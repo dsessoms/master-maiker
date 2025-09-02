@@ -1,31 +1,68 @@
+import { Bookmark, NotebookText, ShoppingCart, User } from "../../../lib/icons";
+
+import { MealPlanContextProvider } from "../../../context/meal-plan-context";
 import React from "react";
 import { Tabs } from "expo-router";
-
-import { useColorScheme } from "@/lib/useColorScheme";
 import { colors } from "@/constants/colors";
+import { useColorScheme } from "@/lib/useColorScheme";
 
 export default function TabsLayout() {
 	const { colorScheme } = useColorScheme();
 
 	return (
-		<Tabs
-			screenOptions={{
-				headerShown: false,
-				tabBarStyle: {
-					backgroundColor:
+		<MealPlanContextProvider>
+			<Tabs
+				screenOptions={{
+					headerShown: false,
+					tabBarStyle: {
+						backgroundColor:
+							colorScheme === "dark"
+								? colors.dark.background
+								: colors.light.background,
+					},
+					tabBarActiveTintColor:
 						colorScheme === "dark"
-							? colors.dark.background
-							: colors.light.background,
-				},
-				tabBarActiveTintColor:
-					colorScheme === "dark"
-						? colors.dark.foreground
-						: colors.light.foreground,
-				tabBarShowLabel: false,
-			}}
-		>
-			<Tabs.Screen name="index" options={{ title: "Home" }} />
-			<Tabs.Screen name="settings" options={{ title: "Settings" }} />
-		</Tabs>
+							? colors.dark.foreground
+							: colors.light.foreground,
+					tabBarShowLabel: false,
+					popToTopOnBlur: true,
+				}}
+			>
+				<Tabs.Screen
+					name="meal-plan/index"
+					options={{
+						title: "Meal Plan",
+						tabBarIcon: ({ color }) => <NotebookText size={28} color={color} />,
+					}}
+				/>
+				<Tabs.Screen
+					name="recipes/index"
+					options={{
+						title: "Recipes",
+						tabBarIcon: ({ color }) => <Bookmark size={28} color={color} />,
+					}}
+				/>
+				<Tabs.Screen
+					name="shopping/index"
+					options={{
+						title: "Shopping",
+						tabBarIcon: ({ color }) => <ShoppingCart size={28} color={color} />,
+					}}
+				/>
+				<Tabs.Screen
+					name="account/index"
+					options={{
+						title: "Account",
+						tabBarIcon: ({ color }) => <User size={28} color={color} />,
+					}}
+				/>
+				<Tabs.Screen
+					name="index"
+					options={{
+						href: null, // This hides the tab button
+					}}
+				/>
+			</Tabs>
+		</MealPlanContextProvider>
 	);
 }

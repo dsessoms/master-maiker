@@ -1,11 +1,11 @@
-import { View } from "react-native";
+import { H1, Muted } from "@/components/ui/typography";
 
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
-import { H1, Muted } from "@/components/ui/typography";
+import { View } from "react-native";
 import { useAuth } from "@/context/supabase-provider";
 
-export default function Settings() {
+export default function Account() {
 	const { signOut } = useAuth();
 
 	return (
