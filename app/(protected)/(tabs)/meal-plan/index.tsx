@@ -81,7 +81,7 @@ export default function MealPlanScreen() {
 	});
 
 	return (
-		<SafeAreaView className="flex flex-1">
+		<SafeAreaView className="flex flex-1 bg-background">
 			<View className="flex flex-1 p-2">
 				<View className="flex flex-row justify-between pb-4">
 					<UserDropdown users={users} onUserToggle={onUserToggle} />
