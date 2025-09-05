@@ -8,29 +8,18 @@ import { Ingredient } from "../../lib/schemas";
 import React from "react";
 import { Text } from "@/components/ui/text";
 import { plural } from "pluralize";
+import { useParseIngredient } from "../../hooks/recipes/use-parse-ingredient";
 
 interface IngredientInputsProps {
 	onIngredientsChange: (ingredients: Ingredient[]) => void;
 	initialValues?: Ingredient[];
 }
 
-const parseIngredient = async (input: string) => {
-	if (!input.trim()) return;
-	try {
-		// TODO: call parse ingredient
-		// if (result == null || result.data == null) {
-		//   return;
-		// }
-		// return { type: "ingredient", ...result.data } as unknown as Ingredient;
-	} catch {
-		return;
-	}
-};
-
 export function IngredientInputs({
 	onIngredientsChange,
 	initialValues,
 }: IngredientInputsProps) {
+	const { parseIngredient } = useParseIngredient();
 	const [ingredients, setIngredients] = React.useState<
 		(EntityInputValue<Ingredient> & { previouslyParsedRaw?: string })[]
 	>(
@@ -87,6 +76,10 @@ export function IngredientInputs({
 						setIngredients(newIngredients);
 					}}
 					onSave={async () => {
+						if (ingredients[index].raw === "" && EntityInputState.New) {
+							return;
+						}
+
 						setIngredients((prevIngredients) => {
 							const newIngredients = [...prevIngredients];
 							const currentIngredient = newIngredients[index];
@@ -99,17 +92,32 @@ export function IngredientInputs({
 							currentIngredient.state = EntityInputState.Parsing;
 							return newIngredients;
 						});
-						const parsedIngredient = await parseIngredient(
-							ingredients[index].raw,
-						);
-						// setIngredients((prevIngredients) => {
-						// 	const newIngredients = [...prevIngredients];
-						// 	const currentIngredient = newIngredients[index];
-						// 	currentIngredient.state = EntityInputState.Parsed;
-						// 	currentIngredient.parsed = parsedIngredient;
-						// 	currentIngredient.previouslyParsedRaw = currentIngredient.raw;
-						// 	return newIngredients;
-						// });
+
+						try {
+							const parsedIngredient = await parseIngredient(
+								ingredients[index].raw,
+							);
+
+							setIngredients((prevIngredients) => {
+								const newIngredients = [...prevIngredients];
+								const currentIngredient = newIngredients[index];
+								currentIngredient.state = EntityInputState.Parsed;
+								currentIngredient.parsed = {
+									type: "ingredient",
+									...parsedIngredient,
+								} as Ingredient;
+								currentIngredient.previouslyParsedRaw = currentIngredient.raw;
+								return newIngredients;
+							});
+						} catch (error) {
+							// Handle parsing error - revert to editing state
+							setIngredients((prevIngredients) => {
+								const newIngredients = [...prevIngredients];
+								const currentIngredient = newIngredients[index];
+								currentIngredient.state = EntityInputState.Editing;
+								return newIngredients;
+							});
+						}
 					}}
 					onEdit={() => {
 						const newIngredients = [...ingredients];

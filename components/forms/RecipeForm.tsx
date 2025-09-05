@@ -2,30 +2,25 @@ import * as z from "zod";
 
 import { ActivityIndicator, View } from "react-native";
 import { Form, FormField, FormInput, FormTextarea } from "../ui/form";
-import { Ingredient, Instruction, RecipeSchema } from "../../lib/schemas";
+import {
+	Ingredient,
+	Instruction,
+	Recipe,
+	RecipeSchema,
+} from "../../lib/schemas";
 
 import { Button } from "../ui/button";
 import { IngredientInputs } from "./IngredientInputs";
 import { InstructionInputs } from "./InstructionInputs";
 import { Label } from "../ui/label";
-import { PostRecipesRequest } from "../../app/api/recipes/index+api";
 import { Text } from "@/components/ui/text";
 import { useForm } from "react-hook-form";
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-const LocalRecipeSchema = RecipeSchema.extend({
-	userId: RecipeSchema.shape.userId.optional(),
-	createdAt: RecipeSchema.shape.createdAt.optional(),
-	updatedAt: RecipeSchema.shape.updatedAt.optional(),
-	id: RecipeSchema.shape.id.optional(),
-});
-
-type LocalRecipe = z.infer<typeof LocalRecipeSchema>;
-
 export interface RecipeFormProps {
-	initialValues?: LocalRecipe;
-	onSubmit: (data: Partial<PostRecipesRequest>) => Promise<void>;
+	initialValues?: Recipe;
+	onSubmit: (data: Partial<Recipe>) => Promise<void>;
 	isEdit?: boolean;
 }
 
@@ -34,8 +29,8 @@ export function RecipeForm({
 	onSubmit,
 	isEdit,
 }: RecipeFormProps) {
-	const form = useForm<LocalRecipe>({
-		resolver: zodResolver(LocalRecipeSchema),
+	const form = useForm<Recipe>({
+		resolver: zodResolver(RecipeSchema),
 		defaultValues: initialValues ?? {
 			name: "",
 			description: "",
@@ -53,26 +48,13 @@ export function RecipeForm({
 	const [parsedInstructions, setParsedInstructions] = useState<string[]>([]);
 
 	// Override the submit handler to include parsed ingredients
-	const handleSubmit = async (data: Partial<LocalRecipe>) => {
+	const handleSubmit = async (data: Partial<Recipe>) => {
 		const instructions: Instruction[] = parsedInstructions.map((value) => ({
 			type: "instruction",
 			value,
 		}));
 
-		const recipeData = {
-			name: data.name,
-			number_of_servings: data.servings,
-			description: data.description,
-			instructions: instructions.map((ins) => ins.value),
-			ingredients: [], // TODO: add ingredients
-			prep_time_hours: data.prepTimeHours,
-			prep_time_minutes: data.prepTimeMinutes,
-			cook_time_hours: data.cookTimeHours,
-			cook_time_minutes: data.cookTimeMinutes,
-			image_id: data.imageUrl,
-		};
-
-		await onSubmit(recipeData);
+		await onSubmit({ ...data, instructions, ingredients: parsedIngredients });
 	};
 
 	return (

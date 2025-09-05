@@ -1,30 +1,9 @@
-import { FatSecretFood } from "@/lib/fat-secret/types";
+import { Recipe } from "@/lib/schemas";
 import { jsonResponse } from "@/lib/server/json-response";
 import { supabase } from "@/config/supabase-server";
 import { validateSession } from "@/lib/server/validate-session";
 
 export const dynamic = "force-dynamic";
-
-interface Ingredient {
-	fsFood: FatSecretFood;
-	fsServingId: string | number;
-	numberOfServings: number;
-	meta?: string | null;
-	order: number;
-}
-
-export interface PostRecipesRequest {
-	name: string;
-	number_of_servings: number;
-	description?: string | null;
-	instructions?: string[] | null;
-	ingredients?: Ingredient[] | null;
-	prep_time_hours?: string | number | null;
-	prep_time_minutes?: string | number | null;
-	cook_time_hours?: string | number | null;
-	cook_time_minutes?: string | number | null;
-	image_id?: string | null;
-}
 
 export type GetRecipesResponse = Awaited<ReturnType<typeof GET>>;
 export type PostRecipesResponse = Awaited<ReturnType<typeof POST>>;
@@ -37,50 +16,36 @@ export async function POST(req: Request) {
 	}
 
 	// get body
-	const recipe = (await req.json()) as PostRecipesRequest;
+	const recipe = (await req.json()) as Recipe;
 
 	if (!recipe.ingredients) {
 		return jsonResponse({ id: undefined }, { status: 401 });
 	}
 
-	// get fat secret foods
-	// const foodMap = await storeFatSecretFoods(recipe.ingredients);
-
 	// create recipe
 	const { data, error } = await supabase.rpc("add_recipe", {
 		name: recipe.name,
-		number_of_servings: Number(recipe.number_of_servings),
+		number_of_servings: Number(recipe.servings),
 		description: recipe.description ?? undefined,
-		prep_time_hours: recipe.prep_time_hours
-			? Number(recipe.prep_time_hours)
+		prep_time_hours: recipe.prepTimeHours
+			? Number(recipe.prepTimeHours)
 			: undefined,
-		prep_time_minutes: recipe.prep_time_minutes
-			? Number(recipe.prep_time_minutes)
+		prep_time_minutes: recipe.prepTimeMinutes
+			? Number(recipe.prepTimeMinutes)
 			: undefined,
-		cook_time_hours: recipe.cook_time_hours
-			? Number(recipe.cook_time_hours)
+		cook_time_hours: recipe.cookTimeHours
+			? Number(recipe.cookTimeHours)
 			: undefined,
-		cook_time_minutes: recipe.cook_time_minutes
-			? Number(recipe.cook_time_minutes)
+		cook_time_minutes: recipe.cookTimeMinutes
+			? Number(recipe.cookTimeMinutes)
 			: undefined,
-		image_id: recipe.image_id ?? undefined,
+		image_id: recipe.imageUrl ?? undefined,
 		instructions: recipe.instructions ?? [],
-		ingredients: [],
-		// recipe.ingredients.map((ing) => {
-		// 	const mappedFood = foodMap[ing.fsFood.food_id];
-		// 	return {
-		// 		food_id: mappedFood!.food_id,
-		// 		serving_id: mappedFood!.serving_id,
-		// 		meta: ing.meta,
-		// 		order: ing.order,
-		// 		number_of_servings: ing.numberOfServings,
-		// 		user_id: user.id,
-		// 	};
-		// }),
+		ingredients: recipe.ingredients,
 	});
 
 	if (error) {
-		console.log(error);
+		console.error(error);
 		return jsonResponse({ id: undefined }, { status: 400 });
 	}
 
@@ -99,8 +64,6 @@ export async function GET(req: Request) {
 		.select(`*, macros:recipe_macros (*)`)
 		.order("created_at", { ascending: false })
 		.eq("user_id", session.user.id);
-
-	console.log("here", recipeRows);
 
 	return jsonResponse({ recipes: recipeRows.data });
 }

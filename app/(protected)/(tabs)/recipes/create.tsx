@@ -1,4 +1,4 @@
-import { PostRecipesRequest } from "../../../api/recipes/index+api";
+import { Recipe } from "@/lib/schemas";
 import { RecipeForm } from "@/components/forms/RecipeForm";
 import { SafeAreaView } from "@/components/safe-area-view";
 import { ScrollView } from "react-native";
@@ -11,10 +11,10 @@ export default function CreateRecipePage() {
 	const { session } = useAuth();
 	const { createRecipe } = useCreateRecipeMutation();
 
-	const handleCreate = async (data: Partial<PostRecipesRequest>) => {
+	const handleCreate = async (data: Partial<Recipe>) => {
 		if (!session) return;
 		try {
-			await createRecipe(data as PostRecipesRequest);
+			await createRecipe(data as Recipe);
 			router.back();
 		} catch (e) {
 			console.error("Error creating recipe:", e);

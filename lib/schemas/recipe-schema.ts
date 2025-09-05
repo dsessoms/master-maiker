@@ -22,8 +22,6 @@ export const InstructionSchema = z.object({
 export type Instruction = z.infer<typeof InstructionSchema>;
 
 export const RecipeSchema = z.object({
-	id: z.string(),
-	userId: z.string(),
 	name: z.string(),
 	description: z.string(),
 	imageUrl: z.string().optional(),
@@ -34,8 +32,6 @@ export const RecipeSchema = z.object({
 	prepTimeMinutes: z.number().optional(),
 	cookTimeHours: z.number().optional(),
 	cookTimeMinutes: z.number().optional(),
-	createdAt: z.coerce.date(),
-	updatedAt: z.coerce.date(),
 });
 
 export type Recipe = z.infer<typeof RecipeSchema>;
