@@ -1,27 +1,62 @@
-# Expo Supabase Starter
+# Running locally
 
-![social-preview-dark](https://github.com/user-attachments/assets/9697a7da-10aa-4661-bb76-b5bc0dd611f0)
+## Supabase
 
-## Introduction
+### Setup
 
-This repository serves as a comprehensive starter project for developing React Native and Expo applications with Supabase as the backend. It integrates various technologies such as Expo Router for navigation, Tailwind CSS for styling, React-Hook-Form for form handling, Zod for schema validation, and TypeScript for type safety. By leveraging these powerful tools, this starter template provides a robust foundation for building modern, scalable, and efficient mobile applications.
+1. Make sure Docker is running. Can you [Docker Desktop](https://docs.docker.com/get-docker/)
+2. Run `npx supabase start`
+3. Once all of the Supabase services are running, you'll see output containing your local Supabase credentials. It should look like this, with urls and keys that you'll use in your local project:
 
-#### Disclaimer
+   ```
+   Started supabase local development setup.
 
-This is not supposed to be a template, boilerplate or a framework. It is an opinionated guide that shows how to do some things in a certain way. You are not forced to do everything exactly as it is shown here, decide what works best for you and your team and stay consistent with your style.
+           API URL: http://localhost:54321
+             DB URL: postgresql://postgres:postgres@localhost:54322/postgres
+         Studio URL: http://localhost:54323
+       Inbucket URL: http://localhost:54324
+           anon key: eyJh......
+   service_role key: eyJh......
+   ```
 
-## Table of Contents
+4. Create an `.env.local` file based on .env.local.example and fill supabase related variables
+5. Run `npx supabase db reset` to setup your local database with the latest migrations
 
-- [💻 Application Overview](docs/application-overview.md)
-- [⚙️ Project Configuration](docs/project-configuration.md)
-- [🗄️ Project Structure](docs/project-structure.md)
-- [🧱 Components And Styling](docs/components-and-styling.md)
-- [🗃️ State Management](docs/state-management.md)
+[view more details](https://supabase.com/docs/guides/cli/local-development)
 
-## Contributing
+### Stop local server
 
-Contributions to this starter project are highly encouraged and welcome! If you have any suggestions, bug reports, or feature requests, please feel free to create an issue or submit a pull request. Let's work together to enhance the developer experience and make it easier for everyone to build exceptional Expo applications with Supabase.
+1. Run `npx supabase stop`
 
-## License
+### Apply new migrations to local database
 
-This repository is licensed under the MIT License. You are granted the freedom to use, modify, and distribute the code for personal or commercial purposes. For more details, please refer to the [LICENSE](https://github.com/FlemingVincent/supabase-starter/blob/main/LICENSE) file.
+1. Run `npx supabase migration up`
+
+### Reset local database completely
+
+1. Run `npx supabase db reset`
+
+### Create a new migration
+
+1. Run `npx supabase migration new <name>`
+2. If you created a new storage bucket you will need to add a seed file entry for it
+
+### Create a new migration based on diffs (if you edited your db using the supabase UI)
+
+1. Run `npx supabase db diff --schema public | npx supabase migration new <name>`
+
+## Website
+
+### Setup
+
+1. Make sure you have followed the supabase steps above
+2. Update your `.env.local` file with any missing api keys (e.g. FatSecret and OpenAi)
+3. Start your local server by running `npm run dev`
+
+### Creating a new user
+
+When a new user is created, the email must be verified. When running locally emails aren't actually sent, but rather intercepted by inbucket. You can view these emails by going to the inbucket URL displayed after running `npx supabase status`.
+
+### Quick fix
+
+1. missing environment variables: `source .env.local`.

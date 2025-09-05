@@ -1,14 +1,13 @@
 import {
-	createContext,
 	PropsWithChildren,
+	createContext,
 	useContext,
 	useEffect,
 	useState,
 } from "react";
-import { SplashScreen, useRouter } from "expo-router";
+import { SplashScreen, usePathname, useRouter } from "expo-router";
 
 import { Session } from "@supabase/supabase-js";
-
 import { supabase } from "@/config/supabase";
 
 SplashScreen.preventAutoHideAsync();
@@ -35,6 +34,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 	const [initialized, setInitialized] = useState(false);
 	const [session, setSession] = useState<Session | null>(null);
 	const router = useRouter();
+	const pathname = usePathname();
 
 	const signUp = async (email: string, password: string) => {
 		const { data, error } = await supabase.auth.signUp({
@@ -85,23 +85,31 @@ export function AuthProvider({ children }: PropsWithChildren) {
 		}
 	};
 
+	const initialize = async () => {
+		const sessionResponse = await supabase.auth.getSession();
+		setSession(sessionResponse.data.session);
+		setInitialized(true);
+	};
+
 	useEffect(() => {
-		supabase.auth.getSession().then(({ data: { session } }) => {
-			setSession(session);
-		});
+		initialize();
 
 		supabase.auth.onAuthStateChange((_event, session) => {
 			setSession(session);
 		});
-
-		setInitialized(true);
 	}, []);
 
 	useEffect(() => {
 		if (initialized) {
 			SplashScreen.hideAsync();
 			if (session) {
-				router.replace("/");
+				if (
+					pathname === "/welcome" ||
+					pathname === "/sign-in" ||
+					pathname === "/sign-up"
+				) {
+					router.replace("/");
+				}
 			} else {
 				router.replace("/welcome");
 			}

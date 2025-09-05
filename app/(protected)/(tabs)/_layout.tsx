@@ -1,6 +1,6 @@
-import { Bookmark, NotebookText, ShoppingCart, User } from "../../../lib/icons";
+import { Bookmark, NotebookText, ShoppingCart, User } from "@/lib/icons";
 
-import { MealPlanContextProvider } from "../../../context/meal-plan-context";
+import { MealPlanContextProvider } from "@/context/meal-plan-context";
 import React from "react";
 import { Tabs } from "expo-router";
 import { colors } from "@/constants/colors";
@@ -29,14 +29,14 @@ export default function TabsLayout() {
 				}}
 			>
 				<Tabs.Screen
-					name="meal-plan/index"
+					name="(meal-plan)/index"
 					options={{
 						title: "Meal Plan",
 						tabBarIcon: ({ color }) => <NotebookText size={28} color={color} />,
 					}}
 				/>
 				<Tabs.Screen
-					name="recipes/index"
+					name="recipes"
 					options={{
 						title: "Recipes",
 						tabBarIcon: ({ color }) => <Bookmark size={28} color={color} />,
@@ -54,12 +54,6 @@ export default function TabsLayout() {
 					options={{
 						title: "Account",
 						tabBarIcon: ({ color }) => <User size={28} color={color} />,
-					}}
-				/>
-				<Tabs.Screen
-					name="index"
-					options={{
-						href: null, // This hides the tab button
 					}}
 				/>
 			</Tabs>

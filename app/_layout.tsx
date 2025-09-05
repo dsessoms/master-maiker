@@ -1,60 +1,66 @@
 import "../global.css";
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
 import { AuthProvider } from "@/context/supabase-provider";
 import { PortalHost } from "@rn-primitives/portal";
 import { Stack } from "expo-router";
 import { colors } from "@/constants/colors";
 import { useColorScheme } from "@/lib/useColorScheme";
 
+export const queryClient = new QueryClient();
+
 export default function AppLayout() {
 	const { colorScheme } = useColorScheme();
 
 	return (
 		<>
-			<AuthProvider>
-				<Stack screenOptions={{ headerShown: false, gestureEnabled: false }}>
-					<Stack.Screen name="(protected)" />
-					<Stack.Screen name="welcome" />
-					<Stack.Screen
-						name="sign-up"
-						options={{
-							presentation: "modal",
-							headerShown: true,
-							headerTitle: "Sign Up",
-							headerStyle: {
-								backgroundColor:
+			<QueryClientProvider client={queryClient}>
+				<AuthProvider>
+					<Stack screenOptions={{ headerShown: false, gestureEnabled: false }}>
+						<Stack.Screen name="(protected)" />
+						<Stack.Screen name="welcome" />
+						<Stack.Screen
+							name="sign-up"
+							options={{
+								presentation: "modal",
+								headerShown: true,
+								headerTitle: "Sign Up",
+								headerStyle: {
+									backgroundColor:
+										colorScheme === "dark"
+											? colors.dark.background
+											: colors.light.background,
+								},
+								headerTintColor:
 									colorScheme === "dark"
-										? colors.dark.background
-										: colors.light.background,
-							},
-							headerTintColor:
-								colorScheme === "dark"
-									? colors.dark.foreground
-									: colors.light.foreground,
-							gestureEnabled: true,
-						}}
-					/>
-					<Stack.Screen
-						name="sign-in"
-						options={{
-							presentation: "modal",
-							headerShown: true,
-							headerTitle: "Sign In",
-							headerStyle: {
-								backgroundColor:
+										? colors.dark.foreground
+										: colors.light.foreground,
+								gestureEnabled: true,
+							}}
+						/>
+						<Stack.Screen
+							name="sign-in"
+							options={{
+								presentation: "modal",
+								headerShown: true,
+								headerTitle: "Sign In",
+								headerStyle: {
+									backgroundColor:
+										colorScheme === "dark"
+											? colors.dark.background
+											: colors.light.background,
+								},
+								headerTintColor:
 									colorScheme === "dark"
-										? colors.dark.background
-										: colors.light.background,
-							},
-							headerTintColor:
-								colorScheme === "dark"
-									? colors.dark.foreground
-									: colors.light.foreground,
-							gestureEnabled: true,
-						}}
-					/>
-				</Stack>
-			</AuthProvider>
+										? colors.dark.foreground
+										: colors.light.foreground,
+								gestureEnabled: true,
+							}}
+						/>
+					</Stack>
+				</AuthProvider>
+			</QueryClientProvider>
 			<PortalHost />
 		</>
 	);

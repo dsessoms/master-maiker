@@ -1,4 +1,4 @@
-import { SafeAreaView } from "../../../../components/safe-area-view";
+import { SafeAreaView } from "@/components//safe-area-view";
 import { View } from "react-native";
 
 export default function Shopping() {

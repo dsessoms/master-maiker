@@ -3,11 +3,11 @@ import { eachDayOfInterval, format } from "date-fns";
 import { useContext, useEffect, useMemo, useState } from "react";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { DaySection } from "../../../../components/meal-plan/day-section";
-import { MealPlanContext } from "../../../../context/meal-plan-context";
-import { SafeAreaView } from "../../../../components/safe-area-view";
-import { UserDropdown } from "../../../../components/user-dropdown";
-import { WeekSelector } from "../../../../components/week-selector";
+import { DaySection } from "@/components//meal-plan/day-section";
+import { MealPlanContext } from "@/context/meal-plan-context";
+import { SafeAreaView } from "@/components//safe-area-view";
+import { UserDropdown } from "@/components//user-dropdown";
+import { WeekSelector } from "@/components//week-selector";
 
 type MealPlan = any; // TODO: update with real type
 type FoodEntry = any; // TODO: replace with real type
