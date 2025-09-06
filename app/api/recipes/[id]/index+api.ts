@@ -1,28 +1,28 @@
-import { NextRequest, NextResponse } from "next/server";
+import { Recipe } from "@/lib/schemas";
+import { extractParamsFromRequest } from "@/lib/url-params";
+import { jsonResponse } from "@/lib/server/json-response";
+import { supabase } from "@/config/supabase-server";
+import { validateSession } from "@/lib/server/validate-session";
 
-import { ApiResponseType } from "../../../../types";
-import { Database } from "../../../../database.types";
-import { PostRecipesRequest } from "../index+api";
-import { cookies } from "next/headers";
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs";
-import { storeFatSecretFoods } from "../../fat-secret/_helper/store-fat-secret-foods";
+export type GetRecipeResponse = NonNullable<Awaited<ReturnType<typeof GET>>>;
+export type PutRecipeResponse = Awaited<ReturnType<typeof PUT>>;
 
-export const dynamic = "force-dynamic";
+export async function GET(req: Request) {
+	const session = await validateSession(req);
 
-export type GetRecipeResponse = NonNullable<ApiResponseType<typeof GET>>;
-export type PutRecipeResponse = ApiResponseType<typeof PUT>;
+	if (!session.user) {
+		return jsonResponse({ recipe: undefined }, { status: 401 });
+	}
 
-export async function GET(
-	req: NextRequest,
-	{ params }: { params: { id: string } },
-) {
-	const supabase = createRouteHandlerClient<Database>({ cookies });
+	const { id: recipeId } = extractParamsFromRequest(
+		req,
+		"/api/recipes/[id]",
+	) as {
+		id: string;
+	};
 
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
-	if (!user) {
-		return NextResponse.json({ recipe: undefined }, { status: 401 });
+	if (!recipeId) {
+		return jsonResponse({ recipe: undefined }, { status: 404 });
 	}
 
 	const { data, error, status } = await supabase
@@ -42,104 +42,91 @@ export async function GET(
       instruction (*)
       `,
 		)
-		.eq("id", params.id)
-		.eq("user_id", user.id)
+		.eq("id", recipeId)
+		.eq("user_id", session.user.id)
 		.single();
 
 	if (error) {
-		return NextResponse.json(null, { status });
+		return jsonResponse(null, { status });
 	}
 
-	return NextResponse.json({ recipe: data });
+	return jsonResponse({ recipe: data });
 }
 
-export async function PUT(
-	req: NextRequest,
-	{ params }: { params: { id: string } },
-) {
-	const supabase = createRouteHandlerClient<Database>({ cookies });
+export async function PUT(req: Request) {
+	const session = await validateSession(req);
 
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
-	if (!user) {
-		return NextResponse.json({ id: undefined }, { status: 401 });
+	if (!session.user) {
+		return jsonResponse({ id: undefined }, { status: 401 });
 	}
 
+	const { id: recipeId } = extractParamsFromRequest(
+		req,
+		"/api/recipes/[id]",
+	) as {
+		id: string;
+	};
+
 	// get body
-	const recipe = (await req.json()) as PostRecipesRequest;
+	const recipe = (await req.json()) as Recipe;
 
 	if (!recipe.ingredients) {
-		return NextResponse.json(
+		return jsonResponse(
 			{ id: undefined },
 			{ status: 400, statusText: "Recipes require at least 1 ingredient" },
 		);
 	}
 
-	const foodMap = await storeFatSecretFoods(recipe.ingredients);
-
-	// create recipe
-	const { data, error, status } = await supabase.rpc("add_recipe", {
-		recipe_id: params.id,
+	// Use the add_recipe RPC function with the existing recipe ID to update
+	const { data, error } = await supabase.rpc("add_recipe", {
+		recipe_id: recipeId,
 		name: recipe.name,
-		number_of_servings: Number(recipe.number_of_servings),
+		number_of_servings: Number(recipe.servings),
 		description: recipe.description ?? undefined,
-		prep_time_hours: recipe.prep_time_hours
-			? Number(recipe.prep_time_hours)
+		prep_time_hours: recipe.prepTimeHours
+			? Number(recipe.prepTimeHours)
 			: undefined,
-		prep_time_minutes: recipe.prep_time_minutes
-			? Number(recipe.prep_time_minutes)
+		prep_time_minutes: recipe.prepTimeMinutes
+			? Number(recipe.prepTimeMinutes)
 			: undefined,
-		cook_time_hours: recipe.cook_time_hours
-			? Number(recipe.cook_time_hours)
+		cook_time_hours: recipe.cookTimeHours
+			? Number(recipe.cookTimeHours)
 			: undefined,
-		cook_time_minutes: recipe.cook_time_minutes
-			? Number(recipe.cook_time_minutes)
+		cook_time_minutes: recipe.cookTimeMinutes
+			? Number(recipe.cookTimeMinutes)
 			: undefined,
-		image_id: recipe.image_id ?? undefined,
+		image_id: recipe.imageUrl ?? undefined,
 		instructions: recipe.instructions ?? [],
-		ingredients: recipe.ingredients.map((ing) => {
-			const mappedFood = foodMap[ing.fsFood.food_id];
-			return {
-				food_id: mappedFood!.food_id,
-				serving_id: mappedFood!.serving_id,
-				meta: ing.meta,
-				order: ing.order,
-				number_of_servings: ing.numberOfServings,
-				user_id: user.id,
-			};
-		}),
+		ingredients: recipe.ingredients,
 	});
 
 	if (error) {
-		return NextResponse.json({ id: undefined }, { status });
+		console.error("Recipe update error:", error);
+		return jsonResponse({ id: undefined }, { status: 500 });
 	}
 
-	return NextResponse.json({ id: data });
+	return jsonResponse({ id: data });
 }
 
 export async function DELETE(
-	req: NextRequest,
+	req: Request,
 	{ params }: { params: { id: string } },
 ) {
-	const supabase = createRouteHandlerClient<Database>({ cookies });
+	const session = await validateSession(req);
 
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
-	if (!user) {
-		return NextResponse.json({ id: undefined }, { status: 401 });
+	if (!session.user) {
+		return jsonResponse({ id: undefined }, { status: 401 });
 	}
 
 	const { error, status } = await supabase
 		.from("recipe")
 		.delete()
-		.eq("user_id", user.id)
+		.eq("user_id", session.user.id)
 		.eq("id", params.id);
 
 	if (error) {
-		return NextResponse.json(null, { status });
+		return jsonResponse(null, { status });
 	}
 
-	return NextResponse.json(null, { status: 200 });
+	return jsonResponse(null, { status: 200 });
 }

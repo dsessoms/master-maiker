@@ -1,13 +1,24 @@
 import { Bookmark, NotebookText, ShoppingCart, User } from "@/lib/icons";
+import { Redirect, Tabs } from "expo-router";
 
 import { MealPlanContextProvider } from "@/context/meal-plan-context";
 import React from "react";
-import { Tabs } from "expo-router";
 import { colors } from "@/constants/colors";
+import { useAuth } from "@/context/supabase-provider";
 import { useColorScheme } from "@/lib/useColorScheme";
 
 export default function TabsLayout() {
 	const { colorScheme } = useColorScheme();
+
+	const { initialized, session } = useAuth();
+
+	if (!initialized) {
+		return null;
+	}
+
+	if (!session) {
+		return <Redirect href="/welcome" />;
+	}
 
 	return (
 		<MealPlanContextProvider>

@@ -18,7 +18,7 @@ export default function AppLayout() {
 			<QueryClientProvider client={queryClient}>
 				<AuthProvider>
 					<Stack screenOptions={{ headerShown: false, gestureEnabled: false }}>
-						<Stack.Screen name="(protected)" />
+						<Stack.Screen name="(tabs)" />
 						<Stack.Screen name="welcome" />
 						<Stack.Screen
 							name="sign-up"

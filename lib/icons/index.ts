@@ -12,3 +12,5 @@ export * from "./hamburger";
 export * from "./salad";
 export * from "./apple";
 export * from "./plus";
+export * from "./minus";
+export * from "./pencil";
