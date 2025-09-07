@@ -27,8 +27,8 @@ export function IngredientInputs({
 			? [
 					...initialValues.map((parsed) => {
 						const raw = `${
-							parsed.numberOfServings * parsed.serving.numberOfUnits
-						} ${parsed.serving.measurementDescription} ${parsed.name}`;
+							parsed.number_of_servings * parsed.serving.number_of_units
+						} ${parsed.serving.measurement_description} ${parsed.name}`;
 
 						return {
 							state: EntityInputState.Parsed,
@@ -126,14 +126,14 @@ export function IngredientInputs({
 						setIngredients(newIngredients);
 					}}
 					renderParsed={(parsed) => {
-						const { name, numberOfServings, serving } = parsed;
-						const displayedCount = numberOfServings * serving.numberOfUnits;
+						const { name, number_of_servings, serving } = parsed;
+						const displayedCount = number_of_servings * serving.number_of_units;
 						return (
 							<>
 								<Text style={{ fontWeight: "bold", fontSize: 16 }}>
 									{displayedCount}
 								</Text>
-								{serving.measurementDescription ? (
+								{serving.measurement_description ? (
 									<Text
 										style={{
 											fontWeight: "bold",
@@ -142,8 +142,8 @@ export function IngredientInputs({
 										}}
 									>
 										{displayedCount === 1
-											? serving.measurementDescription
-											: plural(serving.measurementDescription)}
+											? serving.measurement_description
+											: plural(serving.measurement_description)}
 									</Text>
 								) : null}
 								<Text style={{ marginLeft: 8, fontSize: 16 }}>{name}</Text>

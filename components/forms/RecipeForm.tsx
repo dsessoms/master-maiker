@@ -37,10 +37,10 @@ export function RecipeForm({
 			servings: 1,
 			ingredients: [],
 			instructions: [],
-			prepTimeHours: 0,
-			prepTimeMinutes: 0,
-			cookTimeHours: 0,
-			cookTimeMinutes: 0,
+			prep_time_hours: 0,
+			prep_time_minutes: 0,
+			cook_time_hours: 0,
+			cook_time_minutes: 0,
 		},
 	});
 
@@ -126,7 +126,7 @@ export function RecipeForm({
 					<View style={{ flexDirection: "row", gap: 12 }}>
 						<FormField
 							control={form.control}
-							name="prepTimeHours"
+							name="prep_time_hours"
 							render={({ field }) => (
 								<FormInput
 									label="Hours"
@@ -141,7 +141,7 @@ export function RecipeForm({
 						/>
 						<FormField
 							control={form.control}
-							name="prepTimeMinutes"
+							name="prep_time_minutes"
 							render={({ field }) => (
 								<FormInput
 									label="Minutes"
@@ -160,7 +160,7 @@ export function RecipeForm({
 					<View style={{ flexDirection: "row", gap: 12 }}>
 						<FormField
 							control={form.control}
-							name="cookTimeHours"
+							name="cook_time_hours"
 							render={({ field }) => (
 								<FormInput
 									label="Hours"
@@ -175,7 +175,7 @@ export function RecipeForm({
 						/>
 						<FormField
 							control={form.control}
-							name="cookTimeMinutes"
+							name="cook_time_minutes"
 							render={({ field }) => (
 								<FormInput
 									label="Minutes"

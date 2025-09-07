@@ -5,14 +5,12 @@ import { RecipeSchema } from "./recipe-schema";
 import { z } from "zod";
 
 export const GeneratorOutputSchema = z.object({
-	recipes: z.array(
-		RecipeSchema.omit({ userId: true, updatedAt: true, createdAt: true }),
-	),
-	noteEntries: z.array(NoteEntrySchema.omit({ userId: true, id: true })),
-	foodEntries: z.array(
+	recipes: z.array(RecipeSchema),
+	note_entries: z.array(NoteEntrySchema.omit({ user_id: true, id: true })),
+	food_entries: z.array(
 		z.union([
-			RecipeEntrySchema.omit({ userId: true }),
-			FoodItemEntrySchema.omit({ userId: true }),
+			RecipeEntrySchema.omit({ user_id: true }),
+			FoodItemEntrySchema.omit({ user_id: true }),
 		]),
 	),
 });

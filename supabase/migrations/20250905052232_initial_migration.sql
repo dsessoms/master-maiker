@@ -1,3 +1,4 @@
+
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
@@ -48,11 +49,14 @@ CREATE TYPE "public"."meal_type_enum" AS ENUM (
 
 ALTER TYPE "public"."meal_type_enum" OWNER TO "postgres";
 
-CREATE OR REPLACE FUNCTION "public"."add_recipe"("name" character varying, "number_of_servings" double precision, "instructions" character varying[], "ingredients" "json"[], "recipe_id" "uuid" DEFAULT "gen_random_uuid"(), "prep_time_hours" integer DEFAULT NULL::integer, "prep_time_minutes" integer DEFAULT NULL::integer, "cook_time_hours" integer DEFAULT NULL::integer, "cook_time_minutes" integer DEFAULT NULL::integer, "description" "text" DEFAULT NULL::"text", "image_id" "uuid" DEFAULT NULL::"uuid") RETURNS "uuid"
+CREATE OR REPLACE FUNCTION "public"."add_recipe"("name" character varying, "number_of_servings" double precision, "ingredients" "json"[], "instructions" "json"[] DEFAULT NULL::"json"[], "recipe_id" "uuid" DEFAULT "gen_random_uuid"(), "prep_time_hours" integer DEFAULT NULL::integer, "prep_time_minutes" integer DEFAULT NULL::integer, "cook_time_hours" integer DEFAULT NULL::integer, "cook_time_minutes" integer DEFAULT NULL::integer, "description" "text" DEFAULT NULL::"text", "image_id" "uuid" DEFAULT NULL::"uuid") RETURNS "uuid"
     LANGUAGE "plpgsql"
     AS $$
   declare
     user_id uuid := auth.uid();
+    food_uuid uuid;
+    serving_uuid uuid;
+    serving_json json;
   begin
     delete from instruction where instruction.recipe_id = add_recipe.recipe_id;
     delete from ingredient where ingredient.recipe_id = add_recipe.recipe_id;
@@ -69,19 +73,71 @@ CREATE OR REPLACE FUNCTION "public"."add_recipe"("name" character varying, "numb
     cook_time_minutes=excluded.cook_time_minutes, 
     image_id=excluded.image_id;
 
+    -- Handle instructions (JSON format with headers and values)
     if instructions is not null and array_length(instructions,1) > 0 then
       for i in 1..array_length(instructions,1)
       LOOP
-        insert into instruction(recipe_id, user_id, "order", value)
-        values (recipe_id, user_id, i, instructions[i]);
+        if instructions[i]::json->>'type' = 'header' then
+          insert into instruction(recipe_id, user_id, "order", type, name)
+          values (recipe_id, user_id, i, 'header', instructions[i]::json->>'name');
+        else
+          insert into instruction(recipe_id, user_id, "order", type, value)
+          values (recipe_id, user_id, i, 'instruction', instructions[i]::json->>'value');
+        end if;
       END LOOP;
     end if;
 
     if ingredients is not null and array_length(ingredients,1) > 0 then
       for i in 1..array_length(ingredients,1)
       LOOP
-        insert into ingredient(recipe_id, user_id, "order", meta, number_of_servings, food_id, serving_id)
-        values (recipe_id, user_id, i, ingredients[i]::json->>'meta', cast(ingredients[i]::json->>'number_of_servings' as double precision), cast(ingredients[i]::json->>'food_id' as uuid), cast(ingredients[i]::json->>'serving_id' as uuid));
+        if ingredients[i]::json->>'type' = 'header' then
+          insert into ingredient(recipe_id, user_id, "order", type, name)
+          values (recipe_id, user_id, i, 'header', ingredients[i]::json->>'name');
+        else
+          -- Check if this is a new ingredient (with serving data) or existing ingredient (with food_id/serving_id)
+          if ingredients[i]::jsonb ? 'serving' then
+            -- Create food entry first
+            food_uuid := gen_random_uuid();
+            insert into food(id, food_name, food_type, user_id)
+            values (food_uuid, ingredients[i]::json->>'name', 'Generic', user_id);
+            
+            -- Extract serving data and create serving entry
+            serving_json := ingredients[i]::json->'serving';
+            serving_uuid := gen_random_uuid();
+            insert into serving(
+              id, 
+              food_id, 
+              measurement_description, 
+              number_of_units, 
+              calories, 
+              carbohydrate, 
+              fat, 
+              protein,
+              serving_description,
+              user_id
+            )
+            values (
+              serving_uuid,
+              food_uuid,
+              serving_json->>'measurement_description',
+              cast(serving_json->>'number_of_units' as double precision),
+              cast(serving_json->>'calories' as double precision),
+              cast(serving_json->>'carbohydrate_grams' as double precision),
+              cast(serving_json->>'fat_grams' as double precision),
+              cast(serving_json->>'protein_grams' as double precision),
+              COALESCE(serving_json->>'serving_description', serving_json->>'measurement_description'),
+              user_id
+            );
+            
+            -- Create ingredient entry with references to the created food and serving
+            insert into ingredient(recipe_id, user_id, "order", type, meta, number_of_servings, food_id, serving_id)
+            values (recipe_id, user_id, i, 'ingredient', ingredients[i]::json->>'meta', cast(ingredients[i]::json->>'number_of_servings' as double precision), food_uuid, serving_uuid);
+          else
+            -- Use existing food_id and serving_id
+            insert into ingredient(recipe_id, user_id, "order", type, meta, number_of_servings, food_id, serving_id)
+            values (recipe_id, user_id, i, 'ingredient', ingredients[i]::json->>'meta', cast(ingredients[i]::json->>'number_of_servings' as double precision), cast(ingredients[i]::json->>'food_id' as uuid), cast(ingredients[i]::json->>'serving_id' as uuid));
+          end if;
+        end if;
       END LOOP;
     end if;
 
@@ -89,7 +145,7 @@ CREATE OR REPLACE FUNCTION "public"."add_recipe"("name" character varying, "numb
   end;
 $$;
 
-ALTER FUNCTION "public"."add_recipe"("name" character varying, "number_of_servings" double precision, "instructions" character varying[], "ingredients" "json"[], "recipe_id" "uuid", "prep_time_hours" integer, "prep_time_minutes" integer, "cook_time_hours" integer, "cook_time_minutes" integer, "description" "text", "image_id" "uuid") OWNER TO "postgres";
+ALTER FUNCTION "public"."add_recipe"("name" character varying, "number_of_servings" double precision, "ingredients" "json"[], "instructions" "json"[], "recipe_id" "uuid", "prep_time_hours" integer, "prep_time_minutes" integer, "cook_time_hours" integer, "cook_time_minutes" integer, "description" "text", "image_id" "uuid") OWNER TO "postgres";
 
 CREATE OR REPLACE FUNCTION "public"."handle_new_user"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
@@ -129,8 +185,9 @@ CREATE TABLE IF NOT EXISTS "public"."food" (
     "food_name" character varying NOT NULL,
     "food_type" "public"."food_type" DEFAULT 'Generic'::"public"."food_type" NOT NULL,
     "brand_name" character varying,
-    "fat_secret_id" bigint NOT NULL,
-    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL
+    "fat_secret_id" bigint,
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "user_id" "uuid"
 );
 
 ALTER TABLE "public"."food" OWNER TO "postgres";
@@ -154,12 +211,15 @@ CREATE TABLE IF NOT EXISTS "public"."ingredient" (
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
     "recipe_id" "uuid" NOT NULL,
-    "number_of_servings" double precision NOT NULL,
+    "number_of_servings" double precision,
     "meta" character varying,
     "order" bigint NOT NULL,
-    "food_id" "uuid" NOT NULL,
-    "serving_id" "uuid" NOT NULL,
-    "user_id" "uuid" NOT NULL
+    "food_id" "uuid",
+    "serving_id" "uuid",
+    "user_id" "uuid" NOT NULL,
+    "type" character varying DEFAULT 'ingredient'::character varying NOT NULL,
+    "name" character varying,
+    CONSTRAINT "ingredient_type_check" CHECK ((((("type")::"text" = 'ingredient'::"text") AND ("food_id" IS NOT NULL) AND ("serving_id" IS NOT NULL) AND ("number_of_servings" IS NOT NULL) AND ("name" IS NULL)) OR ((("type")::"text" = 'header'::"text") AND ("food_id" IS NULL) AND ("serving_id" IS NULL) AND ("number_of_servings" IS NULL) AND ("name" IS NOT NULL))))
 );
 
 ALTER TABLE "public"."ingredient" OWNER TO "postgres";
@@ -170,7 +230,10 @@ CREATE TABLE IF NOT EXISTS "public"."instruction" (
     "recipe_id" "uuid" NOT NULL,
     "user_id" "uuid" NOT NULL,
     "order" bigint NOT NULL,
-    "value" character varying NOT NULL
+    "value" character varying,
+    "type" character varying DEFAULT 'instruction'::character varying NOT NULL,
+    "name" character varying,
+    CONSTRAINT "instruction_type_check" CHECK ((((("type")::"text" = 'instruction'::"text") AND ("value" IS NOT NULL) AND ("name" IS NULL)) OR ((("type")::"text" = 'header'::"text") AND ("value" IS NULL) AND ("name" IS NOT NULL))))
 );
 
 ALTER TABLE "public"."instruction" OWNER TO "postgres";
@@ -215,9 +278,10 @@ CREATE TABLE IF NOT EXISTS "public"."serving" (
     "saturated_fat" double precision,
     "polyunsaturated_fat" double precision,
     "monounsaturated_fat" double precision,
-    "fat_secret_id" bigint NOT NULL,
+    "fat_secret_id" bigint,
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "food_id" "uuid" NOT NULL
+    "food_id" "uuid" NOT NULL,
+    "user_id" "uuid"
 );
 
 ALTER TABLE "public"."serving" OWNER TO "postgres";
@@ -324,6 +388,9 @@ ALTER TABLE ONLY "public"."food_entry"
 ALTER TABLE ONLY "public"."food_entry"
     ADD CONSTRAINT "food_entry_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
 
+ALTER TABLE ONLY "public"."food"
+    ADD CONSTRAINT "food_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
+
 ALTER TABLE ONLY "public"."ingredient"
     ADD CONSTRAINT "ingredient_food_id_fkey" FOREIGN KEY ("food_id") REFERENCES "public"."food"("id") ON DELETE CASCADE;
 
@@ -347,6 +414,9 @@ ALTER TABLE ONLY "public"."recipe"
 
 ALTER TABLE ONLY "public"."serving"
     ADD CONSTRAINT "serving_food_id_fkey" FOREIGN KEY ("food_id") REFERENCES "public"."food"("id") ON DELETE CASCADE;
+
+ALTER TABLE ONLY "public"."serving"
+    ADD CONSTRAINT "serving_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "auth"."users"("id") ON DELETE CASCADE;
 
 ALTER TABLE ONLY "public"."shopping_list_item"
     ADD CONSTRAINT "shopping_list_item_food_id_fkey" FOREIGN KEY ("food_id") REFERENCES "public"."food"("id") ON DELETE CASCADE;
@@ -378,9 +448,21 @@ CREATE POLICY "Enable all data owners" ON "public"."shopping_list" USING (("auth
 
 CREATE POLICY "Enable all data owners" ON "public"."shopping_list_item" USING (("auth"."uid"() = "user_id")) WITH CHECK (("auth"."uid"() = "user_id"));
 
-CREATE POLICY "Enable select for authenticated users only" ON "public"."food" FOR SELECT TO "authenticated" USING (true);
+CREATE POLICY "Enable delete for data owners" ON "public"."food" FOR DELETE TO "authenticated" USING (("auth"."uid"() = "user_id"));
 
-CREATE POLICY "Enable select for authenticated users only" ON "public"."serving" FOR SELECT TO "authenticated" USING (true);
+CREATE POLICY "Enable delete for data owners" ON "public"."serving" FOR DELETE TO "authenticated" USING (("auth"."uid"() = "user_id"));
+
+CREATE POLICY "Enable insert for data owners" ON "public"."food" FOR INSERT TO "authenticated" WITH CHECK (("auth"."uid"() = "user_id"));
+
+CREATE POLICY "Enable insert for data owners" ON "public"."serving" FOR INSERT TO "authenticated" WITH CHECK (("auth"."uid"() = "user_id"));
+
+CREATE POLICY "Enable read access for data owners and shared foods" ON "public"."food" FOR SELECT TO "authenticated" USING ((("auth"."uid"() = "user_id") OR ("user_id" IS NULL)));
+
+CREATE POLICY "Enable read access for data owners and shared servings" ON "public"."serving" FOR SELECT TO "authenticated" USING ((("auth"."uid"() = "user_id") OR ("user_id" IS NULL)));
+
+CREATE POLICY "Enable update for data owners" ON "public"."food" FOR UPDATE TO "authenticated" USING (("auth"."uid"() = "user_id")) WITH CHECK (("auth"."uid"() = "user_id"));
+
+CREATE POLICY "Enable update for data owners" ON "public"."serving" FOR UPDATE TO "authenticated" USING (("auth"."uid"() = "user_id")) WITH CHECK (("auth"."uid"() = "user_id"));
 
 ALTER TABLE "public"."food" ENABLE ROW LEVEL SECURITY;
 
@@ -399,54 +481,70 @@ ALTER TABLE "public"."shopping_list" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."shopping_list_item" ENABLE ROW LEVEL SECURITY;
 
 ALTER PUBLICATION "supabase_realtime" OWNER TO "postgres";
+
 GRANT USAGE ON SCHEMA "public" TO "postgres";
 GRANT USAGE ON SCHEMA "public" TO "anon";
 GRANT USAGE ON SCHEMA "public" TO "authenticated";
 GRANT USAGE ON SCHEMA "public" TO "service_role";
-GRANT ALL ON FUNCTION "public"."add_recipe"("name" character varying, "number_of_servings" double precision, "instructions" character varying[], "ingredients" "json"[], "recipe_id" "uuid", "prep_time_hours" integer, "prep_time_minutes" integer, "cook_time_hours" integer, "cook_time_minutes" integer, "description" "text", "image_id" "uuid") TO "anon";
-GRANT ALL ON FUNCTION "public"."add_recipe"("name" character varying, "number_of_servings" double precision, "instructions" character varying[], "ingredients" "json"[], "recipe_id" "uuid", "prep_time_hours" integer, "prep_time_minutes" integer, "cook_time_hours" integer, "cook_time_minutes" integer, "description" "text", "image_id" "uuid") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."add_recipe"("name" character varying, "number_of_servings" double precision, "instructions" character varying[], "ingredients" "json"[], "recipe_id" "uuid", "prep_time_hours" integer, "prep_time_minutes" integer, "cook_time_hours" integer, "cook_time_minutes" integer, "description" "text", "image_id" "uuid") TO "service_role";
+
+GRANT ALL ON FUNCTION "public"."add_recipe"("name" character varying, "number_of_servings" double precision, "ingredients" "json"[], "instructions" "json"[], "recipe_id" "uuid", "prep_time_hours" integer, "prep_time_minutes" integer, "cook_time_hours" integer, "cook_time_minutes" integer, "description" "text", "image_id" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."add_recipe"("name" character varying, "number_of_servings" double precision, "ingredients" "json"[], "instructions" "json"[], "recipe_id" "uuid", "prep_time_hours" integer, "prep_time_minutes" integer, "cook_time_hours" integer, "cook_time_minutes" integer, "description" "text", "image_id" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."add_recipe"("name" character varying, "number_of_servings" double precision, "ingredients" "json"[], "instructions" "json"[], "recipe_id" "uuid", "prep_time_hours" integer, "prep_time_minutes" integer, "cook_time_hours" integer, "cook_time_minutes" integer, "description" "text", "image_id" "uuid") TO "service_role";
+
 GRANT ALL ON FUNCTION "public"."handle_new_user"() TO "anon";
 GRANT ALL ON FUNCTION "public"."handle_new_user"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."handle_new_user"() TO "service_role";
+
 GRANT ALL ON FUNCTION "public"."set_default_shopping_list"("shopping_list_id" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."set_default_shopping_list"("shopping_list_id" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."set_default_shopping_list"("shopping_list_id" "uuid") TO "service_role";
+
 GRANT ALL ON TABLE "public"."food" TO "anon";
 GRANT ALL ON TABLE "public"."food" TO "authenticated";
 GRANT ALL ON TABLE "public"."food" TO "service_role";
+
 GRANT ALL ON TABLE "public"."food_entry" TO "anon";
 GRANT ALL ON TABLE "public"."food_entry" TO "authenticated";
 GRANT ALL ON TABLE "public"."food_entry" TO "service_role";
+
 GRANT ALL ON TABLE "public"."ingredient" TO "anon";
 GRANT ALL ON TABLE "public"."ingredient" TO "authenticated";
 GRANT ALL ON TABLE "public"."ingredient" TO "service_role";
+
 GRANT ALL ON TABLE "public"."instruction" TO "anon";
 GRANT ALL ON TABLE "public"."instruction" TO "authenticated";
 GRANT ALL ON TABLE "public"."instruction" TO "service_role";
+
 GRANT ALL ON TABLE "public"."recipe" TO "anon";
 GRANT ALL ON TABLE "public"."recipe" TO "authenticated";
 GRANT ALL ON TABLE "public"."recipe" TO "service_role";
+
 GRANT ALL ON TABLE "public"."serving" TO "anon";
 GRANT ALL ON TABLE "public"."serving" TO "authenticated";
 GRANT ALL ON TABLE "public"."serving" TO "service_role";
+
 GRANT ALL ON TABLE "public"."recipe_macros" TO "anon";
 GRANT ALL ON TABLE "public"."recipe_macros" TO "authenticated";
 GRANT ALL ON TABLE "public"."recipe_macros" TO "service_role";
+
 GRANT ALL ON TABLE "public"."shopping_list" TO "anon";
 GRANT ALL ON TABLE "public"."shopping_list" TO "authenticated";
 GRANT ALL ON TABLE "public"."shopping_list" TO "service_role";
+
 GRANT ALL ON TABLE "public"."shopping_list_item" TO "anon";
 GRANT ALL ON TABLE "public"."shopping_list_item" TO "authenticated";
 GRANT ALL ON TABLE "public"."shopping_list_item" TO "service_role";
+
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES  TO "postgres";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES  TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES  TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON SEQUENCES  TO "service_role";
+
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS  TO "postgres";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS  TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS  TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON FUNCTIONS  TO "service_role";
+
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES  TO "postgres";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES  TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES  TO "authenticated";
@@ -461,3 +559,4 @@ RESET ALL;
 CREATE OR REPLACE TRIGGER "on_auth_user_created" AFTER INSERT ON "auth"."users" FOR EACH ROW EXECUTE FUNCTION "public"."handle_new_user"();
 
 CREATE POLICY "Give users authenticated access to folder 1uy8qe8_0" ON "storage"."objects" FOR INSERT WITH CHECK ((("bucket_id" = 'recipe-photos'::"text") AND ("auth"."role"() = 'authenticated'::"text")));
+

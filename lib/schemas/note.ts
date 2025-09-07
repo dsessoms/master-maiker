@@ -7,7 +7,7 @@ export type Note = z.infer<typeof NoteSchema>;
 
 export const NoteEntrySchema = z.object({
 	id: z.string(),
-	userId: z.string(),
+	user_id: z.string(),
 	note: NoteSchema,
 	date: z.coerce.date(),
 });

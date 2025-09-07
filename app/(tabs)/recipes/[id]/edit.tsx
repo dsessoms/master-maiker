@@ -32,12 +32,12 @@ export default function EditRecipe() {
 		return {
 			name: recipe.name || "",
 			description: recipe.description || "",
-			imageUrl: recipe.image_id || undefined,
+			image_url: recipe.image_id || undefined,
 			servings: recipe.number_of_servings || 1,
-			prepTimeHours: recipe.prep_time_hours || 0,
-			prepTimeMinutes: recipe.prep_time_minutes || 0,
-			cookTimeHours: recipe.cook_time_hours || 0,
-			cookTimeMinutes: recipe.cook_time_minutes || 0,
+			prep_time_hours: recipe.prep_time_hours || 0,
+			prep_time_minutes: recipe.prep_time_minutes || 0,
+			cook_time_hours: recipe.cook_time_hours || 0,
+			cook_time_minutes: recipe.cook_time_minutes || 0,
 			ingredients:
 				recipe.ingredient?.map((ing) => {
 					if (ing.type === "header") {
@@ -49,25 +49,25 @@ export default function EditRecipe() {
 					return {
 						type: "ingredient" as const,
 						name: ing.name || "",
-						numberOfServings: ing.number_of_servings || 1,
+						number_of_servings: ing.number_of_servings || 1,
 						meta: ing.meta || undefined,
 						serving: ing.serving
 							? {
-									measurementDescription:
+									measurement_description:
 										ing.serving.measurement_description || "",
-									numberOfUnits: ing.serving.number_of_units || 1,
+									number_of_units: ing.serving.number_of_units || 1,
 									calories: ing.serving.calories || 0,
-									carbohydrateGrams: ing.serving.carbohydrate || 0,
-									fatGrams: ing.serving.fat || 0,
-									proteinGrams: ing.serving.protein || 0,
+									carbohydrate_grams: ing.serving.carbohydrate || 0,
+									fat_grams: ing.serving.fat || 0,
+									protein_grams: ing.serving.protein || 0,
 								}
 							: {
-									measurementDescription: "serving",
-									numberOfUnits: 1,
+									measurement_description: "serving",
+									number_of_units: 1,
 									calories: 0,
-									carbohydrateGrams: 0,
-									fatGrams: 0,
-									proteinGrams: 0,
+									carbohydrate_grams: 0,
+									fat_grams: 0,
+									protein_grams: 0,
 								},
 					};
 				}) || [],

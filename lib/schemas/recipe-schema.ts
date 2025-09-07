@@ -9,7 +9,7 @@ export const Header = z.object({
 export const IngredientSchema = FoodItemSchema.extend({
 	type: z.literal("ingredient"),
 	meta: z.string().optional().nullable(), // e.g. "yellow or red"
-	numberOfServings: z.number(),
+	number_of_servings: z.number(),
 });
 
 export type Ingredient = z.infer<typeof IngredientSchema>;
@@ -24,14 +24,14 @@ export type Instruction = z.infer<typeof InstructionSchema>;
 export const RecipeSchema = z.object({
 	name: z.string(),
 	description: z.string(),
-	imageUrl: z.string().optional(),
+	image_url: z.string().optional(),
 	servings: z.number(),
 	ingredients: z.array(z.union([IngredientSchema, Header])).optional(),
 	instructions: z.array(z.union([InstructionSchema, Header])).optional(),
-	prepTimeHours: z.number().optional(),
-	prepTimeMinutes: z.number().optional(),
-	cookTimeHours: z.number().optional(),
-	cookTimeMinutes: z.number().optional(),
+	prep_time_hours: z.number().optional(),
+	prep_time_minutes: z.number().optional(),
+	cook_time_hours: z.number().optional(),
+	cook_time_minutes: z.number().optional(),
 });
 
 export type Recipe = z.infer<typeof RecipeSchema>;

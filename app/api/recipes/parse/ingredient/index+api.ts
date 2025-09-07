@@ -25,26 +25,26 @@ async function parseIngredientWithGoogleAI(input: string) {
 				{
 					text: `\`\`\`
 interface Serving {
-  measurementDescription: string; // cup
-  numberOfUnits: number; // 1
+  measurement_description: string; // cup
+  number_of_units: number; // 1
   calories: number;
-  carbohydrateGrams: number;
-  fatGrams: number;
-  proteinGrams: number;
+  carbohydrate_grams: number;
+  fat_grams: number;
+  protein_grams: number;
 }
 
 interface Ingredient {
   type: "ingredient";
   name: string;
   meta?: string;
-  numberOfServings: number;
+  number_of_servings: number;
   serving: Serving;
 }
 \`\`\`
 Using the object structure defined above, turn the string "${input}" into an Ingredient object using your best estimates for macros. 
 Only include a meta string if the input string needs the meta parsed out of it (e.g. "yellow or red" for "1 bell pepper (yellow or red). 
-Fallback to the ingredient name if a better measurementDescription cannot be parsed. 
-Prefer to use the measurementDescription as a single word (e.g. "cup" instead of "cups").
+Fallback to the ingredient name if a better measurement_description cannot be parsed. 
+Prefer to use the measurement_description as a single word (e.g. "cup" instead of "cups").
 Your entire response should be a single JSON object, and you should NOT wrap it within JSON markdown markers.
 `,
 				},

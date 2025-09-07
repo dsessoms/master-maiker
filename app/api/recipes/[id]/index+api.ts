@@ -83,19 +83,19 @@ export async function PUT(req: Request) {
 		name: recipe.name,
 		number_of_servings: Number(recipe.servings),
 		description: recipe.description ?? undefined,
-		prep_time_hours: recipe.prepTimeHours
-			? Number(recipe.prepTimeHours)
+		prep_time_hours: recipe.prep_time_hours
+			? Number(recipe.prep_time_hours)
 			: undefined,
-		prep_time_minutes: recipe.prepTimeMinutes
-			? Number(recipe.prepTimeMinutes)
+		prep_time_minutes: recipe.prep_time_minutes
+			? Number(recipe.prep_time_minutes)
 			: undefined,
-		cook_time_hours: recipe.cookTimeHours
-			? Number(recipe.cookTimeHours)
+		cook_time_hours: recipe.cook_time_hours
+			? Number(recipe.cook_time_hours)
 			: undefined,
-		cook_time_minutes: recipe.cookTimeMinutes
-			? Number(recipe.cookTimeMinutes)
+		cook_time_minutes: recipe.cook_time_minutes
+			? Number(recipe.cook_time_minutes)
 			: undefined,
-		image_id: recipe.imageUrl ?? undefined,
+		image_id: recipe.image_url ?? undefined,
 		instructions: recipe.instructions ?? [],
 		ingredients: recipe.ingredients,
 	});
