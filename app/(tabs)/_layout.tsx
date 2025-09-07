@@ -3,6 +3,7 @@ import { Redirect, Tabs } from "expo-router";
 
 import { MealPlanContextProvider } from "@/context/meal-plan-context";
 import React from "react";
+import { Text } from "@/components/ui/text";
 import { colors } from "@/constants/colors";
 import { useAuth } from "@/context/supabase-provider";
 import { useColorScheme } from "@/lib/useColorScheme";
@@ -35,7 +36,8 @@ export default function TabsLayout() {
 						colorScheme === "dark"
 							? colors.dark.foreground
 							: colors.light.foreground,
-					tabBarShowLabel: false,
+					tabBarShowLabel: true,
+					tabBarLabelStyle: { fontSize: 8 },
 					popToTopOnBlur: true,
 				}}
 			>
@@ -43,28 +45,28 @@ export default function TabsLayout() {
 					name="(meal-plan)/index"
 					options={{
 						title: "Meal Plan",
-						tabBarIcon: ({ color }) => <NotebookText size={28} color={color} />,
+						tabBarIcon: ({ color }) => <NotebookText size={20} color={color} />,
 					}}
 				/>
 				<Tabs.Screen
 					name="recipes"
 					options={{
 						title: "Recipes",
-						tabBarIcon: ({ color }) => <Bookmark size={28} color={color} />,
+						tabBarIcon: ({ color }) => <Bookmark size={20} color={color} />,
 					}}
 				/>
 				<Tabs.Screen
 					name="shopping/index"
 					options={{
 						title: "Shopping",
-						tabBarIcon: ({ color }) => <ShoppingCart size={28} color={color} />,
+						tabBarIcon: ({ color }) => <ShoppingCart size={20} color={color} />,
 					}}
 				/>
 				<Tabs.Screen
 					name="account/index"
 					options={{
 						title: "Account",
-						tabBarIcon: ({ color }) => <User size={28} color={color} />,
+						tabBarIcon: ({ color }) => <User size={20} color={color} />,
 					}}
 				/>
 			</Tabs>

@@ -14,3 +14,4 @@ export * from "./apple";
 export * from "./plus";
 export * from "./minus";
 export * from "./pencil";
+export * from "./link";

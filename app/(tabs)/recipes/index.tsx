@@ -1,3 +1,10 @@
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Link, Plus } from "@/lib/icons";
 import { router, useRouter } from "expo-router";
 
 import { Button } from "@/components/ui/button";
@@ -11,12 +18,19 @@ export default function Recipes() {
 	const localRouter = useRouter();
 	const { recipes, isLoading, isError } = useRecipes();
 
+	const handleCreateRecipe = () => {
+		router.push("/recipes/create");
+	};
+
+	const handleImportRecipe = () => {
+		// TODO: Implement import from URL functionality
+		console.log("Import recipe from URL");
+	};
+
 	return (
 		<SafeAreaView className="flex flex-1 bg-background">
-			<Button onPress={() => router.push("/recipes/create")}>
-				<Text>Create</Text>
-			</Button>
-			<View className="mt-4">
+			{/* Main content */}
+			<View className="flex-1 mt-4">
 				{isLoading && <Text>Loading...</Text>}
 				{isError && <Text>Error loading recipes.</Text>}
 				{recipes && recipes.length === 0 && <Text>No recipes found.</Text>}
@@ -55,6 +69,31 @@ export default function Recipes() {
 						))}
 					</View>
 				)}
+			</View>
+
+			{/* Floating Action Button with Dropdown Menu */}
+			<View className="absolute bottom-6 right-6">
+				<DropdownMenu>
+					<DropdownMenuTrigger asChild>
+						<Button
+							variant="default"
+							size="icon"
+							className="w-12 h-12 rounded-full shadow-sm"
+						>
+							<Plus className="text-primary-foreground" size={24} />
+						</Button>
+					</DropdownMenuTrigger>
+					<DropdownMenuContent side="top" align="end" className="w-64 mb-2">
+						<DropdownMenuItem onPress={handleCreateRecipe}>
+							<Plus className="text-foreground mr-2" size={16} />
+							<Text>Create new recipe</Text>
+						</DropdownMenuItem>
+						<DropdownMenuItem onPress={handleImportRecipe}>
+							<Link className="text-foreground mr-2" size={16} />
+							<Text>Import recipe from URL</Text>
+						</DropdownMenuItem>
+					</DropdownMenuContent>
+				</DropdownMenu>
 			</View>
 		</SafeAreaView>
 	);
