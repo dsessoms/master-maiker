@@ -1,22 +1,28 @@
+import { Link, Plus } from "@/lib/icons";
+import { router } from "expo-router";
+
+import { Button } from "@/components/ui/button";
+import { RecipeCard } from "@/components/recipe/recipe-card";
+import { SafeAreaView } from "@/components/safe-area-view";
+import { Text } from "@/components/ui/text";
+import { View } from "react-native";
+import { useRecipes } from "@/hooks/recipes/use-recipes";
+import { useDeleteRecipeMutation } from "@/hooks/recipes/use-delete-recipe-mutation";
+import { ScrollView } from "react-native";
+import { useResponsiveColumns } from "@/hooks/useResponsiveColumns";
+import { useConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Link, Plus } from "@/lib/icons";
-import { router, useRouter } from "expo-router";
-
-import { Button } from "@/components/ui/button";
-import { SafeAreaView } from "@/components/safe-area-view";
-import { Text } from "@/components/ui/text";
-import { TouchableOpacity } from "react-native";
-import { View } from "react-native";
-import { useRecipes } from "@/hooks/recipes/use-recipes";
 
 export default function Recipes() {
-	const localRouter = useRouter();
 	const { recipes, isLoading, isError } = useRecipes();
+	const { deleteRecipe, isPending: isDeleting } = useDeleteRecipeMutation();
+	const { columns, cardWidth } = useResponsiveColumns();
+	const { showDialog } = useConfirmDialog();
 
 	const handleCreateRecipe = () => {
 		router.push("/recipes/create");
@@ -27,49 +33,59 @@ export default function Recipes() {
 		console.log("Import recipe from URL");
 	};
 
+	const handleEditRecipe = (recipeId: string) => {
+		router.push(`/recipes/${recipeId}/edit`);
+	};
+
+	const handleDeleteRecipe = (recipeId: string) => {
+		showDialog({
+			title: "Delete Recipe",
+			message:
+				"Are you sure you want to delete this recipe? This action cannot be undone.",
+			confirmText: "Delete",
+			cancelText: "Cancel",
+			onConfirm: async () => {
+				try {
+					await deleteRecipe(recipeId);
+				} catch (error) {
+					console.error("Error deleting recipe:", error);
+					showDialog({
+						title: "Error",
+						message: "Failed to delete recipe. Please try again.",
+						confirmText: "OK",
+						onConfirm: () => {},
+					});
+				}
+			},
+		});
+	};
+
 	return (
 		<SafeAreaView className="flex flex-1 bg-background">
 			{/* Main content */}
-			<View className="flex-1 mt-4">
+			<ScrollView className="flex-1" contentContainerStyle={{ padding: 16 }}>
 				{isLoading && <Text>Loading...</Text>}
 				{isError && <Text>Error loading recipes.</Text>}
 				{recipes && recipes.length === 0 && <Text>No recipes found.</Text>}
 				{recipes && recipes.length > 0 && (
-					<View>
+					<View className="flex flex-row flex-wrap gap-2">
 						{recipes.map((recipe: any) => (
-							<TouchableOpacity
+							<View
 								key={recipe.id}
-								onPress={() => {
-									localRouter.push({
-										pathname: "/recipes/[id]",
-										params: { id: recipe.id },
-									});
+								style={{
+									width: cardWidth,
 								}}
-								className="mb-2 p-4 rounded-lg bg-card border border-border active:bg-muted"
 							>
-								<Text className="text-lg font-semibold mb-1">
-									{recipe.name}
-								</Text>
-								{recipe.description && (
-									<Text className="text-sm text-muted-foreground">
-										{recipe.description}
-									</Text>
-								)}
-								{recipe.macros && recipe.macros.length > 0 && (
-									<View className="flex flex-row mt-2 space-x-4">
-										<Text className="text-xs text-muted-foreground">
-											{Math.round(recipe.macros[0].calories || 0)} cal
-										</Text>
-										<Text className="text-xs text-muted-foreground">
-											{Math.round(recipe.macros[0].protein || 0)}g protein
-										</Text>
-									</View>
-								)}
-							</TouchableOpacity>
+								<RecipeCard
+									recipe={recipe}
+									onEdit={() => handleEditRecipe(recipe.id)}
+									onDelete={() => handleDeleteRecipe(recipe.id)}
+								/>
+							</View>
 						))}
 					</View>
 				)}
-			</View>
+			</ScrollView>
 
 			{/* Floating Action Button with Dropdown Menu */}
 			<View className="absolute bottom-6 right-6">

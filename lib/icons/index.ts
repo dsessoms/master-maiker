@@ -15,3 +15,5 @@ export * from "./plus";
 export * from "./minus";
 export * from "./pencil";
 export * from "./link";
+export * from "./trash";
+export * from "./more-horizontal";

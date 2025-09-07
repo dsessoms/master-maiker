@@ -6,6 +6,7 @@ import { validateSession } from "@/lib/server/validate-session";
 
 export type GetRecipeResponse = NonNullable<Awaited<ReturnType<typeof GET>>>;
 export type PutRecipeResponse = Awaited<ReturnType<typeof PUT>>;
+export type DeleteRecipeResponse = Awaited<ReturnType<typeof DELETE>>;
 
 export async function GET(req: Request) {
 	const session = await validateSession(req);
@@ -108,21 +109,25 @@ export async function PUT(req: Request) {
 	return jsonResponse({ id: data });
 }
 
-export async function DELETE(
-	req: Request,
-	{ params }: { params: { id: string } },
-) {
+export async function DELETE(req: Request) {
 	const session = await validateSession(req);
 
 	if (!session.user) {
 		return jsonResponse({ id: undefined }, { status: 401 });
 	}
 
+	const { id: recipeId } = extractParamsFromRequest(
+		req,
+		"/api/recipes/[id]",
+	) as {
+		id: string;
+	};
+
 	const { error, status } = await supabase
 		.from("recipe")
 		.delete()
 		.eq("user_id", session.user.id)
-		.eq("id", params.id);
+		.eq("id", recipeId);
 
 	if (error) {
 		return jsonResponse(null, { status });

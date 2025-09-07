@@ -155,13 +155,6 @@ export default function RecipeDetails() {
 								))}
 						</View>
 					</View>
-
-					{/* Add to Shopping List Section */}
-					<View className="mb-6">
-						<Button className="w-full" variant="default">
-							<Text>Add to Shopping List</Text>
-						</Button>
-					</View>
 				</View>
 			</ScrollView>
 		</SafeAreaView>
