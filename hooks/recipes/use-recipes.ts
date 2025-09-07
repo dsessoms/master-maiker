@@ -8,6 +8,8 @@ export const useRecipes = () => {
 		queryFn: async () => {
 			const response =
 				await axiosWithAuth.get<GetRecipesResponse>("/api/recipes");
+
+			console.log(response);
 			return response.data.recipes;
 		},
 	});

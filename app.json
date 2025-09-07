@@ -51,6 +51,14 @@
 		"experiments": {
 			"typedRoutes": true
 		},
-		"plugins": ["expo-router", "expo-secure-store"]
+		"plugins": [
+			[
+				"expo-router",
+				{
+					"origin": "http://localhost:8081"
+				}
+			],
+			"expo-secure-store"
+		]
 	}
 }

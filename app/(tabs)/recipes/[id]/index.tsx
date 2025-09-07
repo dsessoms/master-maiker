@@ -159,7 +159,6 @@ export default function RecipeDetails() {
 					{/* Add to Shopping List Section */}
 					<View className="mb-6">
 						<Button className="w-full" variant="default">
-							<Plus className="h-4 w-4 mr-2" />
 							<Text>Add to Shopping List</Text>
 						</Button>
 					</View>

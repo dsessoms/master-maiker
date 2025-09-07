@@ -1,17 +1,35 @@
 import "../global.css";
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { AppStateStatus, Platform } from "react-native";
+import {
+	QueryClient,
+	QueryClientProvider,
+	focusManager,
+} from "@tanstack/react-query";
 
 import { AuthProvider } from "@/context/supabase-provider";
 import { PortalHost } from "@rn-primitives/portal";
 import { Stack } from "expo-router";
 import { colors } from "@/constants/colors";
+import { useAppState } from "@/hooks/useAppStateChange";
 import { useColorScheme } from "@/lib/useColorScheme";
+import { useOnlineManager } from "@/hooks/useOnlineManager";
 
 export const queryClient = new QueryClient();
 
+function onAppStateChange(status: AppStateStatus) {
+	// React Query already supports in web browser refetch on window focus by default
+	if (Platform.OS !== "web") {
+		focusManager.setFocused(status === "active");
+	}
+}
+
 export default function AppLayout() {
 	const { colorScheme } = useColorScheme();
+
+	useOnlineManager();
+
+	useAppState(onAppStateChange);
 
 	return (
 		<>
