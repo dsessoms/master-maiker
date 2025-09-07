@@ -5,8 +5,10 @@ import {
 } from "./IngredientInput";
 
 import { Ingredient } from "../../lib/schemas";
+import { Macros } from "../meal-plan/macros";
 import React from "react";
 import { Text } from "@/components/ui/text";
+import { View } from "react-native";
 import { plural } from "pluralize";
 import { useParseIngredient } from "../../hooks/recipes/use-parse-ingredient";
 
@@ -76,7 +78,9 @@ export function IngredientInputs({
 						setIngredients(newIngredients);
 					}}
 					onSave={async () => {
-						if (ingredients[index].raw === "" && EntityInputState.New) {
+						const currentIngredient = ingredients[index];
+
+						if (currentIngredient.raw === "" && EntityInputState.New) {
 							return;
 						}
 
@@ -92,6 +96,12 @@ export function IngredientInputs({
 							currentIngredient.state = EntityInputState.Parsing;
 							return newIngredients;
 						});
+
+						if (
+							currentIngredient.previouslyParsedRaw === currentIngredient.raw
+						) {
+							return;
+						}
 
 						try {
 							const parsedIngredient = await parseIngredient(
@@ -128,26 +138,49 @@ export function IngredientInputs({
 					renderParsed={(parsed) => {
 						const { name, number_of_servings, serving } = parsed;
 						const displayedCount = number_of_servings * serving.number_of_units;
+
+						// Calculate nutrition for the actual number of servings
+						const totalCalories = serving.calories * number_of_servings;
+						const totalCarbs = serving.carbohydrate_grams * number_of_servings;
+						const totalProtein = serving.protein_grams * number_of_servings;
+						const totalFat = serving.fat_grams * number_of_servings;
+
 						return (
-							<>
-								<Text style={{ fontWeight: "bold", fontSize: 16 }}>
-									{displayedCount}
-								</Text>
-								{serving.measurement_description ? (
-									<Text
-										style={{
-											fontWeight: "bold",
-											fontSize: 16,
-											marginLeft: 4,
-										}}
-									>
-										{displayedCount === 1
-											? serving.measurement_description
-											: plural(serving.measurement_description)}
+							<View>
+								<View
+									style={{
+										flexDirection: "row",
+										alignItems: "center",
+										flexWrap: "wrap",
+									}}
+								>
+									<Text style={{ fontWeight: "bold", fontSize: 16 }}>
+										{displayedCount}
 									</Text>
-								) : null}
-								<Text style={{ marginLeft: 8, fontSize: 16 }}>{name}</Text>
-							</>
+									{serving.measurement_description ? (
+										<Text
+											style={{
+												fontWeight: "bold",
+												fontSize: 16,
+												marginLeft: 4,
+											}}
+										>
+											{displayedCount === 1
+												? serving.measurement_description
+												: plural(serving.measurement_description)}
+										</Text>
+									) : null}
+									<Text style={{ marginLeft: 8, fontSize: 16 }}>{name}</Text>
+								</View>
+								<View style={{ marginTop: 4 }}>
+									<Macros
+										calories={totalCalories}
+										carbohydrate={totalCarbs}
+										protein={totalProtein}
+										fat={totalFat}
+									/>
+								</View>
+							</View>
 						);
 					}}
 				/>
