@@ -22,6 +22,7 @@ export function IngredientInputs({
 	initialValues,
 }: IngredientInputsProps) {
 	const { parseIngredient } = useParseIngredient();
+	const [focusedIndex, setFocusedIndex] = React.useState<number | null>(null);
 	const [ingredients, setIngredients] = React.useState<
 		(EntityInputValue<Ingredient> & { previouslyParsedRaw?: string })[]
 	>(
@@ -64,6 +65,8 @@ export function IngredientInputs({
 					key={index}
 					placeholder="something tasty"
 					value={ingredient}
+					shouldFocus={focusedIndex === index}
+					onFocus={() => setFocusedIndex(null)}
 					onChange={(rawValue) => {
 						const newIngredients = [...ingredients];
 						const currentIngredient = newIngredients[index];
@@ -76,8 +79,18 @@ export function IngredientInputs({
 							});
 						}
 						setIngredients(newIngredients);
+						// Clear focus state when user starts typing
+						if (focusedIndex === index) {
+							setFocusedIndex(null);
+						}
 					}}
 					onSave={async () => {
+						// Focus the next ingredient immediately when user presses enter/tab
+						const nextIndex = index + 1;
+						if (nextIndex < ingredients.length) {
+							setFocusedIndex(nextIndex);
+						}
+
 						const currentIngredient = ingredients[index];
 
 						if (currentIngredient.raw === "" && EntityInputState.New) {
@@ -133,6 +146,11 @@ export function IngredientInputs({
 						const newIngredients = [...ingredients];
 						const currentIngredient = newIngredients[index];
 						currentIngredient.state = EntityInputState.Editing;
+						setIngredients(newIngredients);
+					}}
+					onClear={() => {
+						const newIngredients = [...ingredients];
+						newIngredients.splice(index, 1);
 						setIngredients(newIngredients);
 					}}
 					renderParsed={(parsed) => {
