@@ -1,4 +1,4 @@
-import { FoodItemSchema } from "./food-item";
+import { FoodItemSchema } from "./food-item-schema";
 import { z } from "zod";
 
 export const Header = z.object({

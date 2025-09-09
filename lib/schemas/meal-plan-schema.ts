@@ -1,6 +1,6 @@
-import { FoodItemEntrySchema, RecipeEntrySchema } from "./food-entry";
+import { FoodItemEntrySchema, RecipeEntrySchema } from "./food-entry-schema";
 
-import { NoteEntrySchema } from "./note";
+import { NoteEntrySchema } from "./note-schema";
 import { RecipeSchema } from "./recipe-schema";
 import { z } from "zod";
 

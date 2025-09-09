@@ -9,8 +9,9 @@ import { Macros } from "../meal-plan/macros";
 import React from "react";
 import { Text } from "@/components/ui/text";
 import { View } from "react-native";
+import { Image } from "@/components/image";
 import { plural } from "pluralize";
-import { useParseIngredient } from "../../hooks/recipes/use-parse-ingredient";
+import { useParseIngredients } from "../../hooks/recipes/use-parse-ingredients";
 
 interface IngredientInputsProps {
 	onIngredientsChange: (ingredients: Ingredient[]) => void;
@@ -21,7 +22,7 @@ export function IngredientInputs({
 	onIngredientsChange,
 	initialValues,
 }: IngredientInputsProps) {
-	const { parseIngredient } = useParseIngredient();
+	const { parseIngredients } = useParseIngredients();
 	const [focusedIndex, setFocusedIndex] = React.useState<number | null>(null);
 	const [ingredients, setIngredients] = React.useState<
 		(EntityInputValue<Ingredient> & { previouslyParsedRaw?: string })[]
@@ -117,21 +118,26 @@ export function IngredientInputs({
 						}
 
 						try {
-							const parsedIngredient = await parseIngredient(
-								ingredients[index].raw,
-							);
+							const response = await parseIngredients([ingredients[index].raw]);
 
-							setIngredients((prevIngredients) => {
-								const newIngredients = [...prevIngredients];
-								const currentIngredient = newIngredients[index];
-								currentIngredient.state = EntityInputState.Parsed;
-								currentIngredient.parsed = {
-									type: "ingredient",
-									...parsedIngredient,
-								} as Ingredient;
-								currentIngredient.previouslyParsedRaw = currentIngredient.raw;
-								return newIngredients;
-							});
+							if (
+								"ingredients" in response &&
+								response.ingredients &&
+								response.ingredients.length > 0
+							) {
+								const parsedIngredient = response.ingredients[0];
+
+								setIngredients((prevIngredients) => {
+									const newIngredients = [...prevIngredients];
+									const currentIngredient = newIngredients[index];
+									currentIngredient.state = EntityInputState.Parsed;
+									currentIngredient.parsed = parsedIngredient;
+									currentIngredient.previouslyParsedRaw = currentIngredient.raw;
+									return newIngredients;
+								});
+							} else {
+								throw new Error("No parsed ingredient returned");
+							}
 						} catch (error) {
 							// Handle parsing error - revert to editing state
 							setIngredients((prevIngredients) => {
@@ -154,7 +160,7 @@ export function IngredientInputs({
 						setIngredients(newIngredients);
 					}}
 					renderParsed={(parsed) => {
-						const { name, number_of_servings, serving } = parsed;
+						const { name, number_of_servings, serving, image_url } = parsed;
 						const displayedCount = number_of_servings * serving.number_of_units;
 
 						// Calculate nutrition for the actual number of servings
@@ -172,31 +178,68 @@ export function IngredientInputs({
 										flexWrap: "wrap",
 									}}
 								>
-									<Text style={{ fontWeight: "bold", fontSize: 16 }}>
-										{displayedCount}
-									</Text>
-									{serving.measurement_description ? (
-										<Text
+									{/* Thumbnail image or placeholder */}
+									<View
+										style={{
+											width: 40,
+											height: 40,
+											borderRadius: 20,
+											marginRight: 12,
+											backgroundColor: image_url ? "transparent" : "#e5e5e5",
+											overflow: "hidden",
+											justifyContent: "center",
+											alignItems: "center",
+										}}
+									>
+										{image_url ? (
+											<Image
+												source={{ uri: image_url }}
+												style={{
+													width: 30,
+													height: 30,
+												}}
+												contentFit="contain"
+											/>
+										) : null}
+									</View>
+
+									<View style={{ flex: 1 }}>
+										<View
 											style={{
-												fontWeight: "bold",
-												fontSize: 16,
-												marginLeft: 4,
+												flexDirection: "row",
+												alignItems: "center",
+												flexWrap: "wrap",
 											}}
 										>
-											{displayedCount === 1
-												? serving.measurement_description
-												: plural(serving.measurement_description)}
-										</Text>
-									) : null}
-									<Text style={{ marginLeft: 8, fontSize: 16 }}>{name}</Text>
-								</View>
-								<View style={{ marginTop: 4 }}>
-									<Macros
-										calories={totalCalories}
-										carbohydrate={totalCarbs}
-										protein={totalProtein}
-										fat={totalFat}
-									/>
+											<Text style={{ fontWeight: "bold", fontSize: 16 }}>
+												{displayedCount}
+											</Text>
+											{serving.measurement_description ? (
+												<Text
+													style={{
+														fontWeight: "bold",
+														fontSize: 16,
+														marginLeft: 4,
+													}}
+												>
+													{displayedCount === 1
+														? serving.measurement_description
+														: plural(serving.measurement_description)}
+												</Text>
+											) : null}
+											<Text style={{ marginLeft: 8, fontSize: 16 }}>
+												{name}
+											</Text>
+										</View>
+										<View style={{ marginTop: 4 }}>
+											<Macros
+												calories={totalCalories}
+												carbohydrate={totalCarbs}
+												protein={totalProtein}
+												fat={totalFat}
+											/>
+										</View>
+									</View>
 								</View>
 							</View>
 						);

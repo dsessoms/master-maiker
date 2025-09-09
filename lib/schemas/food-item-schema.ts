@@ -3,6 +3,8 @@ import { z } from "zod";
 export const ServingSchema = z.object({
 	measurement_description: z.string(), // cup
 	serving_description: z.string().optional(), // 1 cup
+	metric_serving_amount: z.number().optional(), // 1
+	metric_serving_unit: z.string().optional(),
 	number_of_units: z.number(),
 	calories: z.number(),
 	carbohydrate_grams: z.number(),
@@ -12,5 +14,7 @@ export const ServingSchema = z.object({
 
 export const FoodItemSchema = z.object({
 	name: z.string(),
+	// TODO: only allow specific urls in database
+	image_url: z.string().optional(),
 	serving: ServingSchema,
 });

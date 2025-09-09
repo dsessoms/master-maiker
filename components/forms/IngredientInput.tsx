@@ -120,7 +120,6 @@ export function EntityInput<T>({
 					onPress={onEdit}
 					style={{
 						minHeight: 40,
-						backgroundColor: "#f8f8f8",
 						borderRadius: 4,
 						marginBottom: 8,
 						width: "100%",

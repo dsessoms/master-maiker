@@ -1,5 +1,5 @@
-import { FoodItemSchema } from "./food-item";
-import { NoteSchema } from "./note";
+import { FoodItemSchema } from "./food-item-schema";
+import { NoteSchema } from "./note-schema";
 import { z } from "zod";
 
 export const UserServingSchema = z.object({

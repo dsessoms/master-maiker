@@ -1,4 +1,4 @@
-import { FatSecretFood, FatSecretServing } from "@/lib/fat-secret/types";
+import { FatSecretFood, FatSecretServing } from "@/lib/server/fat-secret/types";
 
 import { Database } from "./database.types";
 

@@ -114,6 +114,8 @@ CREATE OR REPLACE FUNCTION "public"."add_recipe"("name" character varying, "numb
               fat, 
               protein,
               serving_description,
+              metric_serving_amount,
+              metric_serving_unit,
               user_id
             )
             values (
@@ -126,6 +128,8 @@ CREATE OR REPLACE FUNCTION "public"."add_recipe"("name" character varying, "numb
               cast(serving_json->>'fat_grams' as double precision),
               cast(serving_json->>'protein_grams' as double precision),
               COALESCE(serving_json->>'serving_description', serving_json->>'measurement_description'),
+              cast(serving_json->>'metric_serving_amount' as double precision),
+              serving_json->>'metric_serving_unit',
               user_id
             );
             
@@ -279,6 +283,8 @@ CREATE TABLE IF NOT EXISTS "public"."serving" (
     "polyunsaturated_fat" double precision,
     "monounsaturated_fat" double precision,
     "fat_secret_id" bigint,
+    "metric_serving_amount" double precision,
+    "metric_serving_unit" character varying,
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "food_id" "uuid" NOT NULL,
     "user_id" "uuid"
