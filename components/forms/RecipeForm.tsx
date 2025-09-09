@@ -108,6 +108,7 @@ export function RecipeForm({
 					<Label>Ingredients</Label>
 					<IngredientInputs
 						onIngredientsChange={setParsedIngredients}
+						recipeServings={form.watch("servings") || 1}
 						initialValues={
 							initialValues?.ingredients?.filter(
 								(i: any) => i.type === "ingredient",

@@ -16,11 +16,13 @@ import { useParseIngredients } from "../../hooks/recipes/use-parse-ingredients";
 interface IngredientInputsProps {
 	onIngredientsChange: (ingredients: Ingredient[]) => void;
 	initialValues?: Ingredient[];
+	recipeServings?: number;
 }
 
 export function IngredientInputs({
 	onIngredientsChange,
 	initialValues,
+	recipeServings = 1,
 }: IngredientInputsProps) {
 	const { parseIngredients } = useParseIngredients();
 	const [focusedIndex, setFocusedIndex] = React.useState<number | null>(null);
@@ -169,6 +171,12 @@ export function IngredientInputs({
 						const totalProtein = serving.protein_grams * number_of_servings;
 						const totalFat = serving.fat_grams * number_of_servings;
 
+						// Calculate nutrition per recipe serving
+						const caloriesPerServing = totalCalories / recipeServings;
+						const carbsPerServing = totalCarbs / recipeServings;
+						const proteinPerServing = totalProtein / recipeServings;
+						const fatPerServing = totalFat / recipeServings;
+
 						return (
 							<View>
 								<View
@@ -233,10 +241,10 @@ export function IngredientInputs({
 										</View>
 										<View style={{ marginTop: 4 }}>
 											<Macros
-												calories={totalCalories}
-												carbohydrate={totalCarbs}
-												protein={totalProtein}
-												fat={totalFat}
+												calories={caloriesPerServing}
+												carbohydrate={carbsPerServing}
+												protein={proteinPerServing}
+												fat={fatPerServing}
 											/>
 										</View>
 									</View>
