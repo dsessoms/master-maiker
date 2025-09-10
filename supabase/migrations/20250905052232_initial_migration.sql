@@ -98,8 +98,8 @@ CREATE OR REPLACE FUNCTION "public"."add_recipe"("name" character varying, "numb
           if ingredients[i]::jsonb ? 'serving' then
             -- Create food entry first
             food_uuid := gen_random_uuid();
-            insert into food(id, food_name, food_type, user_id)
-            values (food_uuid, ingredients[i]::json->>'name', 'Generic', user_id);
+            insert into food(id, food_name, food_type, user_id, image_url)
+            values (food_uuid, ingredients[i]::json->>'name', 'Generic', user_id, ingredients[i]::json->>'image_url');
             
             -- Extract serving data and create serving entry
             serving_json := ingredients[i]::json->'serving';
@@ -191,7 +191,8 @@ CREATE TABLE IF NOT EXISTS "public"."food" (
     "brand_name" character varying,
     "fat_secret_id" bigint,
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
-    "user_id" "uuid"
+    "user_id" "uuid",
+    "image_url" character varying
 );
 
 ALTER TABLE "public"."food" OWNER TO "postgres";
