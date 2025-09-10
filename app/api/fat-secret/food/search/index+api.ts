@@ -1,31 +1,51 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { searchFoodV3 } from "@/lib/server/fat-secret/fat-secret-helper";
+import { validateSession } from "@/lib/server/validate-session";
 
-import { searchFoodV2 } from '../../_helper/fat-secret-helper';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
-import { Database } from '../../../../../database.types';
-import * as Sentry from '@sentry/nextjs';
+export const dynamic = "force-dynamic";
 
-export const dynamic = 'force-dynamic';
+export async function GET(req: Request) {
+	const session = await validateSession(req);
 
-export async function GET(request: NextRequest) {
-  const supabase = createRouteHandlerClient<Database>({ cookies });
+	if (!session.user) {
+		return new Response(JSON.stringify({ result: undefined }), {
+			status: 401,
+			headers: { "Content-Type": "application/json" },
+		});
+	}
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json(null, { status: 401 });
-  }
+	const url = new URL(req.url);
+	const query = url.searchParams.get("query");
 
-  const result = await searchFoodV2(
-    request.nextUrl.searchParams.get('query') as string
-  );
+	if (!query) {
+		return new Response(
+			JSON.stringify({ error: "Query parameter is required" }),
+			{
+				status: 400,
+				headers: { "Content-Type": "application/json" },
+			},
+		);
+	}
 
-  if (result.error) {
-    Sentry.captureException(result.error.message);
-    return NextResponse.json(null, { status: 429 });
-  }
+	try {
+		const result = await searchFoodV3(query);
 
-  return NextResponse.json(result);
+		if (result.error) {
+			console.error("FatSecret API error:", result.error.message);
+			return new Response(JSON.stringify({ error: "Search failed" }), {
+				status: 429,
+				headers: { "Content-Type": "application/json" },
+			});
+		}
+
+		return new Response(JSON.stringify(result), {
+			status: 200,
+			headers: { "Content-Type": "application/json" },
+		});
+	} catch (error) {
+		console.error("Unexpected error:", error);
+		return new Response(JSON.stringify({ error: "Internal server error" }), {
+			status: 500,
+			headers: { "Content-Type": "application/json" },
+		});
+	}
 }

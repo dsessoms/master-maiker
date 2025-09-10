@@ -1,5 +1,6 @@
-import { Link, Plus } from "@/lib/icons";
+import { Link, Plus, Search } from "@/lib/icons";
 import { router } from "expo-router";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { RecipeCard } from "@/components/recipe/recipe-card";
@@ -17,12 +18,27 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { SearchFoodModal } from "@/components/food/search-food-modal";
+import type {
+	FatSecretFood,
+	FatSecretServing,
+} from "@/lib/server/fat-secret/types";
+import {
+	Select,
+	SelectTrigger,
+	SelectValue,
+	SelectContent,
+	SelectGroup,
+	SelectLabel,
+	SelectItem,
+} from "@/components/ui/select";
 
 export default function Recipes() {
 	const { recipes, isLoading, isError } = useRecipes();
 	const { deleteRecipe, isPending: isDeleting } = useDeleteRecipeMutation();
 	const { columns, cardWidth } = useResponsiveColumns();
 	const { showDialog } = useConfirmDialog();
+	const [searchFoodModalVisible, setSearchFoodModalVisible] = useState(false);
 
 	const handleCreateRecipe = () => {
 		router.push("/recipes/create");
@@ -31,6 +47,24 @@ export default function Recipes() {
 	const handleImportRecipe = () => {
 		// TODO: Implement import from URL functionality
 		console.log("Import recipe from URL");
+	};
+
+	const handleSearchFood = () => {
+		setSearchFoodModalVisible(true);
+	};
+
+	const handleCloseSearchFood = () => {
+		setSearchFoodModalVisible(false);
+	};
+
+	const handleAddFoodItem = (item: {
+		food: FatSecretFood;
+		serving: FatSecretServing;
+		amount: number;
+	}) => {
+		// For testing purposes, just log the selected food item
+		console.log("Selected food item:", item);
+		setSearchFoodModalVisible(false);
 	};
 
 	const handleEditRecipe = (recipeId: string) => {
@@ -108,9 +142,20 @@ export default function Recipes() {
 							<Link className="text-foreground mr-2" size={16} />
 							<Text>Import recipe from URL</Text>
 						</DropdownMenuItem>
+						<DropdownMenuItem onPress={handleSearchFood}>
+							<Search className="text-foreground mr-2" size={16} />
+							<Text>Search Food (Test)</Text>
+						</DropdownMenuItem>
 					</DropdownMenuContent>
 				</DropdownMenu>
 			</View>
+
+			{/* Search Food Modal */}
+			<SearchFoodModal
+				visible={searchFoodModalVisible}
+				onClose={handleCloseSearchFood}
+				addFoodItem={handleAddFoodItem}
+			/>
 		</SafeAreaView>
 	);
 }

@@ -17,3 +17,4 @@ export * from "./pencil";
 export * from "./link";
 export * from "./trash";
 export * from "./more-horizontal";
+export * from "./search";

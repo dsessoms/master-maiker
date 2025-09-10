@@ -1,5 +1,5 @@
 import { Pressable, TextInput, View } from "react-native";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 import Animated, {
 	useSharedValue,
@@ -10,6 +10,9 @@ import Animated, {
 } from "react-native-reanimated";
 import { Input } from "../ui/input";
 import { X } from "@/lib/icons/x";
+import { Search } from "@/lib/icons/search";
+import { Skeleton } from "@/components/ui/skeleton";
+import { SearchFoodModal } from "@/components/food/search-food-modal";
 
 export enum EntityInputState {
 	New = "new",
@@ -45,6 +48,7 @@ export interface EntityInputProps<T> {
 	onSave: () => void;
 	onEdit: () => void;
 	onClear?: () => void;
+	onFoodSelect?: (foodData: any) => void;
 	renderParsed?: (parsed: T) => React.ReactNode;
 	shouldFocus?: boolean;
 	onFocus?: () => void;
@@ -56,6 +60,7 @@ export function EntityInput<T>({
 	onSave,
 	onEdit,
 	onClear,
+	onFoodSelect,
 	renderParsed,
 	placeholder,
 	shouldFocus,
@@ -64,6 +69,14 @@ export function EntityInput<T>({
 	const inputRef = useRef<TextInput>(null);
 	const isPressingClear = useRef(false);
 	const pulseAnimation = useSharedValue(0);
+	const [showSearchModal, setShowSearchModal] = useState(false);
+
+	const handleFoodSelect = (foodItem: any) => {
+		if (onFoodSelect) {
+			onFoodSelect(foodItem);
+		}
+		setShowSearchModal(false);
+	};
 
 	useEffect(() => {
 		if (value.state === EntityInputState.Parsing) {
@@ -98,20 +111,7 @@ export function EntityInput<T>({
 	}, [shouldFocus, onFocus]);
 
 	if (value.state === EntityInputState.Parsing) {
-		return (
-			<Animated.View
-				style={[
-					{
-						height: 40,
-						backgroundColor: "#eee",
-						borderRadius: 4,
-						marginBottom: 8,
-						width: "100%",
-					},
-					animatedStyle,
-				]}
-			/>
-		);
+		return <Skeleton className="h-[40px] w-full rounded-full" />;
 	}
 	if (value.state === EntityInputState.Parsed && value.parsed) {
 		if (renderParsed) {
@@ -153,7 +153,15 @@ export function EntityInput<T>({
 						}
 					}, 50);
 				}}
-				style={{ paddingRight: value.raw ? 40 : 12 }}
+				style={{
+					paddingRight: onFoodSelect
+						? value.raw
+							? 80
+							: 48 // Both icons or just search icon
+						: value.raw
+							? 40
+							: 12, // Just clear icon or no icons
+				}}
 			/>
 			{!!value.raw && !!onClear && (
 				<Pressable
@@ -169,7 +177,7 @@ export function EntityInput<T>({
 					}}
 					style={{
 						position: "absolute",
-						right: 8,
+						right: 40,
 						top: 0,
 						bottom: 0,
 						width: 32,
@@ -181,6 +189,31 @@ export function EntityInput<T>({
 				>
 					<X size={16} className="text-muted-foreground" />
 				</Pressable>
+			)}
+			{!!onFoodSelect && (
+				<Pressable
+					onPress={() => setShowSearchModal(true)}
+					style={{
+						position: "absolute",
+						right: 8,
+						top: 0,
+						bottom: 0,
+						width: 32,
+						justifyContent: "center",
+						alignItems: "center",
+						zIndex: 1,
+					}}
+					hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+				>
+					<Search size={16} className="text-muted-foreground" />
+				</Pressable>
+			)}
+			{!!onFoodSelect && (
+				<SearchFoodModal
+					visible={showSearchModal}
+					onClose={() => setShowSearchModal(false)}
+					addFoodItem={handleFoodSelect}
+				/>
 			)}
 		</View>
 	);

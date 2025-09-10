@@ -68,8 +68,9 @@ export function IngredientInputs({
 					key={index}
 					placeholder="something tasty"
 					value={ingredient}
-					shouldFocus={focusedIndex === index}
+					shouldFocus={false && focusedIndex === index}
 					onFocus={() => setFocusedIndex(null)}
+					onFoodSelect={(food) => console.log(food)}
 					onChange={(rawValue) => {
 						const newIngredients = [...ingredients];
 						const currentIngredient = newIngredients[index];
