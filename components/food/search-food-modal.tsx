@@ -27,11 +27,18 @@ import type {
 	FatSecretFood,
 	FatSecretServing,
 } from "@/lib/server/fat-secret/types";
+import { Macros } from "@/components/meal-plan/macros";
+
+// Utility function for rounding
+const round = (value: number, precision: number = 2): number => {
+	const factor = Math.pow(10, precision);
+	return Math.round(value * factor) / factor;
+};
 
 interface FoodItemToAdd {
 	food: FatSecretFood;
 	serving: FatSecretServing;
-	amount: number;
+	amount: number; // This now represents numberOfServings
 }
 
 interface SearchFoodModalProps {
@@ -46,10 +53,11 @@ interface FoodItemRowProps {
 }
 
 const FoodItemRow: React.FC<FoodItemRowProps> = ({ food, onAdd }) => {
-	const [amount, setAmount] = useState("1");
+	const [numberOfServings, setNumberOfServings] = useState(1);
 	const [selectedServingId, setSelectedServingId] = useState(
 		String(food.servings.serving[0]?.serving_id || ""),
 	);
+	const [numberOfUnits, setNumberOfUnits] = useState("1");
 	const selectTriggerRef = useRef<TriggerRef>(null);
 	const insets = useSafeAreaInsets();
 
@@ -68,36 +76,53 @@ const FoodItemRow: React.FC<FoodItemRowProps> = ({ food, onAdd }) => {
 		right: 12,
 	};
 
+	// Update numberOfUnits when selectedServing or numberOfServings changes
+	useEffect(() => {
+		setNumberOfUnits(
+			String(numberOfServings * selectedServing.number_of_units),
+		);
+	}, [selectedServing, numberOfServings]);
+
+	const onNumberOfUnitsChange = (value: string) => {
+		setNumberOfUnits(value);
+		const newNumberOfServings = round(
+			Number(value || 0) / selectedServing.number_of_units,
+			5,
+		);
+		setNumberOfServings(newNumberOfServings);
+	};
+
 	const handleAdd = () => {
-		const numericAmount = parseFloat(amount) || 1;
 		onAdd({
 			food,
 			serving: selectedServing,
-			amount: numericAmount,
+			amount: numberOfServings,
 		});
 	};
 
+	const foodName = `${food.food_name}${
+		food.brand_name ? ` (${food.brand_name})` : ""
+	}`;
+
 	return (
 		<View className="border-b border-border p-4">
-			<Text className="font-semibold text-lg mb-2">{food.food_name}</Text>
-			{food.brand_name && (
-				<Text className="text-muted-foreground mb-2">{food.brand_name}</Text>
-			)}
+			<View className="flex-1 mb-2">
+				<Text className="text-lg font-semibold mb-1">{foodName}</Text>
+			</View>
 
 			<View className="flex-row items-center space-x-2 mb-3">
-				<View className="flex-1">
-					<Text className="text-sm font-medium mb-1">Amount</Text>
+				<View className="w-24">
 					<Input
-						value={amount}
-						onChangeText={setAmount}
+						value={numberOfUnits}
+						onChangeText={onNumberOfUnitsChange}
 						placeholder="1"
 						keyboardType="numeric"
-						className="h-8"
+						className="h-10 text-center"
+						selectTextOnFocus={true}
 					/>
 				</View>
 
-				<View className="flex-2">
-					<Text className="text-sm font-medium mb-1">Serving</Text>
+				<View className="flex-1">
 					<Select
 						value={{
 							value: selectedServingId,
@@ -107,7 +132,7 @@ const FoodItemRow: React.FC<FoodItemRowProps> = ({ food, onAdd }) => {
 							setSelectedServingId(option?.value || "")
 						}
 					>
-						<SelectTrigger className="w-[180px]" ref={selectTriggerRef}>
+						<SelectTrigger className="h-10" ref={selectTriggerRef}>
 							<SelectValue placeholder="Select serving" className="text-sm" />
 						</SelectTrigger>
 						<SelectContent insets={contentInsets}>
@@ -126,35 +151,19 @@ const FoodItemRow: React.FC<FoodItemRowProps> = ({ food, onAdd }) => {
 						</SelectContent>
 					</Select>
 				</View>
-			</View>
 
-			<View className="flex-row items-center justify-between">
-				<View className="flex-row space-x-4">
-					<Text className="text-sm">
-						<Text className="font-medium">Calories:</Text>{" "}
-						{Math.round(selectedServing.calories * parseFloat(amount || "1"))}
-					</Text>
-					<Text className="text-sm">
-						<Text className="font-medium">Protein:</Text>{" "}
-						{Math.round(selectedServing.protein * parseFloat(amount || "1"))}g
-					</Text>
-					<Text className="text-sm">
-						<Text className="font-medium">Carbs:</Text>{" "}
-						{Math.round(
-							selectedServing.carbohydrate * parseFloat(amount || "1"),
-						)}
-						g
-					</Text>
-					<Text className="text-sm">
-						<Text className="font-medium">Fat:</Text>{" "}
-						{Math.round(selectedServing.fat * parseFloat(amount || "1"))}g
-					</Text>
-				</View>
-
-				<Button onPress={handleAdd} size="sm">
+				<Button onPress={handleAdd} size="sm" className="h-10">
 					<Text>Add</Text>
 				</Button>
 			</View>
+
+			<Macros
+				calories={selectedServing.calories}
+				carbohydrate={selectedServing.carbohydrate}
+				protein={selectedServing.protein}
+				fat={selectedServing.fat}
+				scale={numberOfServings}
+			/>
 		</View>
 	);
 };
