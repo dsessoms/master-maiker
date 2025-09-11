@@ -22,10 +22,10 @@ type Recipe = {
 	prep_time_minutes?: number;
 	cook_time_hours?: number;
 	cook_time_minutes?: number;
-	macros?: Array<{
+	macros?: {
 		calories?: number;
 		protein?: number;
-	}>;
+	}[];
 };
 
 export const RecipeCard = ({

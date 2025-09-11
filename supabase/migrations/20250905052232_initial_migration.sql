@@ -58,11 +58,12 @@ CREATE OR REPLACE FUNCTION "public"."add_recipe"("name" character varying, "numb
     serving_uuid uuid;
     serving_json json;
   begin
-    delete from instruction where instruction.recipe_id = add_recipe.recipe_id;
+    -- Delete old ingredients and instructions
     delete from ingredient where ingredient.recipe_id = add_recipe.recipe_id;
+    delete from instruction where instruction.recipe_id = add_recipe.recipe_id;
     
     insert into recipe(id, name, description, number_of_servings, prep_time_hours, prep_time_minutes, cook_time_hours, cook_time_minutes, image_id, user_id) 
-    values (recipe_id, add_recipe.name, add_recipe.description, add_recipe.number_of_servings, add_recipe.prep_time_hours, add_recipe.prep_time_minutes, add_recipe.cook_time_hours, add_recipe.cook_time_minutes, add_recipe.image_id, user_id) 
+    values (add_recipe.recipe_id, add_recipe.name, add_recipe.description, add_recipe.number_of_servings, add_recipe.prep_time_hours, add_recipe.prep_time_minutes, add_recipe.cook_time_hours, add_recipe.cook_time_minutes, add_recipe.image_id, user_id) 
     ON CONFLICT (id) DO UPDATE SET 
     name=excluded.name, 
     description=excluded.description, 
@@ -79,10 +80,10 @@ CREATE OR REPLACE FUNCTION "public"."add_recipe"("name" character varying, "numb
       LOOP
         if instructions[i]::json->>'type' = 'header' then
           insert into instruction(recipe_id, user_id, "order", type, name)
-          values (recipe_id, user_id, i, 'header', instructions[i]::json->>'name');
+          values (add_recipe.recipe_id, user_id, i, 'header', instructions[i]::json->>'name');
         else
           insert into instruction(recipe_id, user_id, "order", type, value)
-          values (recipe_id, user_id, i, 'instruction', instructions[i]::json->>'value');
+          values (add_recipe.recipe_id, user_id, i, 'instruction', instructions[i]::json->>'value');
         end if;
       END LOOP;
     end if;
@@ -92,60 +93,62 @@ CREATE OR REPLACE FUNCTION "public"."add_recipe"("name" character varying, "numb
       LOOP
         if ingredients[i]::json->>'type' = 'header' then
           insert into ingredient(recipe_id, user_id, "order", type, name)
-          values (recipe_id, user_id, i, 'header', ingredients[i]::json->>'name');
+          values (add_recipe.recipe_id, user_id, i, 'header', ingredients[i]::json->>'name');
         else
-          -- Check if this is a new ingredient (with serving data) or existing ingredient (with food_id/serving_id)
-          if ingredients[i]::jsonb ? 'serving' then
-            -- Create food entry first
-            food_uuid := gen_random_uuid();
-            insert into food(id, food_name, food_type, user_id, image_url)
-            values (food_uuid, ingredients[i]::json->>'name', 'Generic', user_id, ingredients[i]::json->>'image_url');
-            
-            -- Extract serving data and create serving entry
-            serving_json := ingredients[i]::json->'serving';
-            serving_uuid := gen_random_uuid();
-            insert into serving(
-              id, 
-              food_id, 
-              measurement_description, 
-              number_of_units, 
-              calories, 
-              carbohydrate, 
-              fat, 
-              protein,
-              serving_description,
-              metric_serving_amount,
-              metric_serving_unit,
-              user_id
-            )
-            values (
-              serving_uuid,
-              food_uuid,
-              serving_json->>'measurement_description',
-              cast(serving_json->>'number_of_units' as double precision),
-              cast(serving_json->>'calories' as double precision),
-              cast(serving_json->>'carbohydrate_grams' as double precision),
-              cast(serving_json->>'fat_grams' as double precision),
-              cast(serving_json->>'protein_grams' as double precision),
-              COALESCE(serving_json->>'serving_description', serving_json->>'measurement_description'),
-              cast(serving_json->>'metric_serving_amount' as double precision),
-              serving_json->>'metric_serving_unit',
-              user_id
-            );
-            
-            -- Create ingredient entry with references to the created food and serving
-            insert into ingredient(recipe_id, user_id, "order", type, meta, number_of_servings, food_id, serving_id)
-            values (recipe_id, user_id, i, 'ingredient', ingredients[i]::json->>'meta', cast(ingredients[i]::json->>'number_of_servings' as double precision), food_uuid, serving_uuid);
-          else
-            -- Use existing food_id and serving_id
-            insert into ingredient(recipe_id, user_id, "order", type, meta, number_of_servings, food_id, serving_id)
-            values (recipe_id, user_id, i, 'ingredient', ingredients[i]::json->>'meta', cast(ingredients[i]::json->>'number_of_servings' as double precision), cast(ingredients[i]::json->>'food_id' as uuid), cast(ingredients[i]::json->>'serving_id' as uuid));
-          end if;
+          -- Create food entry first
+          food_uuid := gen_random_uuid();
+          insert into food(id, food_name, food_type, user_id, image_url, fat_secret_id)
+          values (
+            food_uuid, 
+            ingredients[i]::json->>'name', 
+            'Generic', 
+            user_id, 
+            ingredients[i]::json->>'image_url',
+            cast(ingredients[i]::json->>'fat_secret_id' as bigint)
+          );
+          
+          -- Extract serving data and create serving entry
+          serving_json := ingredients[i]::json->'serving';
+          serving_uuid := gen_random_uuid();
+          insert into serving(
+            id, 
+            food_id, 
+            measurement_description, 
+            number_of_units, 
+            calories, 
+            carbohydrate, 
+            fat, 
+            protein,
+            serving_description,
+            metric_serving_amount,
+            metric_serving_unit,
+            user_id,
+            fat_secret_id
+          )
+          values (
+            serving_uuid,
+            food_uuid,
+            serving_json->>'measurement_description',
+            cast(serving_json->>'number_of_units' as double precision),
+            cast(serving_json->>'calories' as double precision),
+            cast(serving_json->>'carbohydrate_grams' as double precision),
+            cast(serving_json->>'fat_grams' as double precision),
+            cast(serving_json->>'protein_grams' as double precision),
+            COALESCE(serving_json->>'serving_description', serving_json->>'measurement_description'),
+            cast(serving_json->>'metric_serving_amount' as double precision),
+            serving_json->>'metric_serving_unit',
+            user_id,
+            cast(serving_json->>'fat_secret_id' as bigint)
+          );
+          
+          -- Create ingredient entry with references to the created food and serving
+          insert into ingredient(recipe_id, user_id, "order", type, meta, number_of_servings, food_id, serving_id)
+          values (add_recipe.recipe_id, user_id, i, 'ingredient', ingredients[i]::json->>'meta', cast(ingredients[i]::json->>'number_of_servings' as double precision), food_uuid, serving_uuid);
         end if;
       END LOOP;
     end if;
 
-    return recipe_id;
+    return add_recipe.recipe_id;
   end;
 $$;
 
@@ -355,9 +358,6 @@ ALTER TABLE ONLY "public"."food_entry"
     ADD CONSTRAINT "food_entry_pkey" PRIMARY KEY ("id");
 
 ALTER TABLE ONLY "public"."food"
-    ADD CONSTRAINT "food_fat_secret_id_key" UNIQUE ("fat_secret_id");
-
-ALTER TABLE ONLY "public"."food"
     ADD CONSTRAINT "food_pkey" PRIMARY KEY ("id");
 
 ALTER TABLE ONLY "public"."ingredient"
@@ -365,9 +365,6 @@ ALTER TABLE ONLY "public"."ingredient"
 
 ALTER TABLE ONLY "public"."recipe"
     ADD CONSTRAINT "recipe_pkey" PRIMARY KEY ("id");
-
-ALTER TABLE ONLY "public"."serving"
-    ADD CONSTRAINT "serving_fat_secret_id_key" UNIQUE ("fat_secret_id");
 
 ALTER TABLE ONLY "public"."serving"
     ADD CONSTRAINT "serving_pkey" PRIMARY KEY ("id");

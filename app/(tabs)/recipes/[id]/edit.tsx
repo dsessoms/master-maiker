@@ -48,9 +48,11 @@ export default function EditRecipe() {
 					}
 					return {
 						type: "ingredient" as const,
-						name: ing.name || "",
+						name: ing.food?.food_name || "",
 						number_of_servings: ing.number_of_servings || 1,
 						meta: ing.meta || undefined,
+						fat_secret_id: ing.food?.fat_secret_id || undefined,
+						image_url: ing.food?.image_url || undefined,
 						serving: ing.serving
 							? {
 									measurement_description:
@@ -60,6 +62,7 @@ export default function EditRecipe() {
 									carbohydrate_grams: ing.serving.carbohydrate || 0,
 									fat_grams: ing.serving.fat || 0,
 									protein_grams: ing.serving.protein || 0,
+									fat_secret_id: ing.serving.fat_secret_id || undefined,
 								}
 							: {
 									measurement_description: "serving",

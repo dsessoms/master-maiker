@@ -10,6 +10,7 @@ export const ServingSchema = z.object({
 	carbohydrate_grams: z.number(),
 	fat_grams: z.number(),
 	protein_grams: z.number(),
+	fat_secret_id: z.number().optional(), // For tracking fat secret serving ID
 });
 
 export const FoodItemSchema = z.object({
@@ -17,4 +18,5 @@ export const FoodItemSchema = z.object({
 	// TODO: only allow specific urls in database
 	image_url: z.string().optional(),
 	serving: ServingSchema,
+	fat_secret_id: z.number().optional(), // For tracking fat secret food ID
 });

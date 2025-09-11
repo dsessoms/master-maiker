@@ -126,7 +126,10 @@ const FoodItemRow: React.FC<FoodItemRowProps> = ({ food, onAdd }) => {
 					<Select
 						value={{
 							value: selectedServingId,
-							label: selectedServing?.serving_description || "",
+							label:
+								food.food_type === "Generic"
+									? selectedServing?.measurement_description || ""
+									: selectedServing?.serving_description || "",
 						}}
 						onValueChange={(option) =>
 							setSelectedServingId(option?.value || "")
@@ -142,9 +145,15 @@ const FoodItemRow: React.FC<FoodItemRowProps> = ({ food, onAdd }) => {
 									<SelectItem
 										key={serving.serving_id}
 										value={String(serving.serving_id)}
-										label={serving.serving_description}
+										label={
+											food.food_type === "Generic"
+												? serving.measurement_description
+												: serving.serving_description
+										}
 									>
-										{serving.serving_description}
+										{food.food_type === "Generic"
+											? serving.measurement_description
+											: serving.serving_description}
 									</SelectItem>
 								))}
 							</SelectGroup>
