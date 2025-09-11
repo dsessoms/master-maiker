@@ -97,14 +97,15 @@ CREATE OR REPLACE FUNCTION "public"."add_recipe"("name" character varying, "numb
         else
           -- Create food entry first
           food_uuid := gen_random_uuid();
-          insert into food(id, food_name, food_type, user_id, image_url, fat_secret_id)
+          insert into food(id, food_name, food_type, user_id, image_url, fat_secret_id, spoonacular_id)
           values (
             food_uuid, 
             ingredients[i]::json->>'name', 
             'Generic', 
             user_id, 
             ingredients[i]::json->>'image_url',
-            cast(ingredients[i]::json->>'fat_secret_id' as bigint)
+            cast(ingredients[i]::json->>'fat_secret_id' as bigint),
+            cast(ingredients[i]::json->>'spoonacular_id' as bigint)
           );
           
           -- Extract serving data and create serving entry
@@ -193,6 +194,7 @@ CREATE TABLE IF NOT EXISTS "public"."food" (
     "food_type" "public"."food_type" DEFAULT 'Generic'::"public"."food_type" NOT NULL,
     "brand_name" character varying,
     "fat_secret_id" bigint,
+    "spoonacular_id" bigint,
     "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "user_id" "uuid",
     "image_url" character varying

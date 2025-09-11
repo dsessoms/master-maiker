@@ -1,4 +1,4 @@
-import { ActivityIndicator, Alert, View } from "react-native";
+import { ActivityIndicator, Alert, ScrollView, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { Recipe } from "@/lib/schemas";
@@ -52,6 +52,7 @@ export default function EditRecipe() {
 						number_of_servings: ing.number_of_servings || 1,
 						meta: ing.meta || undefined,
 						fat_secret_id: ing.food?.fat_secret_id || undefined,
+						spoonacular_id: ing.food?.spoonacular_id || undefined,
 						image_url: ing.food?.image_url || undefined,
 						serving: ing.serving
 							? {
@@ -92,7 +93,7 @@ export default function EditRecipe() {
 
 	if (isLoading) {
 		return (
-			<SafeAreaView>
+			<SafeAreaView className="flex flex-1 bg-background">
 				<View className="flex-1 justify-center items-center">
 					<ActivityIndicator size="large" />
 					<Text className="mt-4">Loading recipe...</Text>
@@ -103,7 +104,7 @@ export default function EditRecipe() {
 
 	if (error || !recipe) {
 		return (
-			<SafeAreaView>
+			<SafeAreaView className="flex flex-1 bg-background">
 				<View className="flex-1 justify-center items-center">
 					<Text className="text-red-500">Failed to load recipe</Text>
 				</View>
@@ -112,12 +113,14 @@ export default function EditRecipe() {
 	}
 
 	return (
-		<SafeAreaView>
-			<RecipeForm
-				initialValues={getInitialValues()}
-				onSubmit={handleSubmit}
-				isEdit={true}
-			/>
+		<SafeAreaView className="flex flex-1 bg-background">
+			<ScrollView>
+				<RecipeForm
+					initialValues={getInitialValues()}
+					onSubmit={handleSubmit}
+					isEdit={true}
+				/>
+			</ScrollView>
 		</SafeAreaView>
 	);
 }

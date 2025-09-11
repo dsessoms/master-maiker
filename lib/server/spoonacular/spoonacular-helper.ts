@@ -89,6 +89,7 @@ export const convertSpoonacularToIngredient = (
 		image_url: spoonacularIngredient.image
 			? `${THUMBNAIL_BASE_URL}${spoonacularIngredient.image}`
 			: undefined,
+		spoonacular_id: spoonacularIngredient.id, // Add spoonacular food ID
 		serving: {
 			measurement_description:
 				spoonacularIngredient.unitLong || spoonacularIngredient.unit,

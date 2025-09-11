@@ -19,4 +19,5 @@ export const FoodItemSchema = z.object({
 	image_url: z.string().optional(),
 	serving: ServingSchema,
 	fat_secret_id: z.number().optional(), // For tracking fat secret food ID
+	spoonacular_id: z.number().optional(), // For tracking spoonacular food ID
 });
