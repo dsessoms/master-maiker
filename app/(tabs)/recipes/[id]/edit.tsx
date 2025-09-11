@@ -1,4 +1,11 @@
-import { ActivityIndicator, Alert, ScrollView, View } from "react-native";
+import {
+	ActivityIndicator,
+	Alert,
+	ScrollView,
+	View,
+	KeyboardAvoidingView,
+	Platform,
+} from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { Recipe } from "@/lib/schemas";
@@ -114,13 +121,22 @@ export default function EditRecipe() {
 
 	return (
 		<SafeAreaView className="flex flex-1 bg-background">
-			<ScrollView>
-				<RecipeForm
-					initialValues={getInitialValues()}
-					onSubmit={handleSubmit}
-					isEdit={true}
-				/>
-			</ScrollView>
+			<KeyboardAvoidingView
+				style={{ flex: 1 }}
+				behavior={Platform.OS === "ios" ? "padding" : "height"}
+				keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+			>
+				<ScrollView
+					contentContainerStyle={{ flexGrow: 1 }}
+					keyboardShouldPersistTaps="handled"
+				>
+					<RecipeForm
+						initialValues={getInitialValues()}
+						onSubmit={handleSubmit}
+						isEdit={true}
+					/>
+				</ScrollView>
+			</KeyboardAvoidingView>
 		</SafeAreaView>
 	);
 }

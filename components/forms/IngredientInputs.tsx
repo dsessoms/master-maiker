@@ -211,6 +211,12 @@ export function IngredientInputs({
 							currentIngredient.state = EntityInputState.Editing;
 							setIngredients(newIngredients);
 						}}
+						onCancel={() => {
+							const newIngredients = [...ingredients];
+							const currentIngredient = newIngredients[index];
+							currentIngredient.state = EntityInputState.Parsed;
+							setIngredients(newIngredients);
+						}}
 						onClear={() => {
 							const newIngredients = [...ingredients];
 							newIngredients.splice(index, 1);

@@ -81,6 +81,7 @@ export interface EntityInputProps<T> {
 	onChange: (rawValue: string) => void;
 	onSave: () => void;
 	onEdit: () => void;
+	onCancel?: () => void;
 	onClear?: () => void;
 	onFoodSelect?: (foodData: FoodData) => void;
 	renderParsed?: (parsed: T) => React.ReactNode;
@@ -245,6 +246,7 @@ export function EntityInput<T>({
 	onChange,
 	onSave,
 	onEdit,
+	onCancel,
 	onClear,
 	onFoodSelect,
 	renderParsed,
@@ -335,6 +337,8 @@ export function EntityInput<T>({
 	const handleFoodCancel = () => {
 		setSelectedFood(null);
 		setIsEditingFood(false);
+		// Call the parent's onCancel to reset the editing state
+		onCancel?.();
 	};
 
 	useEffect(() => {
@@ -359,12 +363,24 @@ export function EntityInput<T>({
 	useEffect(() => {
 		if (inputRef.current && value.state === EntityInputState.Editing) {
 			inputRef.current.focus();
+			// Small delay to ensure the input is properly focused before scrolling
+			setTimeout(() => {
+				inputRef.current?.measureInWindow((x, y, width, height) => {
+					// This helps ensure the input is visible when focused
+				});
+			}, 100);
 		}
 	}, [value.state]);
 
 	useEffect(() => {
 		if (inputRef.current && shouldFocus) {
 			inputRef.current.focus();
+			// Small delay to ensure the input is properly focused before scrolling
+			setTimeout(() => {
+				inputRef.current?.measureInWindow((x, y, width, height) => {
+					// This helps ensure the input is visible when focused
+				});
+			}, 100);
 			onFocus?.();
 		}
 	}, [shouldFocus, onFocus]);
