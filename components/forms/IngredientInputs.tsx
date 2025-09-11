@@ -12,6 +12,7 @@ import { View } from "react-native";
 import { Image } from "@/components/image";
 import { plural } from "pluralize";
 import { useParseIngredients } from "../../hooks/recipes/use-parse-ingredients";
+import { ShoppingBasket } from "@/lib/icons";
 
 interface IngredientInputsProps {
 	onIngredientsChange: (ingredients: Ingredient[]) => void;
@@ -274,7 +275,6 @@ export function IngredientInputs({
 												height: 40,
 												borderRadius: 20,
 												marginRight: 12,
-												backgroundColor: image_url ? "transparent" : "#e5e5e5",
 												overflow: "hidden",
 												justifyContent: "center",
 												alignItems: "center",
@@ -290,7 +290,9 @@ export function IngredientInputs({
 													}}
 													contentFit="contain"
 												/>
-											) : null}
+											) : (
+												<ShoppingBasket size={20} color="#666" />
+											)}
 										</View>
 
 										<View style={{ flex: 1, minWidth: 0 }}>

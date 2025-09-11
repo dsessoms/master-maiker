@@ -2,6 +2,7 @@ import { ExpandedIngredient } from "../../types";
 import { Image } from "@/components/image";
 import { Text } from "../ui/text";
 import { View } from "react-native";
+import { ShoppingBasket } from "@/lib/icons";
 
 interface IngredientProps {
 	ingredient: ExpandedIngredient;
@@ -33,9 +34,6 @@ export function Ingredient({
 					height: 40,
 					borderRadius: 20,
 					marginRight: 12,
-					backgroundColor: ingredient.food.image_url
-						? "transparent"
-						: "#e5e5e5",
 					overflow: "hidden",
 					justifyContent: "center",
 					alignItems: "center",
@@ -50,7 +48,9 @@ export function Ingredient({
 						}}
 						contentFit="contain"
 					/>
-				) : null}
+				) : (
+					<ShoppingBasket size={20} color="#666" />
+				)}
 			</View>
 
 			{/* Text content */}

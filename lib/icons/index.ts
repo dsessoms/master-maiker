@@ -4,6 +4,7 @@ export * from "./chevron-down";
 export * from "./chevron-up";
 export * from "./check";
 export * from "./shopping-cart";
+export * from "./shopping-basket";
 export * from "./notebook-text";
 export * from "./bookmark";
 export * from "./user";
