@@ -235,12 +235,12 @@ export function IngredientInputs({
 							const fatPerServing = totalFat / recipeServings;
 
 							return (
-								<View>
+								<View style={{ flex: 1, minHeight: 60 }}>
 									<View
 										style={{
 											flexDirection: "row",
-											alignItems: "center",
-											flexWrap: "wrap",
+											alignItems: "flex-start",
+											paddingVertical: 8,
 										}}
 									>
 										{/* Thumbnail image or placeholder */}
@@ -254,6 +254,7 @@ export function IngredientInputs({
 												overflow: "hidden",
 												justifyContent: "center",
 												alignItems: "center",
+												flexShrink: 0,
 											}}
 										>
 											{image_url ? (
@@ -268,12 +269,13 @@ export function IngredientInputs({
 											) : null}
 										</View>
 
-										<View style={{ flex: 1 }}>
+										<View style={{ flex: 1, minWidth: 0 }}>
 											<View
 												style={{
 													flexDirection: "row",
 													alignItems: "center",
 													flexWrap: "wrap",
+													marginBottom: 4,
 												}}
 											>
 												<Text style={{ fontWeight: "bold", fontSize: 16 }}>
@@ -292,11 +294,13 @@ export function IngredientInputs({
 															: plural(serving.measurement_description)}
 													</Text>
 												) : null}
-												<Text style={{ marginLeft: 8, fontSize: 16 }}>
+												<Text
+													style={{ marginLeft: 8, fontSize: 16, flexShrink: 1 }}
+												>
 													{name}
 												</Text>
 											</View>
-											<View style={{ marginTop: 4 }}>
+											<View>
 												<Macros
 													calories={caloriesPerServing}
 													carbohydrate={carbsPerServing}
