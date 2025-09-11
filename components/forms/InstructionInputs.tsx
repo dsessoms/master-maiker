@@ -30,6 +30,7 @@ export function InstructionInputs({
 				]
 			: [{ state: EntityInputState.New, raw: "" }],
 	);
+	const [focusedIndex, setFocusedIndex] = React.useState<number | null>(null);
 
 	useEffect(() => {
 		const parsedInstructions = instructions
@@ -65,6 +66,14 @@ export function InstructionInputs({
 						setInstructions(newInstructions);
 					}}
 					onSave={() => {
+						// Focus on the next NEW instruction immediately (before setting state)
+						const nextNewIndex = instructions.findIndex(
+							(ins, idx) => idx > index && ins.state === EntityInputState.New,
+						);
+						if (nextNewIndex !== -1) {
+							setFocusedIndex(nextNewIndex);
+						}
+
 						setInstructions((prevInstructions) => {
 							const newInstructions = [...prevInstructions];
 							const currentInstruction = newInstructions[index];
@@ -93,6 +102,8 @@ export function InstructionInputs({
 					renderParsed={(parsed) => (
 						<Text style={{ fontSize: 16 }}>{parsed}</Text>
 					)}
+					shouldFocus={focusedIndex === index}
+					onFocus={() => setFocusedIndex(null)}
 				/>
 			))}
 		</>

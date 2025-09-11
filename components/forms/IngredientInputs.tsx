@@ -46,6 +46,7 @@ export function IngredientInputs({
 				]
 			: [{ state: EntityInputState.New, raw: "" }],
 	);
+	const [focusedIndex, setFocusedIndex] = React.useState<number | null>(null);
 
 	// Keep parent in sync with parsed ingredients
 	React.useEffect(() => {
@@ -127,6 +128,15 @@ export function IngredientInputs({
 
 								return newIngredients;
 							});
+
+							// Focus on the next NEW ingredient immediately after food selection
+							// Check if this was a NEW ingredient to determine if we should focus on the next one
+							const wasNewIngredient =
+								ingredients[index].state === EntityInputState.New;
+							if (wasNewIngredient) {
+								const nextNewIndex = index + 1; // The new ingredient we just added
+								setFocusedIndex(nextNewIndex);
+							}
 						}}
 						onChange={(rawValue) => {
 							const newIngredients = [...ingredients];
@@ -149,6 +159,14 @@ export function IngredientInputs({
 								currentIngredient.state === EntityInputState.New
 							) {
 								return;
+							}
+
+							// Focus on the next NEW ingredient immediately (before parsing)
+							const nextNewIndex = ingredients.findIndex(
+								(ing, idx) => idx > index && ing.state === EntityInputState.New,
+							);
+							if (nextNewIndex !== -1) {
+								setFocusedIndex(nextNewIndex);
 							}
 
 							setIngredients((prevIngredients) => {
@@ -319,6 +337,8 @@ export function IngredientInputs({
 								</View>
 							);
 						}}
+						shouldFocus={focusedIndex === index}
+						onFocus={() => setFocusedIndex(null)}
 					/>
 				);
 			})}
