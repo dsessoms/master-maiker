@@ -254,11 +254,29 @@ export function EntityInput<T>({
 	editingFatSecretId,
 }: EntityInputProps<T>) {
 	const inputRef = useRef<TextInput>(null);
-	const isPressingClear = useRef(false);
+	const shouldSaveOnBlur = useRef(false);
+	const isDeleting = useRef(false);
+	const isSearching = useRef(false);
 	const pulseAnimation = useSharedValue(0);
 	const [showSearchModal, setShowSearchModal] = useState(false);
 	const [selectedFood, setSelectedFood] = useState<FoodData | null>(null);
 	const [isEditingFood, setIsEditingFood] = useState(false);
+
+	// Helper function to handle blur logic with conditional saving
+	const handleBlur = () => {
+		shouldSaveOnBlur.current = true;
+
+		setTimeout(() => {
+			if (
+				shouldSaveOnBlur.current &&
+				!isDeleting.current &&
+				!isSearching.current
+			) {
+				onSave();
+			}
+			shouldSaveOnBlur.current = false;
+		}, 50);
+	};
 
 	// Load fat secret food when editingFatSecretId is provided
 	const { food: fatSecretFood, isLoading: isLoadingFatSecretFood } =
@@ -394,18 +412,17 @@ export function EntityInput<T>({
 				placeholder={placeholder}
 				value={value.raw}
 				onChangeText={onChange}
-				onSubmitEditing={onSave}
+				onSubmitEditing={() => {
+					shouldSaveOnBlur.current = false; // Reset flag since we're saving immediately
+					onSave();
+				}}
 				autoCapitalize="none"
 				autoCorrect={false}
 				returnKeyType="done"
-				onBlur={(e) => {
-					// Add a small delay to allow onPressIn to set the flag first
-					setTimeout(() => {
-						if (!isPressingClear.current) {
-							onSave();
-						}
-					}, 50);
+				onFocus={() => {
+					shouldSaveOnBlur.current = false;
 				}}
+				onBlur={handleBlur}
 				style={{
 					paddingRight: onFoodSelect
 						? value.raw
@@ -418,13 +435,13 @@ export function EntityInput<T>({
 			/>
 			{!!value.raw && !!onClear && (
 				<Pressable
-					tabIndex={-1}
 					onPressIn={() => {
-						isPressingClear.current = true;
+						isDeleting.current = true;
 					}}
-					onPressOut={() => {
-						isPressingClear.current = false;
+					onFocus={() => {
+						shouldSaveOnBlur.current = false;
 					}}
+					onBlur={handleBlur}
 					onPress={() => {
 						onClear();
 					}}
@@ -445,7 +462,17 @@ export function EntityInput<T>({
 			)}
 			{!!onFoodSelect && (
 				<Pressable
-					onPress={() => setShowSearchModal(true)}
+					onPressIn={() => {
+						isSearching.current = true;
+						shouldSaveOnBlur.current = false;
+					}}
+					onFocus={() => {
+						shouldSaveOnBlur.current = false;
+					}}
+					onBlur={handleBlur}
+					onPress={() => {
+						setShowSearchModal(true);
+					}}
 					style={{
 						position: "absolute",
 						right: 8,
@@ -464,7 +491,14 @@ export function EntityInput<T>({
 			{!!onFoodSelect && (
 				<SearchFoodModal
 					visible={showSearchModal}
-					onClose={() => setShowSearchModal(false)}
+					onDismiss={() => {
+						shouldSaveOnBlur.current = false;
+						isSearching.current = false;
+						inputRef.current?.focus();
+					}}
+					onClose={() => {
+						setShowSearchModal(false);
+					}}
 					addFoodItem={handleFoodSelect}
 				/>
 			)}

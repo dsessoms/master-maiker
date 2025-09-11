@@ -44,6 +44,7 @@ interface FoodItemToAdd {
 interface SearchFoodModalProps {
 	visible: boolean;
 	onClose: () => void;
+	onDismiss?: () => void;
 	addFoodItem: (item: FoodItemToAdd) => void;
 }
 
@@ -180,6 +181,7 @@ const FoodItemRow: React.FC<FoodItemRowProps> = ({ food, onAdd }) => {
 export const SearchFoodModal: React.FC<SearchFoodModalProps> = ({
 	visible,
 	onClose,
+	onDismiss,
 	addFoodItem,
 }) => {
 	const [searchQuery, setSearchQuery] = useState("");
@@ -206,6 +208,7 @@ export const SearchFoodModal: React.FC<SearchFoodModalProps> = ({
 	return (
 		<Modal
 			visible={visible}
+			onDismiss={onDismiss}
 			animationType="slide"
 			presentationStyle={Platform.OS === "ios" ? "pageSheet" : "fullScreen"}
 			onRequestClose={onClose}
@@ -226,7 +229,6 @@ export const SearchFoodModal: React.FC<SearchFoodModalProps> = ({
 						onChangeText={setSearchQuery}
 						placeholder="Search for foods..."
 						className="w-full"
-						autoFocus
 					/>
 				</View>
 

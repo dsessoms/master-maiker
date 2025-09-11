@@ -25,7 +25,6 @@ export function IngredientInputs({
 	recipeServings = 1,
 }: IngredientInputsProps) {
 	const { parseIngredients } = useParseIngredients();
-	const [focusedIndex, setFocusedIndex] = React.useState<number | null>(null);
 	const [ingredients, setIngredients] = React.useState<
 		(EntityInputValue<Ingredient> & { previouslyParsedRaw?: string })[]
 	>(
@@ -76,8 +75,6 @@ export function IngredientInputs({
 						key={index}
 						placeholder="something tasty"
 						value={ingredient}
-						shouldFocus={false && focusedIndex === index}
-						onFocus={() => setFocusedIndex(null)}
 						editingFatSecretId={editingFatSecretId}
 						onFoodSelect={(foodData) => {
 							// Convert FoodData to Ingredient format
@@ -143,18 +140,8 @@ export function IngredientInputs({
 								});
 							}
 							setIngredients(newIngredients);
-							// Clear focus state when user starts typing
-							if (focusedIndex === index) {
-								setFocusedIndex(null);
-							}
 						}}
 						onSave={async () => {
-							// Focus the next ingredient immediately when user presses enter/tab
-							const nextIndex = index + 1;
-							if (nextIndex < ingredients.length) {
-								setFocusedIndex(nextIndex);
-							}
-
 							const currentIngredient = ingredients[index];
 
 							if (
