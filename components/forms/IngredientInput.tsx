@@ -95,12 +95,14 @@ interface EditableFatSecretFoodItemProps {
 	foodData: FoodData;
 	onSave: (updatedFoodData: FoodData) => void;
 	onCancel: () => void;
+	onDelete?: () => void;
 }
 
 const EditableFatSecretFoodItem: React.FC<EditableFatSecretFoodItemProps> = ({
 	foodData,
 	onSave,
 	onCancel,
+	onDelete,
 }) => {
 	const [numberOfServings, setNumberOfServings] = useState(foodData.amount);
 	const [selectedServingId, setSelectedServingId] = useState(
@@ -155,13 +157,17 @@ const EditableFatSecretFoodItem: React.FC<EditableFatSecretFoodItemProps> = ({
 
 	return (
 		<View className="space-y-2 p-2 border border-border rounded-lg">
-			<View className="flex-1">
-				{foodData.originalName && (
-					<Text className="text-sm text-muted-foreground mb-1">
-						{foodData.originalName}
-					</Text>
+			<View className="flex-row items-center justify-between">
+				<Text className="text-lg font-semibold flex-1">{foodName}</Text>
+				{onDelete && (
+					<Pressable
+						onPress={onDelete}
+						className="p-1 rounded-full"
+						hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
+					>
+						<X size={20} className="text-muted-foreground" />
+					</Pressable>
 				)}
-				<Text className="text-lg font-semibold">{foodName}</Text>
 			</View>
 
 			<View className="flex-row items-center space-x-2">
@@ -341,6 +347,13 @@ export function EntityInput<T>({
 		onCancel?.();
 	};
 
+	const handleFoodDelete = () => {
+		setSelectedFood(null);
+		setIsEditingFood(false);
+		// Clear the input value when deleting
+		onClear?.();
+	};
+
 	useEffect(() => {
 		if (value.state === EntityInputState.Parsing) {
 			pulseAnimation.value = withRepeat(
@@ -396,6 +409,7 @@ export function EntityInput<T>({
 				foodData={selectedFood}
 				onSave={handleFoodSave}
 				onCancel={handleFoodCancel}
+				onDelete={onClear ? handleFoodDelete : undefined}
 			/>
 		);
 	}
