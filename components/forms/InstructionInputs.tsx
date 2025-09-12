@@ -52,6 +52,50 @@ export function InstructionInputs({
 					key={index}
 					placeholder="do something awesome"
 					value={instruction}
+					onMultipleIngredientsPaste={(instructionLines) => {
+						// Handle pasting multiple instructions
+						setInstructions((prevInstructions) => {
+							const newInstructions = [...prevInstructions];
+
+							// Replace the current instruction with the first pasted instruction
+							const firstInstruction = instructionLines[0];
+							const currentInstruction = newInstructions[index];
+							currentInstruction.state = EntityInputState.Parsed;
+							currentInstruction.parsed = firstInstruction;
+							currentInstruction.raw = firstInstruction;
+
+							// Add the remaining instructions after the current one
+							const additionalInstructions = instructionLines
+								.slice(1)
+								.map((parsed) => ({
+									state: EntityInputState.Parsed as const,
+									raw: parsed,
+									parsed,
+								}));
+
+							// Insert additional instructions after current index
+							newInstructions.splice(index + 1, 0, ...additionalInstructions);
+
+							// Add a new empty instruction at the end if there isn't one already
+							const hasNewInstruction = newInstructions.some(
+								(ins) => ins.state === EntityInputState.New,
+							);
+							if (!hasNewInstruction) {
+								newInstructions.push({
+									state: EntityInputState.New,
+									raw: "",
+								});
+							}
+
+							return newInstructions;
+						});
+
+						// Focus on the next new instruction after a short delay
+						setTimeout(() => {
+							const nextNewIndex = index + instructionLines.length;
+							setFocusedIndex(nextNewIndex);
+						}, 100);
+					}}
 					onChange={(rawValue) => {
 						const newInstructions = [...instructions];
 						const currentInstruction = newInstructions[index];

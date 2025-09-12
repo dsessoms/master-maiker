@@ -84,6 +84,7 @@ export interface EntityInputProps<T> {
 	onCancel?: () => void;
 	onClear?: () => void;
 	onFoodSelect?: (foodData: FoodData) => void;
+	onMultipleIngredientsPaste?: (ingredients: string[]) => void; // For handling pasted ingredient lists
 	renderParsed?: (parsed: T) => React.ReactNode;
 	shouldFocus?: boolean;
 	onFocus?: () => void;
@@ -255,6 +256,7 @@ export function EntityInput<T>({
 	onCancel,
 	onClear,
 	onFoodSelect,
+	onMultipleIngredientsPaste,
 	renderParsed,
 	placeholder,
 	shouldFocus,
@@ -441,7 +443,37 @@ export function EntityInput<T>({
 				ref={inputRef}
 				placeholder={placeholder}
 				value={value.raw}
-				onChangeText={onChange}
+				multiline
+				onChange={(e) => {
+					const inputType = (e.nativeEvent as any)?.inputType;
+					const newText = e.nativeEvent.text;
+
+					// Check if this is a paste operation with multiple lines
+					if (inputType === "insertFromPaste" && onMultipleIngredientsPaste) {
+						// Split by newlines and filter out empty lines
+						const ingredientLines = newText
+							.split(/\r?\n/)
+							.map((line) => line.trim())
+							.filter((line) => line.length > 0);
+
+						// If multiple lines were pasted, handle as multiple ingredients
+						if (ingredientLines.length > 1) {
+							onMultipleIngredientsPaste(ingredientLines);
+							return; // Don't call the regular onChange
+						}
+					}
+
+					// Call the regular onChange for single-line content
+					onChange(newText);
+				}}
+				onKeyPress={(e) => {
+					// Detect Enter key press and save the ingredient
+					if (e.nativeEvent.key === "Enter" && value.raw.trim()) {
+						e.preventDefault(); // Prevent the newline from being inserted
+						shouldSaveOnBlur.current = false; // Reset flag since we're saving immediately
+						onSave();
+					}
+				}}
 				onSubmitEditing={() => {
 					shouldSaveOnBlur.current = false; // Reset flag since we're saving immediately
 					onSave();
@@ -454,6 +486,7 @@ export function EntityInput<T>({
 				}}
 				onBlur={handleBlur}
 				style={{
+					overflow: "hidden",
 					paddingRight: onFoodSelect
 						? value.raw
 							? 80
@@ -461,6 +494,8 @@ export function EntityInput<T>({
 						: value.raw
 							? 40
 							: 12, // Just clear icon or no icons
+					maxHeight: 40, // Limit height to prevent expansion
+					textAlignVertical: "top",
 				}}
 			/>
 			{!!value.raw && !!onClear && (

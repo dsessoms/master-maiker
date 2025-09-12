@@ -78,6 +78,85 @@ export function IngredientInputs({
 						placeholder="something tasty"
 						value={ingredient}
 						editingFatSecretId={editingFatSecretId}
+						onMultipleIngredientsPaste={async (ingredientLines) => {
+							// Set the current input to parsing state and create new inputs
+							setIngredients((prevIngredients) => {
+								const newIngredients = [...prevIngredients];
+
+								// Set current ingredient to parsing with the first line
+								const currentIngredient = newIngredients[index];
+								currentIngredient.raw = ingredientLines[0] || "";
+								currentIngredient.state = EntityInputState.Parsing;
+
+								// Add remaining lines as parsing ingredients
+								const additionalIngredients = ingredientLines
+									.slice(1)
+									.map((line) => ({
+										state: EntityInputState.Parsing as const,
+										raw: line,
+									}));
+
+								// Insert additional ingredients after current index
+								newIngredients.splice(index + 1, 0, ...additionalIngredients);
+
+								// Add a new empty ingredient at the end
+								newIngredients.push({
+									state: EntityInputState.New,
+									raw: "",
+								});
+
+								return newIngredients;
+							});
+
+							// Focus on the new input immediately
+							const nextNewIndex = index + ingredientLines.length;
+							setFocusedIndex(nextNewIndex);
+
+							// Parse all the pasted ingredients
+							try {
+								const response = await parseIngredients(ingredientLines);
+
+								if (
+									"ingredients" in response &&
+									response.ingredients &&
+									response.ingredients.length > 0
+								) {
+									const parsedIngredients = response.ingredients;
+
+									setIngredients((prevIngredients) => {
+										const newIngredients = [...prevIngredients];
+
+										// Update each ingredient with its parsed result
+										parsedIngredients.forEach((parsed, i) => {
+											const ingredientIndex = index + i;
+											if (ingredientIndex < newIngredients.length) {
+												const ingredient = newIngredients[ingredientIndex];
+												ingredient.state = EntityInputState.Parsed;
+												ingredient.parsed = parsed;
+												ingredient.raw = `${parsed.number_of_servings * parsed.serving.number_of_units} ${parsed.serving.measurement_description} ${parsed.name}`;
+												ingredient.previouslyParsedRaw = ingredient.raw;
+											}
+										});
+
+										return newIngredients;
+									});
+								}
+							} catch (error) {
+								console.error("Failed to parse pasted ingredients:", error);
+								// Handle parsing error - revert to editing state
+								setIngredients((prevIngredients) => {
+									const newIngredients = [...prevIngredients];
+									ingredientLines.forEach((_, i) => {
+										const ingredientIndex = index + i;
+										if (ingredientIndex < newIngredients.length) {
+											newIngredients[ingredientIndex].state =
+												EntityInputState.Editing;
+										}
+									});
+									return newIngredients;
+								});
+							}
+						}}
 						onFoodSelect={(foodData) => {
 							// Convert FoodData to Ingredient format
 							const ingredient: Ingredient = {
