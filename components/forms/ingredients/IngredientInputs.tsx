@@ -66,13 +66,23 @@ export function IngredientInputs({
 	const updateIngredients = React.useCallback(
 		(options: {
 			startIndex: number;
-			updates?: Partial<EntityInputValue<Ingredient> & { previouslyParsedRaw?: string }>;
-			additionalIngredients?: Array<EntityInputValue<Ingredient> & { previouslyParsedRaw?: string }>;
+			updates?: Partial<
+				EntityInputValue<Ingredient> & { previouslyParsedRaw?: string }
+			>;
+			additionalIngredients?: Array<
+				EntityInputValue<Ingredient> & { previouslyParsedRaw?: string }
+			>;
 			addNewAtEnd?: boolean;
 			focusNextNew?: boolean;
 		}) => {
-			const { startIndex, updates = {}, additionalIngredients, addNewAtEnd, focusNextNew } = options;
-			
+			const {
+				startIndex,
+				updates = {},
+				additionalIngredients,
+				addNewAtEnd,
+				focusNextNew,
+			} = options;
+
 			setIngredients((prev) => {
 				const newIngredients = [...prev];
 
@@ -278,32 +288,32 @@ export function IngredientInputs({
 							if (
 								currentIngredient.previouslyParsedRaw === currentIngredient.raw
 							) {
-								updateIngredients({ 
-									startIndex: index, 
-									updates: { state: EntityInputState.Parsed } 
+								updateIngredients({
+									startIndex: index,
+									updates: { state: EntityInputState.Parsed },
 								});
 								return;
 							}
 
 							// Set to parsing state
-							updateIngredients({ 
-								startIndex: index, 
-								updates: { state: EntityInputState.Parsing } 
+							updateIngredients({
+								startIndex: index,
+								updates: { state: EntityInputState.Parsing },
 							});
 
 							// Parse the ingredient
 							await parseIngredientsAndUpdate([currentIngredient.raw], index);
 						}}
 						onEdit={() => {
-							updateIngredients({ 
-								startIndex: index, 
-								updates: { state: EntityInputState.Editing } 
+							updateIngredients({
+								startIndex: index,
+								updates: { state: EntityInputState.Editing },
 							});
 						}}
 						onCancel={() => {
-							updateIngredients({ 
-								startIndex: index, 
-								updates: { state: EntityInputState.Parsed } 
+							updateIngredients({
+								startIndex: index,
+								updates: { state: EntityInputState.Parsed },
 							});
 						}}
 						onClear={() => {
