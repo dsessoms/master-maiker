@@ -2,7 +2,7 @@ import {
 	EntityInput,
 	EntityInputState,
 	EntityInputValue,
-} from "./IngredientInput";
+} from "./IngredientEntityInput";
 
 import { Ingredient } from "../../lib/schemas";
 import { Macros } from "../meal-plan/macros";

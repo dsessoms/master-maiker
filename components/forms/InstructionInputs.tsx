@@ -1,8 +1,8 @@
 import {
-	EntityInput,
-	EntityInputState,
-	EntityInputValue,
-} from "./IngredientInput";
+	InstructionInput,
+	InstructionInputState,
+	InstructionInputValue,
+} from "./InstructionInput";
 import React, { useEffect } from "react";
 
 import { Text } from "@/components/ui/text";
@@ -17,18 +17,18 @@ export function InstructionInputs({
 	initialValues,
 }: InstructionInputsProps) {
 	const [instructions, setInstructions] = React.useState<
-		EntityInputValue<string>[]
+		InstructionInputValue[]
 	>(
 		initialValues && initialValues.length > 0
 			? [
 					...initialValues.map((parsed) => ({
-						state: EntityInputState.Parsed,
+						state: InstructionInputState.Parsed,
 						raw: parsed,
 						parsed,
 					})),
-					{ state: EntityInputState.New, raw: "" },
+					{ state: InstructionInputState.New, raw: "" },
 				]
-			: [{ state: EntityInputState.New, raw: "" }],
+			: [{ state: InstructionInputState.New, raw: "" }],
 	);
 	const [focusedIndex, setFocusedIndex] = React.useState<number | null>(null);
 
@@ -36,8 +36,8 @@ export function InstructionInputs({
 		const parsedInstructions = instructions
 			.filter(
 				(ins) =>
-					(ins.state === EntityInputState.Parsed ||
-						ins.state === EntityInputState.Editing) &&
+					(ins.state === InstructionInputState.Parsed ||
+						ins.state === InstructionInputState.Editing) &&
 					ins.parsed &&
 					ins.raw.trim() !== "",
 			)
@@ -48,11 +48,11 @@ export function InstructionInputs({
 	return (
 		<>
 			{instructions.map((instruction, index) => (
-				<EntityInput<string>
+				<InstructionInput
 					key={index}
 					placeholder="do something awesome"
 					value={instruction}
-					onMultipleIngredientsPaste={(instructionLines) => {
+					onMultipleInstructionsPaste={(instructionLines: string[]) => {
 						// Handle pasting multiple instructions
 						setInstructions((prevInstructions) => {
 							const newInstructions = [...prevInstructions];
@@ -60,15 +60,15 @@ export function InstructionInputs({
 							// Replace the current instruction with the first pasted instruction
 							const firstInstruction = instructionLines[0];
 							const currentInstruction = newInstructions[index];
-							currentInstruction.state = EntityInputState.Parsed;
+							currentInstruction.state = InstructionInputState.Parsed;
 							currentInstruction.parsed = firstInstruction;
 							currentInstruction.raw = firstInstruction;
 
 							// Add the remaining instructions after the current one
 							const additionalInstructions = instructionLines
 								.slice(1)
-								.map((parsed) => ({
-									state: EntityInputState.Parsed as const,
+								.map((parsed: string) => ({
+									state: InstructionInputState.Parsed,
 									raw: parsed,
 									parsed,
 								}));
@@ -78,11 +78,11 @@ export function InstructionInputs({
 
 							// Add a new empty instruction at the end if there isn't one already
 							const hasNewInstruction = newInstructions.some(
-								(ins) => ins.state === EntityInputState.New,
+								(ins) => ins.state === InstructionInputState.New,
 							);
 							if (!hasNewInstruction) {
 								newInstructions.push({
-									state: EntityInputState.New,
+									state: InstructionInputState.New,
 									raw: "",
 								});
 							}
@@ -96,14 +96,14 @@ export function InstructionInputs({
 							setFocusedIndex(nextNewIndex);
 						}, 100);
 					}}
-					onChange={(rawValue) => {
+					onChange={(rawValue: string) => {
 						const newInstructions = [...instructions];
 						const currentInstruction = newInstructions[index];
 						currentInstruction.raw = rawValue;
-						if (currentInstruction.state === EntityInputState.New) {
-							currentInstruction.state = EntityInputState.Dirty;
+						if (currentInstruction.state === InstructionInputState.New) {
+							currentInstruction.state = InstructionInputState.Dirty;
 							newInstructions.push({
-								state: EntityInputState.New,
+								state: InstructionInputState.New,
 								raw: "",
 							});
 						}
@@ -112,7 +112,8 @@ export function InstructionInputs({
 					onSave={() => {
 						// Focus on the next NEW instruction immediately (before setting state)
 						const nextNewIndex = instructions.findIndex(
-							(ins, idx) => idx > index && ins.state === EntityInputState.New,
+							(ins, idx) =>
+								idx > index && ins.state === InstructionInputState.New,
 						);
 						if (nextNewIndex !== -1) {
 							setFocusedIndex(nextNewIndex);
@@ -123,11 +124,11 @@ export function InstructionInputs({
 							const currentInstruction = newInstructions[index];
 							if (
 								currentInstruction.parsed === currentInstruction.raw &&
-								currentInstruction.state === EntityInputState.Parsed
+								currentInstruction.state === InstructionInputState.Parsed
 							) {
 								return newInstructions;
 							}
-							currentInstruction.state = EntityInputState.Parsed;
+							currentInstruction.state = InstructionInputState.Parsed;
 							currentInstruction.parsed = currentInstruction.raw;
 							return newInstructions;
 						});
@@ -135,7 +136,7 @@ export function InstructionInputs({
 					onEdit={() => {
 						const newInstructions = [...instructions];
 						const currentInstruction = newInstructions[index];
-						currentInstruction.state = EntityInputState.Editing;
+						currentInstruction.state = InstructionInputState.Editing;
 						setInstructions(newInstructions);
 					}}
 					onClear={() => {

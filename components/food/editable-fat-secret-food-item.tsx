@@ -4,7 +4,7 @@ import { Button } from "../ui/button";
 import { Text } from "../ui/text";
 import { X } from "@/lib/icons/x";
 import { FoodServingEditor } from "./food-serving-editor";
-import type { FoodData } from "@/components/forms/IngredientInput";
+import type { FoodData } from "@/components/forms/IngredientEntityInput";
 import type { FatSecretServing } from "@/lib/server/fat-secret/types";
 
 interface EditableFatSecretFoodItemProps {
