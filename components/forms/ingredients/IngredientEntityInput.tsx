@@ -8,7 +8,7 @@ import {
 	withTiming,
 	interpolate,
 } from "react-native-reanimated";
-import { Input } from "../ui/input";
+import { Input } from "../../ui/input";
 import { X } from "@/lib/icons/x";
 import { Search } from "@/lib/icons/search";
 import { Skeleton } from "@/components/ui/skeleton";

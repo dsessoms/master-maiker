@@ -1,7 +1,7 @@
 import { Pressable, TextInput, View } from "react-native";
 import React, { useEffect, useRef } from "react";
 
-import { Input } from "../ui/input";
+import { Input } from "../../ui/input";
 import { X } from "@/lib/icons/x";
 
 export enum InstructionInputState {

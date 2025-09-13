@@ -10,8 +10,8 @@ import {
 } from "../../lib/schemas";
 
 import { Button } from "../ui/button";
-import { IngredientInputs } from "./IngredientInputs";
-import { InstructionInputs } from "./InstructionInputs";
+import { IngredientInputs } from "./ingredients/IngredientInputs";
+import { InstructionInputs } from "./instructions/InstructionInputs";
 import { Label } from "../ui/label";
 import { Text } from "@/components/ui/text";
 import { useForm } from "react-hook-form";
