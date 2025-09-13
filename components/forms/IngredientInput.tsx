@@ -1,7 +1,7 @@
-import { Pressable, TextInput, View, Platform } from "react-native";
+import { Pressable, TextInput, View } from "react-native";
 import React, { useEffect, useRef, useState } from "react";
 
-import Animated, {
+import {
 	useSharedValue,
 	useAnimatedStyle,
 	withRepeat,
@@ -9,35 +9,16 @@ import Animated, {
 	interpolate,
 } from "react-native-reanimated";
 import { Input } from "../ui/input";
-import { Button } from "../ui/button";
-import { Text } from "../ui/text";
-import {
-	Select,
-	SelectContent,
-	SelectGroup,
-	SelectItem,
-	SelectLabel,
-	SelectTrigger,
-	SelectValue,
-} from "../ui/select";
-import type { TriggerRef } from "@rn-primitives/select";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { X } from "@/lib/icons/x";
 import { Search } from "@/lib/icons/search";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SearchFoodModal } from "@/components/food/search-food-modal";
-import { Macros } from "@/components/meal-plan/macros";
+import { EditableFatSecretFoodItem } from "@/components/food/editable-fat-secret-food-item";
 import { useFatSecretFood } from "@/hooks/fat-secret/use-fat-secret-food";
 import type {
 	FatSecretFood,
 	FatSecretServing,
 } from "@/lib/server/fat-secret/types";
-
-// Utility function for rounding
-const round = (value: number, precision: number = 2): number => {
-	const factor = Math.pow(10, precision);
-	return Math.round(value * factor) / factor;
-};
 
 // Food data interfaces
 export interface FoodData {
@@ -90,163 +71,6 @@ export interface EntityInputProps<T> {
 	onFocus?: () => void;
 	editingFatSecretId?: number; // For editing existing fat secret foods
 }
-
-// EditableFoodItem component for editing selected foods
-interface EditableFatSecretFoodItemProps {
-	foodData: FoodData;
-	onSave: (updatedFoodData: FoodData) => void;
-	onCancel: () => void;
-	onDelete?: () => void;
-}
-
-const EditableFatSecretFoodItem: React.FC<EditableFatSecretFoodItemProps> = ({
-	foodData,
-	onSave,
-	onCancel,
-	onDelete,
-}) => {
-	const [numberOfServings, setNumberOfServings] = useState(foodData.amount);
-	const [selectedServingId, setSelectedServingId] = useState(
-		String(foodData.serving.serving_id),
-	);
-	const [numberOfUnits, setNumberOfUnits] = useState("1");
-	const selectTriggerRef = useRef<TriggerRef>(null);
-	const insets = useSafeAreaInsets();
-
-	const selectedServing =
-		foodData.food.servings.serving.find(
-			(serving) => String(serving.serving_id) === selectedServingId,
-		) || foodData.food.servings.serving[0];
-
-	const contentInsets = {
-		top: insets.top,
-		bottom: Platform.select({
-			ios: insets.bottom,
-			android: insets.bottom + 24,
-		}),
-		left: 12,
-		right: 12,
-	};
-
-	// Update numberOfUnits when selectedServing or numberOfServings changes
-	useEffect(() => {
-		setNumberOfUnits(
-			String(numberOfServings * selectedServing.number_of_units),
-		);
-	}, [selectedServing, numberOfServings]);
-
-	const onNumberOfUnitsChange = (value: string) => {
-		setNumberOfUnits(value);
-		const newNumberOfServings = round(
-			Number(value || 0) / selectedServing.number_of_units,
-			5,
-		);
-		setNumberOfServings(newNumberOfServings);
-	};
-
-	const handleSave = () => {
-		onSave({
-			...foodData,
-			serving: selectedServing,
-			amount: numberOfServings,
-		});
-	};
-
-	const foodName = `${foodData.food.food_name}${
-		foodData.food.brand_name ? ` (${foodData.food.brand_name})` : ""
-	}`;
-
-	return (
-		<View className="space-y-2 p-2 border border-border rounded-lg">
-			<View className="flex-row items-center justify-between">
-				<Text className="text-lg font-semibold flex-1">{foodName}</Text>
-				{onDelete && (
-					<Pressable
-						onPress={onDelete}
-						className="p-1 rounded-full"
-						hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
-					>
-						<X size={20} className="text-muted-foreground" />
-					</Pressable>
-				)}
-			</View>
-
-			<View className="flex-row items-center space-x-2">
-				<View className="w-24">
-					<Input
-						value={numberOfUnits}
-						onChangeText={onNumberOfUnitsChange}
-						placeholder="1"
-						keyboardType="numeric"
-						className="h-10 text-center"
-						selectTextOnFocus={true}
-					/>
-				</View>
-
-				<View className="flex-1">
-					<Select
-						value={{
-							value: selectedServingId,
-							label:
-								foodData.food.food_type === "Generic"
-									? selectedServing?.measurement_description || ""
-									: selectedServing?.serving_description || "",
-						}}
-						onValueChange={(option) =>
-							setSelectedServingId(option?.value || "")
-						}
-					>
-						<SelectTrigger className="h-10" ref={selectTriggerRef}>
-							<SelectValue placeholder="Select serving" className="text-sm" />
-						</SelectTrigger>
-						<SelectContent insets={contentInsets}>
-							<SelectGroup>
-								<SelectLabel>Servings</SelectLabel>
-								{foodData.food.servings.serving.map((serving) => (
-									<SelectItem
-										key={serving.serving_id}
-										value={String(serving.serving_id)}
-										label={
-											foodData.food.food_type === "Generic"
-												? serving.measurement_description
-												: serving.serving_description
-										}
-									>
-										{foodData.food.food_type === "Generic"
-											? serving.measurement_description
-											: serving.serving_description}
-									</SelectItem>
-								))}
-							</SelectGroup>
-						</SelectContent>
-					</Select>
-				</View>
-			</View>
-
-			<Macros
-				calories={selectedServing.calories}
-				carbohydrate={selectedServing.carbohydrate}
-				protein={selectedServing.protein}
-				fat={selectedServing.fat}
-				scale={numberOfServings}
-			/>
-
-			<View className="flex-row space-x-2">
-				<Button
-					variant="outline"
-					onPress={onCancel}
-					size="sm"
-					className="flex-1"
-				>
-					<Text>Cancel</Text>
-				</Button>
-				<Button onPress={handleSave} size="sm" className="flex-1">
-					<Text>Save</Text>
-				</Button>
-			</View>
-		</View>
-	);
-};
 
 export function EntityInput<T>({
 	value,
