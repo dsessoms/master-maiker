@@ -58,7 +58,7 @@ export function RecipeForm({
 	};
 
 	return (
-		<View style={{ padding: 16 }}>
+		<View className="p-4">
 			<Form {...form}>
 				<View className="gap-4">
 					<FormField
@@ -124,7 +124,7 @@ export function RecipeForm({
 					/>
 					{/* Prep Time Section */}
 					<Label>Prep Time</Label>
-					<View style={{ flexDirection: "row", gap: 12 }}>
+					<View className="flex-row gap-3">
 						<FormField
 							control={form.control}
 							name="prep_time_hours"
@@ -133,7 +133,7 @@ export function RecipeForm({
 									label="Hours"
 									placeholder="0"
 									keyboardType="numeric"
-									style={{ flex: 1 }}
+									className="flex-1"
 									{...field}
 									value={field.value?.toString() ?? ""}
 									onChangeText={(v) => field.onChange(v === "" ? 0 : Number(v))}
@@ -148,7 +148,7 @@ export function RecipeForm({
 									label="Minutes"
 									placeholder="0"
 									keyboardType="numeric"
-									style={{ flex: 1 }}
+									className="flex-1"
 									{...field}
 									value={field.value?.toString() ?? ""}
 									onChangeText={(v) => field.onChange(v === "" ? 0 : Number(v))}
@@ -158,7 +158,7 @@ export function RecipeForm({
 					</View>
 					{/* Cook Time Section */}
 					<Label>Cook Time</Label>
-					<View style={{ flexDirection: "row", gap: 12 }}>
+					<View className="flex-row gap-3">
 						<FormField
 							control={form.control}
 							name="cook_time_hours"
@@ -167,7 +167,7 @@ export function RecipeForm({
 									label="Hours"
 									placeholder="0"
 									keyboardType="numeric"
-									style={{ flex: 1 }}
+									className="flex-1"
 									{...field}
 									value={field.value?.toString() ?? ""}
 									onChangeText={(v) => field.onChange(v === "" ? 0 : Number(v))}
@@ -182,7 +182,7 @@ export function RecipeForm({
 									label="Minutes"
 									placeholder="0"
 									keyboardType="numeric"
-									style={{ flex: 1 }}
+									className="flex-1"
 									{...field}
 									value={field.value?.toString() ?? ""}
 									onChangeText={(v) => field.onChange(v === "" ? 0 : Number(v))}

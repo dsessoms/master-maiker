@@ -1,24 +1,24 @@
-import { Pressable, TextInput, View } from "react-native";
-import React, { useEffect, useRef, useState } from "react";
-
-import {
-	useSharedValue,
-	useAnimatedStyle,
-	withRepeat,
-	withTiming,
-	interpolate,
-} from "react-native-reanimated";
-import { Input } from "../../ui/input";
-import { X } from "@/lib/icons/x";
-import { Search } from "@/lib/icons/search";
-import { Skeleton } from "@/components/ui/skeleton";
-import { SearchFoodModal } from "@/components/food/search-food-modal";
-import { EditableFatSecretFoodItem } from "@/components/food/editable-fat-secret-food-item";
-import { useFatSecretFood } from "@/hooks/fat-secret/use-fat-secret-food";
 import type {
 	FatSecretFood,
 	FatSecretServing,
 } from "@/lib/server/fat-secret/types";
+import { Pressable, TextInput, View } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import {
+	interpolate,
+	useAnimatedStyle,
+	useSharedValue,
+	withRepeat,
+	withTiming,
+} from "react-native-reanimated";
+
+import { EditableFatSecretFoodItem } from "@/components/food/editable-fat-secret-food-item";
+import { Input } from "../../ui/input";
+import { Search } from "@/lib/icons/search";
+import { SearchFoodModal } from "@/components/food/search-food-modal";
+import { Skeleton } from "@/components/ui/skeleton";
+import { X } from "@/lib/icons/x";
+import { useFatSecretFood } from "@/hooks/fat-secret/use-fat-secret-food";
 
 // Food data interfaces
 export interface FoodData {
@@ -245,15 +245,7 @@ export function EntityInput<T>({
 			return (
 				<Pressable
 					onPress={onEdit}
-					style={{
-						minHeight: 40,
-						borderRadius: 4,
-						marginBottom: 8,
-						width: "100%",
-						flexDirection: "row",
-						alignItems: "center",
-						paddingHorizontal: 8,
-					}}
+					className="min-h-[40px] rounded mb-2 w-full flex-row items-center px-2"
 				>
 					{renderParsed(value.parsed)}
 				</Pressable>
@@ -262,7 +254,7 @@ export function EntityInput<T>({
 		return null;
 	}
 	return (
-		<View style={{ position: "relative", width: "100%" }}>
+		<View className="relative w-full">
 			<Input
 				ref={inputRef}
 				placeholder={placeholder}
@@ -309,8 +301,8 @@ export function EntityInput<T>({
 					shouldSaveOnBlur.current = false;
 				}}
 				onBlur={handleBlur}
+				className="overflow-hidden max-h-[40px] text-start"
 				style={{
-					overflow: "hidden",
 					paddingRight: onFoodSelect
 						? value.raw
 							? 80
@@ -318,8 +310,6 @@ export function EntityInput<T>({
 						: value.raw
 							? 40
 							: 12, // Just clear icon or no icons
-					maxHeight: 40, // Limit height to prevent expansion
-					textAlignVertical: "top",
 				}}
 			/>
 			{!!value.raw && !!onClear && (
@@ -334,16 +324,7 @@ export function EntityInput<T>({
 					onPress={() => {
 						onClear();
 					}}
-					style={{
-						position: "absolute",
-						right: 40,
-						top: 0,
-						bottom: 0,
-						width: 32,
-						justifyContent: "center",
-						alignItems: "center",
-						zIndex: 1,
-					}}
+					className="absolute right-10 top-0 bottom-0 w-8 justify-center items-center z-10"
 					hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
 				>
 					<X size={16} className="text-muted-foreground" />
@@ -362,16 +343,7 @@ export function EntityInput<T>({
 					onPress={() => {
 						setShowSearchModal(true);
 					}}
-					style={{
-						position: "absolute",
-						right: 8,
-						top: 0,
-						bottom: 0,
-						width: 32,
-						justifyContent: "center",
-						alignItems: "center",
-						zIndex: 1,
-					}}
+					className="absolute right-2 top-0 bottom-0 w-8 justify-center items-center z-10"
 					hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
 				>
 					<Search size={16} className="text-muted-foreground" />

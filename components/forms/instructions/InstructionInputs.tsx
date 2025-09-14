@@ -144,9 +144,7 @@ export function InstructionInputs({
 						newInstructions.splice(index, 1);
 						setInstructions(newInstructions);
 					}}
-					renderParsed={(parsed) => (
-						<Text style={{ fontSize: 16 }}>{parsed}</Text>
-					)}
+					renderParsed={(parsed) => <Text className="text-base">{parsed}</Text>}
 					shouldFocus={focusedIndex === index}
 					onFocus={() => setFocusedIndex(null)}
 				/>

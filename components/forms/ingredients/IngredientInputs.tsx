@@ -4,15 +4,15 @@ import {
 	EntityInputValue,
 } from "./IngredientEntityInput";
 
+import { Image } from "@/components/image";
 import { Ingredient } from "../../../lib/schemas";
 import { Macros } from "../../meal-plan/macros";
 import React from "react";
+import { ShoppingBasket } from "@/lib/icons";
 import { Text } from "@/components/ui/text";
 import { View } from "react-native";
-import { Image } from "@/components/image";
 import { plural } from "pluralize";
 import { useParseIngredients } from "../../../hooks/recipes/use-parse-ingredients";
-import { ShoppingBasket } from "@/lib/icons";
 
 interface IngredientInputsProps {
 	onIngredientsChange: (ingredients: Ingredient[]) => void;
@@ -342,34 +342,14 @@ export function IngredientInputs({
 							const fatPerServing = totalFat / recipeServings;
 
 							return (
-								<View style={{ flex: 1, minHeight: 60 }}>
-									<View
-										style={{
-											flexDirection: "row",
-											alignItems: "flex-start",
-											paddingVertical: 8,
-										}}
-									>
+								<View className="flex-1 min-h-[60px]">
+									<View className="flex-row items-start py-2">
 										{/* Thumbnail image or placeholder */}
-										<View
-											style={{
-												width: 40,
-												height: 40,
-												borderRadius: 20,
-												marginRight: 12,
-												overflow: "hidden",
-												justifyContent: "center",
-												alignItems: "center",
-												flexShrink: 0,
-											}}
-										>
+										<View className="w-10 h-10 rounded-full mr-3 overflow-hidden justify-center items-center flex-shrink-0">
 											{image_url ? (
 												<Image
 													source={{ uri: image_url }}
-													style={{
-														width: 30,
-														height: 30,
-													}}
+													className="w-[30px] h-[30px]"
 													contentFit="contain"
 												/>
 											) : (
@@ -377,34 +357,19 @@ export function IngredientInputs({
 											)}
 										</View>
 
-										<View style={{ flex: 1, minWidth: 0 }}>
-											<View
-												style={{
-													flexDirection: "row",
-													alignItems: "center",
-													flexWrap: "wrap",
-													marginBottom: 4,
-												}}
-											>
-												<Text style={{ fontWeight: "bold", fontSize: 16 }}>
+										<View className="flex-1 min-w-0">
+											<View className="flex-row items-center flex-wrap mb-1">
+												<Text className="font-bold text-base">
 													{displayedCount}
 												</Text>
 												{serving.measurement_description ? (
-													<Text
-														style={{
-															fontWeight: "bold",
-															fontSize: 16,
-															marginLeft: 4,
-														}}
-													>
+													<Text className="font-bold text-base ml-1">
 														{displayedCount === 1
 															? serving.measurement_description
 															: plural(serving.measurement_description)}
 													</Text>
 												) : null}
-												<Text
-													style={{ marginLeft: 8, fontSize: 16, flexShrink: 1 }}
-												>
+												<Text className="ml-2 text-base flex-shrink">
 													{name}
 												</Text>
 											</View>

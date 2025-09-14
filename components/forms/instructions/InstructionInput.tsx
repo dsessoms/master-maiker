@@ -94,15 +94,7 @@ export function InstructionInput({
 			return (
 				<Pressable
 					onPress={onEdit}
-					style={{
-						minHeight: 40,
-						borderRadius: 4,
-						marginBottom: 8,
-						width: "100%",
-						flexDirection: "row",
-						alignItems: "center",
-						paddingHorizontal: 8,
-					}}
+					className="min-h-[40px] rounded mb-2 w-full flex-row items-center px-2"
 				>
 					{renderParsed(value.parsed)}
 				</Pressable>
@@ -112,7 +104,7 @@ export function InstructionInput({
 	}
 
 	return (
-		<View style={{ position: "relative", width: "100%" }}>
+		<View className="relative w-full">
 			<Input
 				ref={inputRef}
 				placeholder={placeholder}
@@ -159,11 +151,9 @@ export function InstructionInput({
 					shouldSaveOnBlur.current = false;
 				}}
 				onBlur={handleBlur}
+				className="overflow-hidden max-h-[120px] text-start"
 				style={{
-					overflow: "hidden",
 					paddingRight: value.raw ? 40 : 12, // Space for clear icon or no icons
-					maxHeight: 120, // Allow more height for instructions
-					textAlignVertical: "top",
 				}}
 			/>
 			{!!value.raw && !!onClear && (
@@ -178,16 +168,7 @@ export function InstructionInput({
 					onPress={() => {
 						onClear();
 					}}
-					style={{
-						position: "absolute",
-						right: 8,
-						top: 0,
-						bottom: 0,
-						width: 32,
-						justifyContent: "center",
-						alignItems: "center",
-						zIndex: 1,
-					}}
+					className="absolute right-2 top-0 bottom-0 w-8 justify-center items-center z-10"
 					hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
 				>
 					<X size={16} className="text-muted-foreground" />
