@@ -100,27 +100,27 @@ export default function EditRecipe() {
 
 	if (isLoading) {
 		return (
-			<SafeAreaView className="flex flex-1 bg-background">
+			<View className="flex flex-1 bg-background">
 				<View className="flex-1 justify-center items-center">
 					<ActivityIndicator size="large" />
 					<Text className="mt-4">Loading recipe...</Text>
 				</View>
-			</SafeAreaView>
+			</View>
 		);
 	}
 
 	if (error || !recipe) {
 		return (
-			<SafeAreaView className="flex flex-1 bg-background">
+			<View className="flex flex-1 bg-background">
 				<View className="flex-1 justify-center items-center">
 					<Text className="text-red-500">Failed to load recipe</Text>
 				</View>
-			</SafeAreaView>
+			</View>
 		);
 	}
 
 	return (
-		<SafeAreaView className="flex flex-1 bg-background">
+		<View className="flex flex-1 bg-background">
 			<KeyboardAvoidingView
 				style={{ flex: 1 }}
 				behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -137,6 +137,6 @@ export default function EditRecipe() {
 					/>
 				</ScrollView>
 			</KeyboardAvoidingView>
-		</SafeAreaView>
+		</View>
 	);
 }

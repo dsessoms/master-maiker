@@ -1,21 +1,21 @@
-import { Link, Plus } from "@/lib/icons";
-import { router } from "expo-router";
-
-import { Button } from "@/components/ui/button";
-import { RecipeCard } from "@/components/recipe/recipe-card";
-import { SafeAreaView } from "@/components/safe-area-view";
-import { Text } from "@/components/ui/text";
-import { View, ScrollView } from "react-native";
-import { useRecipes } from "@/hooks/recipes/use-recipes";
-import { useDeleteRecipeMutation } from "@/hooks/recipes/use-delete-recipe-mutation";
-import { useResponsiveColumns } from "@/hooks/useResponsiveColumns";
-import { useConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Link, Plus } from "@/lib/icons";
+import { ScrollView, View } from "react-native";
+
+import { Button } from "@/components/ui/button";
+import { RecipeCard } from "@/components/recipe/recipe-card";
+import { SafeAreaView } from "@/components/safe-area-view";
+import { Text } from "@/components/ui/text";
+import { router } from "expo-router";
+import { useConfirmDialog } from "@/components/ui/confirm-dialog";
+import { useDeleteRecipeMutation } from "@/hooks/recipes/use-delete-recipe-mutation";
+import { useRecipes } from "@/hooks/recipes/use-recipes";
+import { useResponsiveColumns } from "@/hooks/useResponsiveColumns";
 
 export default function Recipes() {
 	const { recipes, isLoading, isError } = useRecipes();
@@ -60,7 +60,7 @@ export default function Recipes() {
 	};
 
 	return (
-		<SafeAreaView className="flex flex-1 bg-background">
+		<View className="flex flex-1 bg-background">
 			{/* Main content */}
 			<ScrollView className="flex-1" contentContainerStyle={{ padding: 16 }}>
 				{isLoading && <Text>Loading...</Text>}
@@ -110,6 +110,6 @@ export default function Recipes() {
 					</DropdownMenuContent>
 				</DropdownMenu>
 			</View>
-		</SafeAreaView>
+		</View>
 	);
 }

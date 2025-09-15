@@ -43,16 +43,16 @@ export default function RecipeDetails() {
 
 	if (isLoading) {
 		return (
-			<SafeAreaView className="flex flex-1 bg-background justify-center items-center">
+			<View className="flex flex-1 bg-background justify-center items-center">
 				<ActivityIndicator size="large" />
 				<Text className="mt-2">Loading recipe...</Text>
-			</SafeAreaView>
+			</View>
 		);
 	}
 
 	if (isError || !recipe) {
 		return (
-			<SafeAreaView className="flex flex-1 bg-background justify-center items-center p-4">
+			<View className="flex flex-1 bg-background justify-center items-center p-4">
 				<Text className="text-lg font-semibold mb-2">Recipe not found</Text>
 				<Text className="text-center text-muted-foreground mb-4">
 					The recipe you're looking for doesn't exist or you don't have
@@ -61,12 +61,12 @@ export default function RecipeDetails() {
 				<Button onPress={() => router.back()}>
 					<Text>Go Back</Text>
 				</Button>
-			</SafeAreaView>
+			</View>
 		);
 	}
 
 	return (
-		<SafeAreaView className="flex flex-1 bg-background">
+		<View className="flex flex-1 bg-background">
 			<ScrollView className="flex-1">
 				<View className="p-4">
 					{/* Recipe Image */}
@@ -171,6 +171,6 @@ export default function RecipeDetails() {
 					</View>
 				</View>
 			</ScrollView>
-		</SafeAreaView>
+		</View>
 	);
 }

@@ -278,7 +278,7 @@ export function RecipeForm({
 					console.error("Form submission errors:", formErrors);
 				})}
 				disabled={form.formState.isSubmitting || isUploadingImage}
-				className="web:my-4"
+				className="my-4"
 			>
 				{form.formState.isSubmitting || isUploadingImage ? (
 					<ActivityIndicator size="small" />
