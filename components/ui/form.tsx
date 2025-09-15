@@ -1,4 +1,6 @@
 import * as React from "react";
+
+import Animated, { FadeInDown, FadeOut } from "react-native-reanimated";
 import {
 	Controller,
 	ControllerProps,
@@ -8,15 +10,15 @@ import {
 	Noop,
 	useFormContext,
 } from "react-hook-form";
-import { View } from "react-native";
-import Animated, { FadeInDown, FadeOut } from "react-native-reanimated";
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
 import { Text } from "./text";
+import { Textarea } from "@/components/ui/textarea";
+import { View } from "react-native";
+import { cn } from "@/lib/utils";
 
 const Form = FormProvider;
 
