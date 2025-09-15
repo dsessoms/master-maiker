@@ -178,8 +178,8 @@ type FormItemProps<T extends React.ElementType<any>, U> = Override<
 
 const FormInput = React.forwardRef<
 	React.ComponentRef<typeof Input>,
-	FormItemProps<typeof Input, string>
->(({ label, description, onChange, ...props }, ref) => {
+	FormItemProps<typeof Input, string> & { labelClassName?: string }
+>(({ label, description, labelClassName, onChange, ...props }, ref) => {
 	const inputRef = React.useRef<React.ComponentRef<typeof Input>>(null);
 	const {
 		error,
@@ -209,7 +209,11 @@ const FormInput = React.forwardRef<
 	return (
 		<FormItem>
 			{!!label && (
-				<FormLabel nativeID={formItemNativeID} onPress={handleOnLabelPress}>
+				<FormLabel
+					nativeID={formItemNativeID}
+					onPress={handleOnLabelPress}
+					className={labelClassName}
+				>
 					{label}
 				</FormLabel>
 			)}
@@ -236,8 +240,8 @@ FormInput.displayName = "FormInput";
 
 const FormTextarea = React.forwardRef<
 	React.ComponentRef<typeof Textarea>,
-	FormItemProps<typeof Textarea, string>
->(({ label, description, onChange, ...props }, ref) => {
+	FormItemProps<typeof Textarea, string> & { labelClassName?: string }
+>(({ label, description, labelClassName, onChange, ...props }, ref) => {
 	const textareaRef = React.useRef<React.ComponentRef<typeof Textarea>>(null);
 	const {
 		error,
@@ -267,7 +271,11 @@ const FormTextarea = React.forwardRef<
 	return (
 		<FormItem>
 			{!!label && (
-				<FormLabel nativeID={formItemNativeID} onPress={handleOnLabelPress}>
+				<FormLabel
+					nativeID={formItemNativeID}
+					onPress={handleOnLabelPress}
+					className={labelClassName}
+				>
 					{label}
 				</FormLabel>
 			)}
@@ -294,8 +302,10 @@ FormTextarea.displayName = "FormTextarea";
 
 const FormRadioGroup = React.forwardRef<
 	React.ComponentRef<typeof RadioGroup>,
-	Omit<FormItemProps<typeof RadioGroup, string>, "onValueChange">
->(({ label, description, value, onChange, ...props }, ref) => {
+	Omit<FormItemProps<typeof RadioGroup, string>, "onValueChange"> & {
+		labelClassName?: string;
+	}
+>(({ label, description, labelClassName, value, onChange, ...props }, ref) => {
 	const {
 		error,
 		formItemNativeID,
@@ -306,7 +316,11 @@ const FormRadioGroup = React.forwardRef<
 	return (
 		<FormItem className="gap-3">
 			<View>
-				{!!label && <FormLabel nativeID={formItemNativeID}>{label}</FormLabel>}
+				{!!label && (
+					<FormLabel nativeID={formItemNativeID} className={labelClassName}>
+						{label}
+					</FormLabel>
+				)}
 				{!!description && (
 					<FormDescription className="pt-0">{description}</FormDescription>
 				)}
@@ -334,8 +348,10 @@ FormRadioGroup.displayName = "FormRadioGroup";
 
 const FormSwitch = React.forwardRef<
 	React.ComponentRef<typeof Switch>,
-	Omit<FormItemProps<typeof Switch, boolean>, "checked" | "onCheckedChange">
->(({ label, description, value, onChange, ...props }, ref) => {
+	Omit<FormItemProps<typeof Switch, boolean>, "checked" | "onCheckedChange"> & {
+		labelClassName?: string;
+	}
+>(({ label, description, labelClassName, value, onChange, ...props }, ref) => {
 	const switchRef = React.useRef<React.ComponentRef<typeof Switch>>(null);
 	const {
 		error,
@@ -373,7 +389,7 @@ const FormSwitch = React.forwardRef<
 				/>
 				{!!label && (
 					<FormLabel
-						className="pb-0"
+						className={cn("pb-0", labelClassName)}
 						nativeID={formItemNativeID}
 						onPress={handleOnLabelPress}
 					>

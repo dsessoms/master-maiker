@@ -65,6 +65,7 @@ export function RecipeForm({
 						render={({ field }) => (
 							<FormInput
 								label="Recipe Name"
+								labelClassName="text-xl font-semibold"
 								placeholder="Recipe Name"
 								autoCapitalize="none"
 								autoCorrect={false}
@@ -78,6 +79,7 @@ export function RecipeForm({
 						render={({ field }) => (
 							<FormTextarea
 								label="Description"
+								labelClassName="text-xl font-semibold"
 								placeholder="A brief description of the recipe"
 								autoCapitalize="none"
 								autoCorrect={false}
@@ -91,6 +93,7 @@ export function RecipeForm({
 						render={({ field }) => (
 							<FormInput
 								label="Servings"
+								labelClassName="text-xl font-semibold"
 								placeholder="Number of servings"
 								autoCapitalize="none"
 								autoCorrect={false}
@@ -103,7 +106,7 @@ export function RecipeForm({
 							/>
 						)}
 					/>
-					<Label>Ingredients</Label>
+					<Label className="text-xl font-semibold">Ingredients</Label>
 					<IngredientInputs
 						onIngredientsChange={setParsedIngredients}
 						recipeServings={form.watch("servings") || 1}
@@ -113,7 +116,7 @@ export function RecipeForm({
 							) as Ingredient[]
 						}
 					/>
-					<Label>Instructions</Label>
+					<Label className="text-xl font-semibold">Instructions</Label>
 					<InstructionInputs
 						onInstructionsChange={setParsedInstructions}
 						initialValues={initialValues?.instructions
@@ -121,7 +124,7 @@ export function RecipeForm({
 							.map((i: any) => i.value)}
 					/>
 					{/* Prep Time Section */}
-					<Label>Prep Time</Label>
+					<Label className="text-xl font-semibold">Prep Time</Label>
 					<View className="flex-row gap-3">
 						<FormField
 							control={form.control}
@@ -155,7 +158,7 @@ export function RecipeForm({
 						/>
 					</View>
 					{/* Cook Time Section */}
-					<Label>Cook Time</Label>
+					<Label className="text-xl font-semibold">Cook Time</Label>
 					<View className="flex-row gap-3">
 						<FormField
 							control={form.control}
