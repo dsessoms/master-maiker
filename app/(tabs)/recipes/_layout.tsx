@@ -8,6 +8,14 @@ export default function RecipesStackLayout() {
 	return (
 		<Stack>
 			<Stack.Screen name="index" options={{ title: "Recipes" }} />
+			<Stack.Screen
+				name="import"
+				options={{
+					title: "Import Recipe",
+					presentation: "modal",
+					headerShown: true,
+				}}
+			/>
 		</Stack>
 	);
 }

@@ -1,5 +1,6 @@
+import { Ingredient, Recipe } from "../../schemas/recipe-schema";
+
 import axios from "axios";
-import { Ingredient } from "../../schemas/recipe-schema";
 const API_PATH = "https://api.spoonacular.com";
 export const THUMBNAIL_BASE_URL =
 	"https://spoonacular.com/cdn/ingredients_100x100/";
@@ -55,6 +56,134 @@ export interface SpoonacularIngredient {
 	};
 }
 
+export interface SpoonacularMeasures {
+	us: {
+		amount: number;
+		unitShort: string;
+		unitLong: string;
+	};
+	metric: {
+		amount: number;
+		unitShort: string;
+		unitLong: string;
+	};
+}
+
+export interface SpoonacularExtendedIngredient {
+	id: number;
+	aisle: string;
+	image: string;
+	consistency: string;
+	name: string;
+	nameClean: string;
+	original: string;
+	originalName: string;
+	amount: number;
+	unit: string;
+	meta: string[];
+	measures: SpoonacularMeasures;
+}
+
+export interface SpoonacularNutrition {
+	nutrients: NutrientInformation[];
+	properties: {
+		name: string;
+		amount: number;
+		unit: string;
+	}[];
+	flavonoids: {
+		name: string;
+		amount: number;
+		unit: string;
+	}[];
+	ingredients: {
+		id: number;
+		name: string;
+		amount: number;
+		unit: string;
+		nutrients: NutrientInformation[];
+	}[];
+	caloricBreakdown: {
+		percentProtein: number;
+		percentFat: number;
+		percentCarbs: number;
+	};
+	weightPerServing: {
+		amount: number;
+		unit: string;
+	};
+}
+
+export interface SpoonacularInstructionStep {
+	number: number;
+	step: string;
+	ingredients: {
+		id: number;
+		name: string;
+		localizedName: string;
+		image: string;
+	}[];
+	equipment: {
+		id: number;
+		name: string;
+		localizedName: string;
+		image: string;
+		temperature?: {
+			number: number;
+			unit: string;
+		};
+	}[];
+	length?: {
+		number: number;
+		unit: string;
+	};
+}
+
+export interface SpoonacularInstructionSection {
+	name: string;
+	steps: SpoonacularInstructionStep[];
+}
+
+export interface SpoonacularRecipeResponse {
+	id: number;
+	image: string;
+	imageType: string;
+	title: string;
+	readyInMinutes: number;
+	servings: number;
+	sourceUrl: string;
+	vegetarian: boolean;
+	vegan: boolean;
+	glutenFree: boolean;
+	dairyFree: boolean;
+	veryHealthy: boolean;
+	cheap: boolean;
+	veryPopular: boolean;
+	sustainable: boolean;
+	lowFodmap: boolean;
+	weightWatcherSmartPoints: number;
+	gaps: string;
+	preparationMinutes: number;
+	cookingMinutes: number;
+	aggregateLikes: number;
+	healthScore: number;
+	creditsText: string;
+	license: string | null;
+	sourceName: string;
+	pricePerServing: number;
+	extendedIngredients: SpoonacularExtendedIngredient[];
+	nutrition: SpoonacularNutrition;
+	summary: string;
+	cuisines: string[];
+	dishTypes: string[];
+	diets: string[];
+	occasions: string[];
+	instructions: string;
+	analyzedInstructions: SpoonacularInstructionSection[];
+	originalId: number | null;
+	spoonacularScore: number;
+}
+
 export const getNutrition = (
 	nutrients: NutrientInformation[],
 	name: string,
@@ -107,6 +236,114 @@ export const convertSpoonacularToIngredient = (
 	};
 };
 
+export const convertSpoonacularExtendedIngredientToIngredient = (
+	extendedIngredient: SpoonacularExtendedIngredient,
+	nutrition: SpoonacularNutrition,
+): Ingredient => {
+	// Find nutrition info for this specific ingredient
+	const ingredientNutrition = nutrition.ingredients.find(
+		(ing) => ing.id === extendedIngredient.id,
+	);
+
+	const calories = ingredientNutrition
+		? getNutrition(ingredientNutrition.nutrients, "Calories").amount
+		: 0;
+	const carbs = ingredientNutrition
+		? getNutrition(ingredientNutrition.nutrients, "Carbohydrates").amount
+		: 0;
+	const fat = ingredientNutrition
+		? getNutrition(ingredientNutrition.nutrients, "Fat").amount
+		: 0;
+	const protein = ingredientNutrition
+		? getNutrition(ingredientNutrition.nutrients, "Protein").amount
+		: 0;
+
+	return {
+		type: "ingredient",
+		name: extendedIngredient.nameClean || extendedIngredient.name,
+		meta:
+			extendedIngredient.meta.length > 0
+				? extendedIngredient.meta.join(", ")
+				: null,
+		number_of_servings: 1,
+		image_url: extendedIngredient.image
+			? `${THUMBNAIL_BASE_URL}${extendedIngredient.image}`
+			: undefined,
+		spoonacular_id: extendedIngredient.id,
+		serving: {
+			measurement_description:
+				extendedIngredient.measures.us.unitLong ||
+				extendedIngredient.measures.us.unitShort ||
+				extendedIngredient.unit,
+			serving_description: `${extendedIngredient.amount} ${
+				extendedIngredient.measures.us.unitLong ||
+				extendedIngredient.measures.us.unitShort ||
+				extendedIngredient.unit
+			}`,
+			metric_serving_amount: extendedIngredient.measures.metric.amount,
+			metric_serving_unit: extendedIngredient.measures.metric.unitShort,
+			number_of_units: extendedIngredient.amount,
+			calories,
+			carbohydrate_grams: carbs,
+			fat_grams: fat,
+			protein_grams: protein,
+		},
+	};
+};
+
+export const convertSpoonacularRecipeToRecipe = (
+	spoonacularRecipe: SpoonacularRecipeResponse,
+): Recipe => {
+	// Convert ingredients
+	const ingredients = spoonacularRecipe.extendedIngredients.map((ingredient) =>
+		convertSpoonacularExtendedIngredientToIngredient(
+			ingredient,
+			spoonacularRecipe.nutrition,
+		),
+	);
+
+	// Convert instructions
+	const instructions = spoonacularRecipe.analyzedInstructions.flatMap(
+		(section) => {
+			const sectionInstructions = section.steps.map((step) => ({
+				type: "instruction" as const,
+				value: step.step,
+			}));
+
+			// Add section header if it has a name
+			if (section.name && section.name.trim()) {
+				return [
+					{
+						type: "header" as const,
+						name: section.name,
+					},
+					...sectionInstructions,
+				];
+			}
+
+			return sectionInstructions;
+		},
+	);
+
+	// Calculate prep and cook times
+	const prepTimeMinutes = spoonacularRecipe.preparationMinutes || 0;
+	const cookTimeMinutes = spoonacularRecipe.cookingMinutes || 0;
+
+	return {
+		name: spoonacularRecipe.title,
+		description: spoonacularRecipe.summary
+			? spoonacularRecipe.summary.replace(/<[^>]*>/g, "") // Strip HTML tags
+			: "",
+		servings: spoonacularRecipe.servings,
+		ingredients,
+		instructions,
+		prep_time_hours: Math.floor(prepTimeMinutes / 60),
+		prep_time_minutes: prepTimeMinutes % 60,
+		cook_time_hours: Math.floor(cookTimeMinutes / 60),
+		cook_time_minutes: cookTimeMinutes % 60,
+	};
+};
+
 export class Spoonacular {
 	static async makeApiCall(
 		endpoint: string,
@@ -143,6 +380,15 @@ export class Spoonacular {
 		return this.makeApiCall("recipes/random");
 	}
 
+	static parseRecipeFromWebsite(params: {
+		url: string;
+	}): Promise<SpoonacularRecipeResponse> {
+		return this.makeApiCall("recipes/extract", {
+			...params,
+			includeNutrition: true,
+		});
+	}
+
 	static parseIngredients(params: {
 		ingredientList: string;
 	}): Promise<SpoonacularIngredient[]> {
@@ -161,3 +407,7 @@ export class Spoonacular {
 		);
 	}
 }
+
+// Example usage:
+// const spoonacularRecipe = await Spoonacular.parseRecipeFromWebsite({ url: "https://example.com/recipe" });
+// const recipe = convertSpoonacularRecipeToRecipe(spoonacularRecipe);

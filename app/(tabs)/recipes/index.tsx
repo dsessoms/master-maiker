@@ -28,8 +28,7 @@ export default function Recipes() {
 	};
 
 	const handleImportRecipe = () => {
-		// TODO: Implement import from URL functionality
-		console.log("Import recipe from URL");
+		router.push("/recipes/import");
 	};
 
 	const handleEditRecipe = (recipeId: string) => {
