@@ -5,17 +5,20 @@ import { useEffect, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { Button } from "@/components/ui/button";
+import { Image } from "@/components/image";
 import { Ingredient } from "@/components/recipe/ingredient";
 import { Instruction } from "@/components/recipe/instruction";
 import { Macros } from "@/components/recipe/macros";
 import { SafeAreaView } from "@/components/safe-area-view";
 import { Text } from "@/components/ui/text";
 import { useRecipe } from "@/hooks/recipes/use-recipe";
+import { useRecipeImage } from "@/hooks/recipes/use-recipe-image";
 
 export default function RecipeDetails() {
 	const { id } = useLocalSearchParams<{ id: string }>();
 	const router = useRouter();
 	const { recipe, isLoading, isError } = useRecipe(id!);
+	const imageUrl = useRecipeImage(recipe?.image_id);
 	const [recipeServings, setRecipeServings] = useState<number>(1);
 
 	useEffect(() => {
@@ -66,6 +69,17 @@ export default function RecipeDetails() {
 		<SafeAreaView className="flex flex-1 bg-background">
 			<ScrollView className="flex-1">
 				<View className="p-4">
+					{/* Recipe Image */}
+					{imageUrl && (
+						<View className="mb-6">
+							<Image
+								source={{ uri: imageUrl }}
+								className="h-64 w-full rounded-lg"
+								contentFit="cover"
+							/>
+						</View>
+					)}
+
 					{/* Header Section */}
 					<View className="mb-6">
 						<View className="flex flex-row justify-between items-start mb-4">

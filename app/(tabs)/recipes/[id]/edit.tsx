@@ -1,10 +1,10 @@
 import {
 	ActivityIndicator,
 	Alert,
-	ScrollView,
-	View,
 	KeyboardAvoidingView,
 	Platform,
+	ScrollView,
+	View,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
@@ -39,7 +39,7 @@ export default function EditRecipe() {
 		return {
 			name: recipe.name || "",
 			description: recipe.description || "",
-			image_url: recipe.image_id || undefined,
+			image_id: recipe.image_id || undefined,
 			servings: recipe.number_of_servings || 1,
 			prep_time_hours: recipe.prep_time_hours || 0,
 			prep_time_minutes: recipe.prep_time_minutes || 0,

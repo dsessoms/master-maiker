@@ -24,7 +24,7 @@ export type Instruction = z.infer<typeof InstructionSchema>;
 export const RecipeSchema = z.object({
 	name: z.string(),
 	description: z.string(),
-	image_url: z.string().optional(),
+	image_id: z.string().optional(),
 	servings: z.number(),
 	ingredients: z.array(z.union([IngredientSchema, Header])).optional(),
 	instructions: z.array(z.union([InstructionSchema, Header])).optional(),

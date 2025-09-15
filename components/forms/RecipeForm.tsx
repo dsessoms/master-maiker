@@ -8,12 +8,16 @@ import {
 } from "../../lib/schemas";
 
 import { Button } from "../ui/button";
+import { ImageUploader } from "./ImageUploader";
 import { IngredientInputs } from "./ingredients/IngredientInputs";
 import { InstructionInputs } from "./instructions/InstructionInputs";
 import { Label } from "../ui/label";
 import { Text } from "@/components/ui/text";
+import { supabase } from "@/config/supabase";
 import { useForm } from "react-hook-form";
+import { useRecipeImage } from "@/hooks/recipes/use-recipe-image";
 import { useState } from "react";
+import { v4 as uuidv4 } from "uuid";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 export interface RecipeFormProps {
@@ -27,6 +31,8 @@ export function RecipeForm({
 	onSubmit,
 	isEdit,
 }: RecipeFormProps) {
+	const existingImageUrl = useRecipeImage(initialValues?.image_id);
+
 	const form = useForm<Recipe>({
 		resolver: zodResolver(RecipeSchema),
 		defaultValues: initialValues ?? {
@@ -44,15 +50,62 @@ export function RecipeForm({
 
 	const [parsedIngredients, setParsedIngredients] = useState<Ingredient[]>([]);
 	const [parsedInstructions, setParsedInstructions] = useState<string[]>([]);
+	const [selectedImage, setSelectedImage] = useState<
+		{ file: File; uri: string } | string | undefined
+	>(existingImageUrl);
+	const [isUploadingImage, setIsUploadingImage] = useState(false);
 
-	// Override the submit handler to include parsed ingredients
+	// Override the submit handler to include parsed ingredients and handle image upload
 	const handleSubmit = async (data: Partial<Recipe>) => {
 		const instructions: Instruction[] = parsedInstructions.map((value) => ({
 			type: "instruction",
 			value,
 		}));
 
-		await onSubmit({ ...data, instructions, ingredients: parsedIngredients });
+		let image_id: string | undefined;
+
+		// Handle image upload if there's a new file
+		if (
+			selectedImage &&
+			typeof selectedImage === "object" &&
+			"file" in selectedImage
+		) {
+			setIsUploadingImage(true);
+			try {
+				const newImageUUID = uuidv4();
+				const { error: uploadError } = await supabase.storage
+					.from("recipe-photos")
+					.upload(newImageUUID, selectedImage.file);
+
+				if (uploadError) {
+					console.error("Image upload error:", uploadError);
+					throw new Error("Failed to upload image");
+				}
+
+				image_id = newImageUUID;
+			} catch (error) {
+				console.error("Error uploading image:", error);
+				// Continue without image if upload fails
+			} finally {
+				setIsUploadingImage(false);
+			}
+		} else if (
+			typeof selectedImage === "string" &&
+			selectedImage === existingImageUrl
+		) {
+			// Keep existing image ID if the selected image is the same as the existing one
+			image_id = initialValues?.image_id;
+		} else if (typeof selectedImage === "string") {
+			// This is a new URL that's not the existing one, treat as new image ID
+			image_id = selectedImage;
+		}
+
+		await onSubmit({
+			...data,
+			instructions,
+			ingredients: parsedIngredients,
+			image_id: image_id,
+		});
 	};
 
 	return (
@@ -73,6 +126,19 @@ export function RecipeForm({
 							/>
 						)}
 					/>
+
+					<View>
+						<Label className="text-xl font-semibold mb-2">Photo</Label>
+						<ImageUploader
+							selectedImageUri={
+								typeof selectedImage === "string"
+									? selectedImage
+									: selectedImage?.uri
+							}
+							onImageSelected={setSelectedImage}
+						/>
+					</View>
+
 					<FormField
 						control={form.control}
 						name="description"
@@ -211,10 +277,10 @@ export function RecipeForm({
 				onPress={form.handleSubmit(handleSubmit, (formErrors) => {
 					console.error("Form submission errors:", formErrors);
 				})}
-				disabled={form.formState.isSubmitting}
+				disabled={form.formState.isSubmitting || isUploadingImage}
 				className="web:my-4"
 			>
-				{form.formState.isSubmitting ? (
+				{form.formState.isSubmitting || isUploadingImage ? (
 					<ActivityIndicator size="small" />
 				) : (
 					<Text>{isEdit ? "Save Changes" : "Create Recipe"}</Text>

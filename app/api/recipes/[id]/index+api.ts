@@ -96,7 +96,7 @@ export async function PUT(req: Request) {
 		cook_time_minutes: recipe.cook_time_minutes
 			? Number(recipe.cook_time_minutes)
 			: undefined,
-		image_id: recipe.image_url ?? undefined,
+		image_id: recipe.image_id ?? undefined,
 		instructions: recipe.instructions ?? [],
 		ingredients: recipe.ingredients,
 	});

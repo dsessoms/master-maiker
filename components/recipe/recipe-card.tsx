@@ -1,16 +1,17 @@
-import { Image } from "@/components/image";
-import { MoreHorizontalIcon, PencilIcon, Trash2Icon } from "@/lib/icons";
-import { toHoursAndMinutes } from "@/lib/utils/to-hours-and-minutes";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { MoreHorizontalIcon, PencilIcon, Trash2Icon } from "@/lib/icons";
 import { TouchableOpacity, View } from "react-native";
 
 import { Button } from "@/components/ui/button";
+import { Image } from "@/components/image";
 import { Text } from "@/components/ui/text";
+import { toHoursAndMinutes } from "@/lib/utils/to-hours-and-minutes";
+import { useRecipeImage } from "@/hooks/recipes/use-recipe-image";
 import { useRouter } from "expo-router";
 
 type Recipe = {
@@ -39,6 +40,7 @@ export const RecipeCard = ({
 }) => {
 	const router = useRouter();
 	const { id, image_id, name, description } = recipe;
+	const imageUrl = useRecipeImage(image_id);
 
 	const totalMinutes =
 		Number(recipe.cook_time_hours ?? 0) * 60 +
@@ -70,9 +72,9 @@ export const RecipeCard = ({
 			className="flex flex-col bg-card border border-border rounded-lg overflow-hidden active:bg-muted"
 		>
 			<View className="relative">
-				{image_id ? (
+				{imageUrl ? (
 					<Image
-						source={{ uri: image_id }}
+						source={{ uri: imageUrl }}
 						className="h-48 w-full"
 						contentFit="cover"
 					/>
