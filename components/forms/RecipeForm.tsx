@@ -126,70 +126,82 @@ export function RecipeForm({
 					{/* Prep Time Section */}
 					<Label className="text-xl font-semibold">Prep Time</Label>
 					<View className="flex-row gap-3">
-						<FormField
-							control={form.control}
-							name="prep_time_hours"
-							render={({ field }) => (
-								<FormInput
-									label="Hours"
-									placeholder="0"
-									keyboardType="numeric"
-									className="flex-1"
-									{...field}
-									value={field.value?.toString() ?? ""}
-									onChangeText={(v) => field.onChange(v === "" ? 0 : Number(v))}
-								/>
-							)}
-						/>
-						<FormField
-							control={form.control}
-							name="prep_time_minutes"
-							render={({ field }) => (
-								<FormInput
-									label="Minutes"
-									placeholder="0"
-									keyboardType="numeric"
-									className="flex-1"
-									{...field}
-									value={field.value?.toString() ?? ""}
-									onChangeText={(v) => field.onChange(v === "" ? 0 : Number(v))}
-								/>
-							)}
-						/>
+						<View className="flex-1">
+							<FormField
+								control={form.control}
+								name="prep_time_hours"
+								render={({ field }) => (
+									<FormInput
+										label="Hours"
+										placeholder="0"
+										keyboardType="numeric"
+										{...field}
+										value={field.value?.toString() ?? ""}
+										onChangeText={(v) =>
+											field.onChange(v === "" ? 0 : Number(v))
+										}
+									/>
+								)}
+							/>
+						</View>
+						<View className="flex-1">
+							<FormField
+								control={form.control}
+								name="prep_time_minutes"
+								render={({ field }) => (
+									<FormInput
+										label="Minutes"
+										placeholder="0"
+										keyboardType="numeric"
+										{...field}
+										value={field.value?.toString() ?? ""}
+										onChangeText={(v) =>
+											field.onChange(v === "" ? 0 : Number(v))
+										}
+									/>
+								)}
+							/>
+						</View>
 					</View>
 					{/* Cook Time Section */}
 					<Label className="text-xl font-semibold">Cook Time</Label>
 					<View className="flex-row gap-3">
-						<FormField
-							control={form.control}
-							name="cook_time_hours"
-							render={({ field }) => (
-								<FormInput
-									label="Hours"
-									placeholder="0"
-									keyboardType="numeric"
-									className="flex-1"
-									{...field}
-									value={field.value?.toString() ?? ""}
-									onChangeText={(v) => field.onChange(v === "" ? 0 : Number(v))}
-								/>
-							)}
-						/>
-						<FormField
-							control={form.control}
-							name="cook_time_minutes"
-							render={({ field }) => (
-								<FormInput
-									label="Minutes"
-									placeholder="0"
-									keyboardType="numeric"
-									className="flex-1"
-									{...field}
-									value={field.value?.toString() ?? ""}
-									onChangeText={(v) => field.onChange(v === "" ? 0 : Number(v))}
-								/>
-							)}
-						/>
+						<View className="flex-1">
+							<FormField
+								control={form.control}
+								name="cook_time_hours"
+								render={({ field }) => (
+									<FormInput
+										label="Hours"
+										placeholder="0"
+										keyboardType="numeric"
+										{...field}
+										value={field.value?.toString() ?? ""}
+										onChangeText={(v) =>
+											field.onChange(v === "" ? 0 : Number(v))
+										}
+									/>
+								)}
+							/>
+						</View>
+						<View className="flex-1">
+							<FormField
+								control={form.control}
+								name="cook_time_minutes"
+								render={({ field }) => (
+									<FormInput
+										label="Minutes"
+										placeholder="0"
+										keyboardType="numeric"
+										{...field}
+										value={field.value?.toString() ?? ""}
+										onChangeText={(v) =>
+											field.onChange(v === "" ? 0 : Number(v))
+										}
+									/>
+								)}
+							/>
+						</View>
 					</View>
 				</View>
 			</Form>
@@ -200,7 +212,7 @@ export function RecipeForm({
 					console.error("Form submission errors:", formErrors);
 				})}
 				disabled={form.formState.isSubmitting}
-				className="web:m-4"
+				className="web:my-4"
 			>
 				{form.formState.isSubmitting ? (
 					<ActivityIndicator size="small" />
