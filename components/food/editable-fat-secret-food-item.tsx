@@ -1,14 +1,19 @@
 import { Pressable, View } from "react-native";
 import React, { useState } from "react";
+
 import { Button } from "../ui/button";
+import type { FatSecretServing } from "@/lib/server/fat-secret/types";
+import { FoodData } from "@/components/forms/ingredients/ingredient-input";
+import { FoodServingEditor } from "./food-serving-editor";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "../ui/text";
 import { X } from "@/lib/icons/x";
-import { FoodServingEditor } from "./food-serving-editor";
-import type { FoodData } from "@/components/forms/ingredients/IngredientEntityInput";
-import type { FatSecretServing } from "@/lib/server/fat-secret/types";
+import { useFatSecretFood } from "@/hooks/fat-secret/use-fat-secret-food";
 
 interface EditableFatSecretFoodItemProps {
-	foodData: FoodData;
+	foodId: string;
+	servingId: string;
+	amount: number;
 	onSave: (updatedFoodData: FoodData) => void;
 	onCancel: () => void;
 	onDelete?: () => void;
@@ -16,25 +21,68 @@ interface EditableFatSecretFoodItemProps {
 
 export const EditableFatSecretFoodItem: React.FC<
 	EditableFatSecretFoodItemProps
-> = ({ foodData, onSave, onCancel, onDelete }) => {
-	const [currentServing, setCurrentServing] = useState(foodData.serving);
-	const [currentAmount, setCurrentAmount] = useState(foodData.amount);
+> = ({ foodId, servingId, amount, onSave, onCancel, onDelete }) => {
+	const { food, isLoading, error } = useFatSecretFood(String(foodId));
 
-	const handleServingChange = (serving: FatSecretServing, amount: number) => {
+	// Find the matching serving by servingId or use the first one as default
+	const getInitialServing = (): FatSecretServing | null => {
+		if (!food?.servings?.serving) return null;
+		return (
+			food.servings.serving.find(
+				(serving: FatSecretServing) => serving.serving_id === Number(servingId),
+			) || food.servings.serving[0]
+		);
+	};
+
+	const [currentServing, setCurrentServing] = useState<FatSecretServing | null>(
+		null,
+	);
+	const [currentAmount, setCurrentAmount] = useState<number>(amount);
+
+	// Update serving when food loads
+	React.useEffect(() => {
+		if (food && !currentServing) {
+			setCurrentServing(getInitialServing());
+		}
+	}, [food, currentServing]);
+
+	const handleServingChange = (
+		serving: FatSecretServing,
+		newAmount: number,
+	) => {
 		setCurrentServing(serving);
-		setCurrentAmount(amount);
+		setCurrentAmount(newAmount);
 	};
 
 	const handleSave = () => {
-		onSave({
-			...foodData,
+		if (!food || !currentServing) return;
+
+		const foodData: FoodData = {
+			food,
 			serving: currentServing,
 			amount: currentAmount,
-		});
+			fat_secret_id: Number(foodId),
+		};
+
+		onSave(foodData);
 	};
 
-	const foodName = `${foodData.food.food_name}${
-		foodData.food.brand_name ? ` (${foodData.food.brand_name})` : ""
+	if ((isLoading || !food || !currentServing) && !error) {
+		return <Skeleton className="h-[120px] w-full rounded-lg" />;
+	}
+
+	if (error) {
+		return (
+			<View className="p-4 border border-destructive rounded-lg">
+				<Text className="text-destructive">
+					{error ? "Failed to load food data" : "Loading food data..."}
+				</Text>
+			</View>
+		);
+	}
+
+	const foodName = `${food.food_name}${
+		food.brand_name ? ` (${food.brand_name})` : ""
 	}`;
 
 	return (
@@ -53,9 +101,9 @@ export const EditableFatSecretFoodItem: React.FC<
 			</View>
 
 			<FoodServingEditor
-				food={foodData.food}
-				initialServing={foodData.serving}
-				initialAmount={foodData.amount}
+				food={food}
+				initialServing={currentServing || undefined}
+				initialAmount={currentAmount}
 				onServingChange={handleServingChange}
 				showMacros={true}
 			/>
@@ -69,7 +117,12 @@ export const EditableFatSecretFoodItem: React.FC<
 				>
 					<Text>Cancel</Text>
 				</Button>
-				<Button onPress={handleSave} size="sm" className="flex-1">
+				<Button
+					onPress={handleSave}
+					size="sm"
+					className="flex-1"
+					disabled={!currentServing}
+				>
 					<Text>Save</Text>
 				</Button>
 			</View>

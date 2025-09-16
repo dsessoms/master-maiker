@@ -2,13 +2,14 @@ import {
 	EntityInput,
 	EntityInputState,
 	EntityInputValue,
-} from "./IngredientEntityInput";
+} from "@/components/forms/entity-input";
 import { Header, Ingredient } from "@/lib/schemas";
 import { Plus, ShoppingBasket } from "@/lib/icons";
 import { Pressable, View } from "react-native";
 
 import { Button } from "@/components/ui/button";
 import { Image } from "@/components/image";
+import { IngredientInput } from "@/components/forms/ingredients/ingredient-input";
 import { Macros } from "../../meal-plan/macros";
 import React from "react";
 import { Text } from "@/components/ui/text";
@@ -318,12 +319,12 @@ export function IngredientInputs({
 						: undefined;
 
 				return (
-					<EntityInput<Ingredient>
+					<IngredientInput
 						key={index}
 						placeholder="something tasty"
 						value={ingredient as EntityInputValue<Ingredient>}
-						editingFatSecretId={editingFatSecretId}
-						onMultipleIngredientsPaste={async (ingredientLines) => {
+						recipeServings={recipeServings}
+						onMultiplePaste={async (ingredientLines) => {
 							// Set current ingredient to parsing and add additional parsing ingredients
 							updateIngredients({
 								startIndex: index,
@@ -468,69 +469,6 @@ export function IngredientInputs({
 								newIngredients.splice(index, 1);
 								return newIngredients;
 							});
-						}}
-						renderParsed={(parsed) => {
-							const { name, number_of_servings, serving, image_url } = parsed;
-							const displayedCount =
-								number_of_servings * serving.number_of_units;
-
-							// Calculate nutrition for the actual number of servings
-							const totalCalories = serving.calories * number_of_servings;
-							const totalCarbs =
-								serving.carbohydrate_grams * number_of_servings;
-							const totalProtein = serving.protein_grams * number_of_servings;
-							const totalFat = serving.fat_grams * number_of_servings;
-
-							// Calculate nutrition per recipe serving
-							const caloriesPerServing = totalCalories / recipeServings;
-							const carbsPerServing = totalCarbs / recipeServings;
-							const proteinPerServing = totalProtein / recipeServings;
-							const fatPerServing = totalFat / recipeServings;
-
-							return (
-								<View className="flex-1 min-h-[60px]">
-									<View className="flex-row items-start py-2">
-										{/* Thumbnail image or placeholder */}
-										<View className="w-10 h-10 rounded-full mr-3 overflow-hidden justify-center items-center flex-shrink-0">
-											{image_url ? (
-												<Image
-													source={{ uri: image_url }}
-													className="w-[30px] h-[30px]"
-													contentFit="contain"
-												/>
-											) : (
-												<ShoppingBasket size={20} color="#666" />
-											)}
-										</View>
-
-										<View className="flex-1 min-w-0">
-											<View className="flex-row items-center flex-wrap mb-1">
-												<Text className="font-bold text-base">
-													{displayedCount}
-												</Text>
-												{serving.measurement_description ? (
-													<Text className="font-bold text-base ml-1">
-														{displayedCount === 1
-															? serving.measurement_description
-															: plural(serving.measurement_description)}
-													</Text>
-												) : null}
-												<Text className="ml-2 text-base flex-shrink">
-													{name}
-												</Text>
-											</View>
-											<View>
-												<Macros
-													calories={caloriesPerServing}
-													carbohydrate={carbsPerServing}
-													protein={proteinPerServing}
-													fat={fatPerServing}
-												/>
-											</View>
-										</View>
-									</View>
-								</View>
-							);
 						}}
 						shouldFocus={focusedIndex === index}
 						onFocus={() => setFocusedIndex(null)}

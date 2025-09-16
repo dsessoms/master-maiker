@@ -1,12 +1,12 @@
 import {
 	InstructionInput,
-	InstructionInputState,
 	InstructionInputValue,
 	InstructionOrHeader,
 } from "./InstructionInput";
 import React, { useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
+import { EntityInputState } from "../entity-input";
 import { Plus } from "@/lib/icons";
 import { Text } from "@/components/ui/text";
 import { cn } from "@/lib/utils";
@@ -26,30 +26,113 @@ export function InstructionInputs({
 		initialValues && initialValues.length > 0
 			? [
 					...initialValues.map((parsed) => ({
-						state: InstructionInputState.Parsed,
-						raw: parsed,
+						state: EntityInputState.Parsed,
+						raw: parsed.type === "header" ? parsed.name : parsed.value,
 						parsed,
 					})),
 					{
-						state: InstructionInputState.New,
-						parsed: { type: "instruction", value: "" },
+						state: EntityInputState.New,
+						raw: "",
+						parsed: undefined,
 					},
 				]
 			: [
 					{
-						state: InstructionInputState.New,
-						parsed: { type: "instruction", value: "" },
+						state: EntityInputState.New,
+						raw: "",
+						parsed: undefined,
 					},
 				],
 	);
 	const [focusedIndex, setFocusedIndex] = React.useState<number | null>(null);
 
+	// Centralized instruction update function
+	const updateInstructions = React.useCallback(
+		(options: {
+			startIndex?: number;
+			updates?: Partial<InstructionInputValue>;
+			additionalInstructions?: Array<InstructionInputValue>;
+			addNewAtEnd?: boolean;
+			focusNextNew?: boolean;
+			deleteAtIndex?: boolean;
+			insertAtIndex?: { index: number; instruction: InstructionInputValue };
+			appendInstruction?: InstructionInputValue;
+		}) => {
+			const {
+				startIndex,
+				updates = {},
+				additionalInstructions,
+				addNewAtEnd,
+				focusNextNew,
+				deleteAtIndex,
+				insertAtIndex,
+				appendInstruction,
+			} = options;
+
+			setInstructions((prev) => {
+				const newInstructions = [...prev];
+
+				if (deleteAtIndex && startIndex !== undefined) {
+					// Delete the instruction at startIndex
+					newInstructions.splice(startIndex, 1);
+				} else if (insertAtIndex) {
+					// Insert instruction at specific index
+					newInstructions.splice(
+						insertAtIndex.index,
+						0,
+						insertAtIndex.instruction,
+					);
+				} else if (appendInstruction) {
+					// Append instruction at the end
+					newInstructions.push(appendInstruction);
+				} else if (startIndex !== undefined) {
+					// Update the instruction at startIndex
+					Object.assign(newInstructions[startIndex], updates);
+
+					// Insert additional instructions after startIndex if provided
+					if (additionalInstructions && additionalInstructions.length > 0) {
+						newInstructions.splice(
+							startIndex + 1,
+							0,
+							...additionalInstructions,
+						);
+					}
+				}
+
+				// Add new instruction at end if requested
+				if (addNewAtEnd) {
+					newInstructions.push({
+						state: EntityInputState.New,
+						raw: "",
+						parsed: undefined,
+					});
+				}
+
+				return newInstructions;
+			});
+
+			// Handle focus logic
+			if (focusNextNew && startIndex !== undefined) {
+				setTimeout(() => {
+					const nextNewIndex = instructions.findIndex(
+						(ins, idx) =>
+							idx > startIndex && ins.state === EntityInputState.New,
+					);
+					if (nextNewIndex !== -1) {
+						setFocusedIndex(nextNewIndex);
+					}
+				}, 0);
+			}
+		},
+		[instructions],
+	);
+
 	useEffect(() => {
 		const parsedInstructions = instructions
 			.filter(
 				(ins) =>
-					(ins.state === InstructionInputState.Parsed ||
-						ins.state === InstructionInputState.Editing) &&
+					(ins.state === EntityInputState.Parsed ||
+						ins.state === EntityInputState.Editing) &&
 					ins.parsed &&
 					(ins.parsed.type === "header"
 						? ins.parsed.name.trim()
@@ -61,31 +144,31 @@ export function InstructionInputs({
 
 	// Function to add a header above the first New Instruction input
 	const addHeader = React.useCallback(() => {
-		setInstructions((prev) => {
-			// Find the first ingredient with New state
-			const firstNewIndex = prev.findIndex(
-				(item) => item.state === InstructionInputState.New,
-			);
+		// Find the first instruction with New state
+		const firstNewIndex = instructions.findIndex(
+			(item) => item.state === EntityInputState.New,
+		);
 
-			const newInstructions = [...prev];
-			const headerItem = {
-				state: InstructionInputState.New,
-				parsed: { type: "header" as const, name: "" },
-			};
+		const headerItem = {
+			state: EntityInputState.New,
+			raw: "",
+			parsed: { type: "header" as const, name: "" },
+		};
 
-			if (firstNewIndex !== -1) {
-				// Insert header before the first New instruction
-				newInstructions.splice(firstNewIndex, 0, headerItem);
-				setFocusedIndex(firstNewIndex);
-			} else {
-				// If no New instruction found, add at the end
-				newInstructions.push(headerItem);
-				setFocusedIndex(newInstructions.length - 1);
-			}
-
-			return newInstructions;
-		});
-	}, []);
+		if (firstNewIndex !== -1) {
+			// Insert header before the first New instruction
+			updateInstructions({
+				insertAtIndex: { index: firstNewIndex, instruction: headerItem },
+			});
+			setFocusedIndex(firstNewIndex);
+		} else {
+			// If no New instruction found, add at the end
+			updateInstructions({
+				appendInstruction: headerItem,
+			});
+			setFocusedIndex(instructions.length);
+		}
+	}, [instructions, updateInstructions]);
 
 	return (
 		<>
@@ -93,48 +176,33 @@ export function InstructionInputs({
 				<InstructionInput
 					key={index}
 					placeholder={
-						instruction.parsed.type === "header"
+						instruction.parsed?.type === "header"
 							? "Header name"
 							: "Add instruction"
 					}
 					value={instruction}
-					onMultipleInstructionsPaste={(instructionLines: string[]) => {
-						// Handle pasting multiple instructions
-						setInstructions((prevInstructions) => {
-							const newInstructions = [...prevInstructions];
+					onMultiplePaste={(instructionLines: string[]) => {
+						// Handle pasting multiple instructions using centralized update
+						const additionalInstructions = instructionLines
+							.slice(1)
+							.map((parsed: string) => ({
+								state: EntityInputState.Parsed,
+								raw: parsed,
+								parsed: { type: "instruction" as const, value: parsed },
+							}));
 
-							// Replace the current instruction with the first pasted instruction
-							const firstInstruction = instructionLines[0];
-							const currentInstruction = newInstructions[index];
-							currentInstruction.state = InstructionInputState.Parsed;
-							currentInstruction.parsed = {
-								type: "instruction",
-								value: firstInstruction,
-							};
-
-							// Add the remaining instructions after the current one
-							const additionalInstructions = instructionLines
-								.slice(1)
-								.map((parsed: string) => ({
-									state: InstructionInputState.Parsed,
-									parsed: { type: "instruction" as const, value: parsed },
-								}));
-
-							// Insert additional instructions after current index
-							newInstructions.splice(index + 1, 0, ...additionalInstructions);
-
-							// Add a new empty instruction at the end if there isn't one already
-							const hasNewInstruction = newInstructions.some(
-								(ins) => ins.state === InstructionInputState.New,
-							);
-							if (!hasNewInstruction) {
-								newInstructions.push({
-									state: InstructionInputState.New,
-									parsed: { type: "instruction", value: "" },
-								});
-							}
-
-							return newInstructions;
+						updateInstructions({
+							startIndex: index,
+							updates: {
+								state: EntityInputState.Parsed,
+								raw: instructionLines[0],
+								parsed: {
+									type: "instruction",
+									value: instructionLines[0],
+								},
+							},
+							additionalInstructions,
+							addNewAtEnd: true,
 						});
 
 						// Focus on the next new instruction after a short delay
@@ -144,76 +212,73 @@ export function InstructionInputs({
 						}, 100);
 					}}
 					onChange={(rawValue: string) => {
-						const newInstructions = [...instructions];
-						const currentInstruction = newInstructions[index];
-						if (currentInstruction.parsed.type === "header") {
-							currentInstruction.parsed.name = rawValue;
+						const currentInstruction = instructions[index];
+						const wasNew = currentInstruction.state === EntityInputState.New;
+
+						// Create updated parsed value
+						let updatedParsed: InstructionOrHeader;
+						if (currentInstruction.parsed) {
+							if (currentInstruction.parsed.type === "header") {
+								updatedParsed = { type: "header", name: rawValue };
+							} else {
+								updatedParsed = { type: "instruction", value: rawValue };
+							}
 						} else {
-							currentInstruction.parsed.value = rawValue;
+							updatedParsed = { type: "instruction", value: rawValue };
 						}
 
-						if (currentInstruction.state === InstructionInputState.New) {
-							currentInstruction.state = InstructionInputState.Dirty;
-							// Only add new input if the current input is not of type header
-							if (currentInstruction.parsed.type !== "header") {
-								newInstructions.push({
-									state: InstructionInputState.New,
-									parsed: { type: "instruction", value: "" },
-								});
-							}
-						}
-						setInstructions(newInstructions);
+						updateInstructions({
+							startIndex: index,
+							updates: {
+								raw: rawValue,
+								parsed: updatedParsed,
+								state: wasNew
+									? EntityInputState.Dirty
+									: currentInstruction.state,
+							},
+							addNewAtEnd: wasNew && updatedParsed.type !== "header",
+						});
 					}}
 					onSave={() => {
-						setInstructions((prevInstructions) => {
-							const newInstructions = [...prevInstructions];
-							const currentInstruction = newInstructions[index];
+						const currentInstruction = instructions[index];
+						const isEmpty = !currentInstruction.raw.trim();
 
-							// Check if the field is empty and not of state NEW
-							const isEmpty =
-								currentInstruction.parsed.type === "header"
-									? !currentInstruction.parsed.name.trim()
-									: !currentInstruction.parsed.value.trim();
+						// Handle empty instructions
+						if (
+							isEmpty &&
+							currentInstruction.state === EntityInputState.New &&
+							currentInstruction.parsed?.type !== "header"
+						) {
+							return;
+						}
 
-							if (
-								isEmpty &&
-								currentInstruction.state === InstructionInputState.New &&
-								currentInstruction.parsed.type !== "header"
-							) {
-								return newInstructions;
-							}
+						if (isEmpty) {
+							// Delete empty instruction
+							updateInstructions({
+								startIndex: index,
+								deleteAtIndex: true,
+							});
+							return;
+						}
 
-							if (isEmpty) {
-								// Delete empty input field
-								newInstructions.splice(index, 1);
-								return newInstructions;
-							}
-
-							currentInstruction.state = InstructionInputState.Parsed;
-							return newInstructions;
+						// Mark as parsed and focus next NEW instruction
+						updateInstructions({
+							startIndex: index,
+							updates: { state: EntityInputState.Parsed },
+							focusNextNew: true,
 						});
-
-						// Focus on the next NEW instruction immediately (after setting state)
-						setTimeout(() => {
-							const nextNewIndex = instructions.findIndex(
-								(ins, idx) =>
-									idx > index && ins.state === InstructionInputState.New,
-							);
-							if (nextNewIndex !== -1) {
-								setFocusedIndex(nextNewIndex);
-							}
-						}, 0);
 					}}
 					onEdit={() => {
-						const newInstructions = [...instructions];
-						const currentInstruction = newInstructions[index];
-						currentInstruction.state = InstructionInputState.Editing;
-						setInstructions(newInstructions);
+						updateInstructions({
+							startIndex: index,
+							updates: { state: EntityInputState.Editing },
+						});
 					}}
 					onClear={() => {
-						const newInstructions = [...instructions];
-						newInstructions.splice(index, 1);
-						setInstructions(newInstructions);
+						updateInstructions({
+							startIndex: index,
+							deleteAtIndex: true,
+						});
 					}}
 					renderParsed={(parsed) => (
 						<Text
