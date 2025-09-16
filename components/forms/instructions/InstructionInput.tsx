@@ -1,3 +1,4 @@
+import { Header, Instruction } from "@/lib/schemas";
 import { Pressable, TextInput, View } from "react-native";
 import React, { useEffect, useRef } from "react";
 
@@ -11,17 +12,12 @@ export enum InstructionInputState {
 	Editing = "editing",
 }
 
-export type InstructionInputValue =
-	| {
-			state: InstructionInputState.New | InstructionInputState.Dirty;
-			raw: string;
-			parsed?: string;
-	  }
-	| {
-			state: InstructionInputState.Parsed | InstructionInputState.Editing;
-			raw: string;
-			parsed: string;
-	  };
+export type InstructionOrHeader = Instruction | Header;
+
+export type InstructionInputValue = {
+	state: InstructionInputState;
+	parsed: InstructionOrHeader;
+};
 
 export interface InstructionInputProps {
 	value: InstructionInputValue;
@@ -31,12 +27,12 @@ export interface InstructionInputProps {
 	onEdit: () => void;
 	onClear?: () => void;
 	onMultipleInstructionsPaste?: (instructions: string[]) => void;
-	renderParsed?: (parsed: string) => React.ReactNode;
+	renderParsed?: (parsed: InstructionOrHeader) => React.ReactNode;
 	shouldFocus?: boolean;
 	onFocus?: () => void;
 }
 
-export function InstructionInput({
+export function InstructionInput<T>({
 	value,
 	onChange,
 	onSave,
@@ -51,6 +47,9 @@ export function InstructionInput({
 	const inputRef = useRef<TextInput>(null);
 	const shouldSaveOnBlur = useRef(false);
 	const isDeleting = useRef(false);
+
+	const parsedValue =
+		value.parsed.type === "header" ? value.parsed.name : value.parsed.value;
 
 	// Helper function to handle blur logic with conditional saving
 	const handleBlur = () => {
@@ -108,7 +107,7 @@ export function InstructionInput({
 			<Input
 				ref={inputRef}
 				placeholder={placeholder}
-				value={value.raw}
+				value={parsedValue}
 				multiline
 				onChange={(e) => {
 					const inputType = (e.nativeEvent as any)?.inputType;
@@ -134,7 +133,7 @@ export function InstructionInput({
 				}}
 				onKeyPress={(e) => {
 					// Detect Enter key press and save the instruction
-					if (e.nativeEvent.key === "Enter" && value.raw.trim()) {
+					if (e.nativeEvent.key === "Enter" && parsedValue.trim()) {
 						e.preventDefault(); // Prevent the newline from being inserted
 						shouldSaveOnBlur.current = false; // Reset flag since we're saving immediately
 						onSave();
@@ -153,10 +152,10 @@ export function InstructionInput({
 				onBlur={handleBlur}
 				className="overflow-hidden max-h-[120px] text-start"
 				style={{
-					paddingRight: value.raw ? 40 : 12, // Space for clear icon or no icons
+					paddingRight: parsedValue ? 40 : 12, // Space for clear icon or no icons
 				}}
 			/>
-			{!!value.raw && !!onClear && (
+			{!!parsedValue && !!onClear && (
 				<Pressable
 					onPressIn={() => {
 						isDeleting.current = true;

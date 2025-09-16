@@ -3,20 +3,24 @@ import {
 	EntityInputState,
 	EntityInputValue,
 } from "./IngredientEntityInput";
+import { Header, Ingredient } from "@/lib/schemas";
+import { Plus, ShoppingBasket } from "@/lib/icons";
+import { Pressable, View } from "react-native";
 
+import { Button } from "@/components/ui/button";
 import { Image } from "@/components/image";
-import { Ingredient } from "../../../lib/schemas";
 import { Macros } from "../../meal-plan/macros";
 import React from "react";
-import { ShoppingBasket } from "@/lib/icons";
 import { Text } from "@/components/ui/text";
-import { View } from "react-native";
 import { plural } from "pluralize";
 import { useParseIngredients } from "../../../hooks/recipes/use-parse-ingredients";
 
+// Union type for ingredients or headers
+type IngredientOrHeader = Ingredient | Header;
+
 interface IngredientInputsProps {
-	onIngredientsChange: (ingredients: Ingredient[]) => void;
-	initialValues?: Ingredient[];
+	onIngredientsChange: (ingredients: IngredientOrHeader[]) => void;
+	initialValues?: IngredientOrHeader[];
 	recipeServings?: number;
 }
 
@@ -27,19 +31,31 @@ export function IngredientInputs({
 }: IngredientInputsProps) {
 	const { parseIngredients } = useParseIngredients();
 	const [ingredients, setIngredients] = React.useState<
-		(EntityInputValue<Ingredient> & { previouslyParsedRaw?: string })[]
+		(EntityInputValue<IngredientOrHeader> & { previouslyParsedRaw?: string })[]
 	>(
 		initialValues && initialValues.length > 0
 			? [
 					...initialValues.map((parsed) => {
+						// Handle headers differently from ingredients
+						if (parsed.type === "header") {
+							return {
+								state: EntityInputState.Parsed,
+								raw: parsed.name,
+								parsed,
+								previouslyParsedRaw: parsed.name,
+							};
+						}
+
+						// Handle ingredients
+						const ingredient = parsed as Ingredient;
 						const raw = `${
-							parsed.number_of_servings * parsed.serving.number_of_units
-						} ${parsed.serving.measurement_description} ${parsed.name}`;
+							ingredient.number_of_servings * ingredient.serving.number_of_units
+						} ${ingredient.serving.measurement_description} ${ingredient.name}`;
 
 						return {
 							state: EntityInputState.Parsed,
 							raw,
-							parsed,
+							parsed: ingredient,
 							previouslyParsedRaw: raw,
 						};
 					}),
@@ -49,17 +65,17 @@ export function IngredientInputs({
 	);
 	const [focusedIndex, setFocusedIndex] = React.useState<number | null>(null);
 
-	// Keep parent in sync with parsed ingredients
+	// Keep parent in sync with parsed ingredients and headers
 	React.useEffect(() => {
-		const parsedIngredients = ingredients
+		const parsedItems = ingredients
 			.filter(
-				(ing) =>
-					ing.state === EntityInputState.Parsed &&
-					ing.parsed &&
-					ing.raw.trim() !== "",
+				(item) =>
+					item.state === EntityInputState.Parsed &&
+					item.parsed &&
+					item.raw.trim() !== "",
 			)
-			.map((ing) => ing.parsed!);
-		onIngredientsChange(parsedIngredients);
+			.map((item) => item.parsed!);
+		onIngredientsChange(parsedItems);
 	}, [ingredients, onIngredientsChange]);
 
 	// Centralized ingredient update function
@@ -67,10 +83,10 @@ export function IngredientInputs({
 		(options: {
 			startIndex: number;
 			updates?: Partial<
-				EntityInputValue<Ingredient> & { previouslyParsedRaw?: string }
+				EntityInputValue<IngredientOrHeader> & { previouslyParsedRaw?: string }
 			>;
 			additionalIngredients?: Array<
-				EntityInputValue<Ingredient> & { previouslyParsedRaw?: string }
+				EntityInputValue<IngredientOrHeader> & { previouslyParsedRaw?: string }
 			>;
 			addNewAtEnd?: boolean;
 			focusNextNew?: boolean;
@@ -170,21 +186,142 @@ export function IngredientInputs({
 		[parseIngredients],
 	);
 
+	// Function to add a header above the first New ingredient input
+	const addHeader = React.useCallback(() => {
+		setIngredients((prev) => {
+			// Find the first ingredient with New state
+			const firstNewIndex = prev.findIndex(
+				(item) => item.state === EntityInputState.New,
+			);
+
+			const newIngredients = [...prev];
+			const headerItem = {
+				state: EntityInputState.New,
+				raw: "",
+				parsed: { type: "header", name: "" } as Header,
+			};
+
+			if (firstNewIndex !== -1) {
+				// Insert header before the first New ingredient
+				newIngredients.splice(firstNewIndex, 0, headerItem);
+				setFocusedIndex(firstNewIndex);
+			} else {
+				// If no New ingredient found, add at the end
+				newIngredients.push(headerItem);
+				setFocusedIndex(newIngredients.length - 1);
+			}
+
+			return newIngredients;
+		});
+	}, []);
+
 	return (
 		<>
 			{ingredients.map((ingredient, index) => {
+				// Handle headers separately
+				if (ingredient.parsed?.type === "header") {
+					const headerItem = ingredient.parsed as Header;
+
+					if (ingredient.state === EntityInputState.Parsed) {
+						return (
+							<Pressable
+								key={index}
+								onPress={() => {
+									updateIngredients({
+										startIndex: index,
+										updates: { state: EntityInputState.Editing },
+									});
+								}}
+								className="mb-2 min-h-[40px] rounded px-2 py-1 active:bg-muted/50"
+							>
+								<Text className="text-lg font-semibold text-foreground">
+									{headerItem.name}
+								</Text>
+							</Pressable>
+						);
+					}
+
+					// Render header input for editing/new states
+					return (
+						<EntityInput<Header>
+							key={index}
+							placeholder="Header name (e.g., 'For the sauce')"
+							value={ingredient as EntityInputValue<Header>}
+							onChange={(rawValue) => {
+								updateIngredients({
+									startIndex: index,
+									updates: {
+										raw: rawValue,
+										parsed: { type: "header", name: rawValue } as Header,
+									},
+								});
+							}}
+							onSave={() => {
+								if (ingredient.raw.trim()) {
+									updateIngredients({
+										startIndex: index,
+										updates: {
+											state: EntityInputState.Parsed,
+											parsed: {
+												type: "header",
+												name: ingredient.raw,
+											} as Header,
+										},
+										focusNextNew: true,
+									});
+								} else {
+									// Delete empty header
+									setIngredients((prev) => {
+										const newIngredients = [...prev];
+										newIngredients.splice(index, 1);
+										return newIngredients;
+									});
+								}
+							}}
+							onEdit={() => {
+								updateIngredients({
+									startIndex: index,
+									updates: { state: EntityInputState.Editing },
+								});
+							}}
+							onCancel={() => {
+								updateIngredients({
+									startIndex: index,
+									updates: { state: EntityInputState.Parsed },
+								});
+							}}
+							onClear={() => {
+								setIngredients((prev) => {
+									const newIngredients = [...prev];
+									newIngredients.splice(index, 1);
+									return newIngredients;
+								});
+							}}
+							renderParsed={(parsed) => (
+								<Text className="text-lg font-semibold text-foreground">
+									{parsed.name}
+								</Text>
+							)}
+							shouldFocus={focusedIndex === index}
+							onFocus={() => setFocusedIndex(null)}
+						/>
+					);
+				}
+
+				// Handle ingredients (existing logic)
 				// Check if this ingredient should show fat secret editing UI
 				const editingFatSecretId =
 					ingredient.state === EntityInputState.Editing &&
-					ingredient.parsed?.fat_secret_id
-						? ingredient.parsed.fat_secret_id
+					ingredient.parsed?.type === "ingredient" &&
+					(ingredient.parsed as Ingredient)?.fat_secret_id
+						? (ingredient.parsed as Ingredient).fat_secret_id
 						: undefined;
 
 				return (
 					<EntityInput<Ingredient>
 						key={index}
 						placeholder="something tasty"
-						value={ingredient}
+						value={ingredient as EntityInputValue<Ingredient>}
 						editingFatSecretId={editingFatSecretId}
 						onMultipleIngredientsPaste={async (ingredientLines) => {
 							// Set current ingredient to parsing and add additional parsing ingredients
@@ -273,11 +410,20 @@ export function IngredientInputs({
 						onSave={async () => {
 							const currentIngredient = ingredients[index];
 
-							// Skip empty new ingredients
 							if (
-								currentIngredient.raw === "" &&
+								currentIngredient.raw.trim() === "" &&
 								currentIngredient.state === EntityInputState.New
 							) {
+								return;
+							}
+
+							// Delete empty ingredients
+							if (currentIngredient.raw.trim() === "") {
+								setIngredients((prev) => {
+									const newIngredients = [...prev];
+									newIngredients.splice(index, 1);
+									return newIngredients;
+								});
 								return;
 							}
 
@@ -391,6 +537,15 @@ export function IngredientInputs({
 					/>
 				);
 			})}
+
+			<Button
+				variant="outline"
+				onPress={addHeader}
+				className="mt-2 flex-row self-start"
+			>
+				<Plus className="text-primary" size={15} />
+				<Text>Header</Text>
+			</Button>
 		</>
 	);
 }

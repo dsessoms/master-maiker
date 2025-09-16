@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { Button } from "@/components/ui/button";
+import { Header } from "@/components/recipe/header";
 import { Image } from "@/components/image";
 import { Ingredient } from "@/components/recipe/ingredient";
 import { Instruction } from "@/components/recipe/instruction";
@@ -137,13 +138,26 @@ export default function RecipeDetails() {
 									(a: ExpandedIngredient, b: ExpandedIngredient) =>
 										a.order - b.order,
 								)
-								.map((ingredient: ExpandedIngredient) => (
-									<Ingredient
-										key={ingredient.id}
-										ingredient={ingredient}
-										recipeServingsMultiplier={recipeServingsMultiplier}
-									/>
-								))}
+								.map((ingredient: ExpandedIngredient) => {
+									// Check if this is a header
+									if (ingredient.type === "header") {
+										return (
+											<Header
+												key={ingredient.id}
+												name={ingredient.name || ""}
+											/>
+										);
+									}
+
+									// Render regular ingredient
+									return (
+										<Ingredient
+											key={ingredient.id}
+											ingredient={ingredient}
+											recipeServingsMultiplier={recipeServingsMultiplier}
+										/>
+									);
+								})}
 						</View>
 					</View>
 
@@ -160,13 +174,36 @@ export default function RecipeDetails() {
 								?.sort(
 									(a: InstructionRow, b: InstructionRow) => a.order - b.order,
 								)
-								.map((instruction: InstructionRow, index: number) => (
-									<Instruction
-										key={instruction.id}
-										index={index}
-										value={instruction.value || ""}
-									/>
-								))}
+								.map((instruction: InstructionRow, index: number) => {
+									// Check if this is a header
+									if (instruction.type === "header") {
+										return (
+											<Header
+												key={instruction.id}
+												name={instruction.name || ""}
+											/>
+										);
+									}
+
+									// Calculate the step number by counting only non-header instructions before this one
+									const sortedInstructions =
+										recipe.instruction?.sort(
+											(a: InstructionRow, b: InstructionRow) =>
+												a.order - b.order,
+										) || [];
+
+									const stepNumber = sortedInstructions
+										.slice(0, index)
+										.filter((inst) => inst.type !== "header").length;
+
+									return (
+										<Instruction
+											key={instruction.id}
+											index={stepNumber}
+											value={instruction.value || ""}
+										/>
+									);
+								})}
 						</View>
 					</View>
 				</View>

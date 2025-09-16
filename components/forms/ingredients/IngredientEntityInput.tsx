@@ -18,6 +18,7 @@ import { Search } from "@/lib/icons/search";
 import { SearchFoodModal } from "@/components/food/search-food-modal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { X } from "@/lib/icons/x";
+import { cn } from "@/lib/utils";
 import { useFatSecretFood } from "@/hooks/fat-secret/use-fat-secret-food";
 
 // Food data interfaces
@@ -324,7 +325,12 @@ export function EntityInput<T>({
 					onPress={() => {
 						onClear();
 					}}
-					className="absolute right-10 top-0 bottom-0 w-8 justify-center items-center z-10"
+					className={cn({
+						"absolute top-0 bottom-0 w-8 justify-center items-center z-10":
+							true,
+						"right-10": !!onFoodSelect,
+						"right-2": !onFoodSelect,
+					})}
 					hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
 				>
 					<X size={16} className="text-muted-foreground" />

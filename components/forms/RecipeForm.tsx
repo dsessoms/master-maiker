@@ -11,6 +11,7 @@ import { Button } from "../ui/button";
 import { ImageUploader } from "./ImageUploader";
 import { IngredientInputs } from "./ingredients/IngredientInputs";
 import { InstructionInputs } from "./instructions/InstructionInputs";
+import { InstructionOrHeader } from "@/components/forms/instructions/InstructionInput";
 import { Label } from "../ui/label";
 import { Text } from "@/components/ui/text";
 import { supabase } from "@/config/supabase";
@@ -19,6 +20,15 @@ import { useRecipeImage } from "@/hooks/recipes/use-recipe-image";
 import { useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { zodResolver } from "@hookform/resolvers/zod";
+
+// Header type definition to match schema
+interface Header {
+	type: "header";
+	name: string;
+}
+
+// Union type for ingredients or headers
+type IngredientOrHeader = Ingredient | Header;
 
 export interface RecipeFormProps {
 	initialValues?: Recipe;
@@ -48,8 +58,12 @@ export function RecipeForm({
 		},
 	});
 
-	const [parsedIngredients, setParsedIngredients] = useState<Ingredient[]>([]);
-	const [parsedInstructions, setParsedInstructions] = useState<string[]>([]);
+	const [parsedIngredients, setParsedIngredients] = useState<
+		IngredientOrHeader[]
+	>([]);
+	const [parsedInstructions, setParsedInstructions] = useState<
+		InstructionOrHeader[]
+	>([]);
 	const [selectedImage, setSelectedImage] = useState<
 		{ file: File; uri: string } | string | undefined
 	>(existingImageUrl);
@@ -57,11 +71,6 @@ export function RecipeForm({
 
 	// Override the submit handler to include parsed ingredients and handle image upload
 	const handleSubmit = async (data: Partial<Recipe>) => {
-		const instructions: Instruction[] = parsedInstructions.map((value) => ({
-			type: "instruction",
-			value,
-		}));
-
 		let image_id: string | undefined;
 
 		// Handle image upload if there's a new file
@@ -102,7 +111,7 @@ export function RecipeForm({
 
 		await onSubmit({
 			...data,
-			instructions,
+			instructions: parsedInstructions,
 			ingredients: parsedIngredients,
 			image_id: image_id,
 		});
@@ -176,18 +185,12 @@ export function RecipeForm({
 					<IngredientInputs
 						onIngredientsChange={setParsedIngredients}
 						recipeServings={form.watch("servings") || 1}
-						initialValues={
-							initialValues?.ingredients?.filter(
-								(i: any) => i.type === "ingredient",
-							) as Ingredient[]
-						}
+						initialValues={initialValues?.ingredients}
 					/>
 					<Label className="text-xl font-semibold">Instructions</Label>
 					<InstructionInputs
 						onInstructionsChange={setParsedInstructions}
-						initialValues={initialValues?.instructions
-							?.filter((i: any) => i.type === "instruction")
-							.map((i: any) => i.value)}
+						initialValues={initialValues?.instructions}
 					/>
 					{/* Prep Time Section */}
 					<Label className="text-xl font-semibold">Prep Time</Label>

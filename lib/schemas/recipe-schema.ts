@@ -1,10 +1,12 @@
 import { FoodItemSchema } from "./food-item-schema";
 import { z } from "zod";
 
-export const Header = z.object({
+export const HeaderSchema = z.object({
 	type: z.literal("header"),
 	name: z.string(), // e.g. "for the sauce"
 });
+
+export type Header = z.infer<typeof HeaderSchema>;
 
 export const IngredientSchema = FoodItemSchema.extend({
 	type: z.literal("ingredient"),
@@ -26,8 +28,8 @@ export const RecipeSchema = z.object({
 	description: z.string(),
 	image_id: z.string().optional(),
 	servings: z.number(),
-	ingredients: z.array(z.union([IngredientSchema, Header])).optional(),
-	instructions: z.array(z.union([InstructionSchema, Header])).optional(),
+	ingredients: z.array(z.union([IngredientSchema, HeaderSchema])).optional(),
+	instructions: z.array(z.union([InstructionSchema, HeaderSchema])).optional(),
 	prep_time_hours: z.number().optional(),
 	prep_time_minutes: z.number().optional(),
 	cook_time_hours: z.number().optional(),
