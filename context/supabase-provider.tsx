@@ -103,11 +103,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 		if (initialized) {
 			SplashScreen.hideAsync();
 			if (session) {
-				if (
-					pathname === "/welcome" ||
-					pathname === "/sign-in" ||
-					pathname === "/sign-up"
-				) {
+				if (["/welcome", "/sign-in", "/sign-up"].includes(pathname)) {
 					router.replace("/");
 				}
 			} else {

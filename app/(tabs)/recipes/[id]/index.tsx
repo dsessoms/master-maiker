@@ -86,7 +86,7 @@ export default function RecipeDetails() {
 						<View className="flex flex-row justify-between items-start mb-4">
 							<View className="flex-1 mr-4">
 								<Text className="text-2xl font-bold mb-2">{recipe.name}</Text>
-								{recipe.description && (
+								{!!recipe.description && (
 									<Text className="text-base text-muted-foreground">
 										{recipe.description}
 									</Text>

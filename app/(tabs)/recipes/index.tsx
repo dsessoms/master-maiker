@@ -62,10 +62,10 @@ export default function Recipes() {
 		<View className="flex flex-1 bg-background">
 			{/* Main content */}
 			<ScrollView className="flex-1" contentContainerStyle={{ padding: 16 }}>
-				{isLoading && <Text>Loading...</Text>}
-				{isError && <Text>Error loading recipes.</Text>}
-				{recipes && recipes.length === 0 && <Text>No recipes found.</Text>}
-				{recipes && recipes.length > 0 && (
+				{!!isLoading && <Text>Loading...</Text>}
+				{!!isError && <Text>Error loading recipes.</Text>}
+				{!!recipes && recipes.length === 0 && <Text>No recipes found.</Text>}
+				{!!recipes && recipes.length > 0 && (
 					<View className="flex flex-row flex-wrap gap-2">
 						{recipes.map((recipe: any) => (
 							<View

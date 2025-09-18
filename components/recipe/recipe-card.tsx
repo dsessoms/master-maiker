@@ -42,13 +42,6 @@ export const RecipeCard = ({
 	const { id, image_id, name, description } = recipe;
 	const imageUrl = useRecipeImage(image_id);
 
-	const totalMinutes =
-		Number(recipe.cook_time_hours ?? 0) * 60 +
-		Number(recipe.prep_time_hours ?? 0) * 60 +
-		Number(recipe.cook_time_minutes ?? 0) +
-		Number(recipe.prep_time_minutes ?? 0);
-	const { hours, minutes } = toHoursAndMinutes(totalMinutes);
-
 	const handlePress = () => {
 		router.push({
 			pathname: "/recipes/[id]",
@@ -72,7 +65,7 @@ export const RecipeCard = ({
 			className="flex flex-col bg-card border border-border rounded-lg overflow-hidden active:bg-muted"
 		>
 			<View className="relative">
-				{imageUrl ? (
+				{!!imageUrl ? (
 					<Image
 						source={{ uri: imageUrl }}
 						className="h-48 w-full"
@@ -114,7 +107,7 @@ export const RecipeCard = ({
 
 			<View className="flex flex-1 flex-col p-4">
 				<Text className="text-lg font-semibold mb-1 line-clamp-1">{name}</Text>
-				{description && (
+				{!!description && (
 					<Text className="text-sm text-muted-foreground mb-2 line-clamp-1">
 						{description}
 					</Text>

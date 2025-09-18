@@ -1,20 +1,21 @@
-import React, { useState, useEffect } from "react";
 import {
-	Modal,
-	View,
-	ScrollView,
-	Platform,
 	ActivityIndicator,
+	Modal,
+	Platform,
+	ScrollView,
+	View,
 } from "react-native";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Text } from "@/components/ui/text";
-import { useFatSecretFoodSearch } from "@/hooks/fat-secret/use-fat-secret-food-search";
-import { FoodServingEditor } from "./food-serving-editor";
 import type {
 	FatSecretFood,
 	FatSecretServing,
 } from "@/lib/server/fat-secret/types";
+import React, { useEffect, useState } from "react";
+
+import { Button } from "@/components/ui/button";
+import { FoodServingEditor } from "./food-serving-editor";
+import { Input } from "@/components/ui/input";
+import { Text } from "@/components/ui/text";
+import { useFatSecretFoodSearch } from "@/hooks/fat-secret/use-fat-secret-food-search";
 
 interface FoodItemToAdd {
 	food: FatSecretFood;
@@ -103,8 +104,6 @@ export const SearchFoodModal: React.FC<SearchFoodModalProps> = ({
 
 	const handleAddFood = (item: FoodItemToAdd) => {
 		addFoodItem(item);
-		// Optionally close modal after adding
-		// onClose();
 	};
 
 	return (
@@ -136,7 +135,7 @@ export const SearchFoodModal: React.FC<SearchFoodModalProps> = ({
 
 				{/* Results */}
 				<ScrollView className="flex-1">
-					{isLoading && debouncedQuery && (
+					{isLoading && !!debouncedQuery && (
 						<View className="p-4 items-center">
 							<ActivityIndicator size="large" />
 							<Text className="mt-2 text-muted-foreground">Searching...</Text>
@@ -152,7 +151,7 @@ export const SearchFoodModal: React.FC<SearchFoodModalProps> = ({
 					)}
 
 					{!isLoading &&
-						debouncedQuery &&
+						!!debouncedQuery &&
 						!searchResults?.foods_search?.results?.food?.length && (
 							<View className="p-4 items-center">
 								<Text className="text-muted-foreground">
