@@ -10,7 +10,6 @@ import { TouchableOpacity, View } from "react-native";
 import { Button } from "@/components/ui/button";
 import { Image } from "@/components/image";
 import { Text } from "@/components/ui/text";
-import { toHoursAndMinutes } from "@/lib/utils/to-hours-and-minutes";
 import { useRecipeImage } from "@/hooks/recipes/use-recipe-image";
 import { useRouter } from "expo-router";
 
@@ -105,13 +104,8 @@ export const RecipeCard = ({
 				</View>
 			</View>
 
-			<View className="flex flex-1 flex-col p-4">
-				<Text className="text-lg font-semibold mb-1 line-clamp-1">{name}</Text>
-				{!!description && (
-					<Text className="text-sm text-muted-foreground mb-2 line-clamp-1">
-						{description}
-					</Text>
-				)}
+			<View className="flex flex-col p-2 h-16">
+				<Text className="text-sm font-semibold mb-1 line-clamp-2">{name}</Text>
 			</View>
 		</TouchableOpacity>
 	);
