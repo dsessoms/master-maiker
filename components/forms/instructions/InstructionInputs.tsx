@@ -108,12 +108,15 @@ export function InstructionInputs({
 					});
 				}
 
-				return newInstructions;
-			});
-
-			// Handle focus logic
-			if (focusNextNew && startIndex !== undefined) {
-				setTimeout(() => {
+				if (startIndex != null && updates.state === EntityInputState.Editing) {
+					setFocusedIndex(startIndex);
+				} else if (
+					focusNextNew &&
+					!newInstructions.some(
+						(ins) => ins.state === EntityInputState.Editing,
+					) &&
+					startIndex != null
+				) {
 					const nextNewIndex = instructions.findIndex(
 						(ins, idx) =>
 							idx > startIndex && ins.state === EntityInputState.New,
@@ -121,8 +124,10 @@ export function InstructionInputs({
 					if (nextNewIndex !== -1) {
 						setFocusedIndex(nextNewIndex);
 					}
-				}, 0);
-			}
+				}
+
+				return newInstructions;
+			});
 		},
 		[instructions],
 	);

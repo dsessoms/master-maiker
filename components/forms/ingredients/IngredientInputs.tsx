@@ -119,18 +119,23 @@ export function IngredientInputs({
 					});
 				}
 
+				if (updates.state === EntityInputState.Editing) {
+					setFocusedIndex(startIndex);
+				} else if (
+					focusNextNew &&
+					!newIngredients.some((ing) => ing.state === EntityInputState.Editing)
+				) {
+					const nextNewIndex = ingredients.findIndex(
+						(ing, idx) =>
+							idx > startIndex && ing.state === EntityInputState.New,
+					);
+					if (nextNewIndex !== -1) {
+						setFocusedIndex(nextNewIndex);
+					}
+				}
+
 				return newIngredients;
 			});
-
-			// Handle focus logic
-			if (focusNextNew) {
-				const nextNewIndex = ingredients.findIndex(
-					(ing, idx) => idx > startIndex && ing.state === EntityInputState.New,
-				);
-				if (nextNewIndex !== -1) {
-					setFocusedIndex(nextNewIndex);
-				}
-			}
 		},
 		[ingredients],
 	);

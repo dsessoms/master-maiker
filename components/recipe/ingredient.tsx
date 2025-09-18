@@ -1,8 +1,8 @@
 import { ExpandedIngredient } from "../../types";
 import { Image } from "@/components/image";
+import { ShoppingBasket } from "@/lib/icons";
 import { Text } from "../ui/text";
 import { View } from "react-native";
-import { ShoppingBasket } from "@/lib/icons";
 
 interface IngredientProps {
 	ingredient: ExpandedIngredient;
@@ -64,12 +64,12 @@ export function Ingredient({
 						{ingredient.food.food_name}
 						{ingredient.food.brand_name && ` (${ingredient.food.brand_name})`}
 					</Text>
-					{ingredient.meta && (
-						<Text className="text-sm text-muted-foreground ml-1">
-							({ingredient.meta})
-						</Text>
-					)}
 				</View>
+				{ingredient.meta && (
+					<Text className="text-sm text-muted-foreground">
+						{ingredient.meta}
+					</Text>
+				)}
 			</View>
 		</View>
 	);
