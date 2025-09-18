@@ -107,6 +107,11 @@ export default function RecipeDetails() {
 						</View>
 					</View>
 
+					{/* Nutrition Section */}
+					<View className="mb-6">
+						<Macros recipe={recipe} />
+					</View>
+
 					{/* Ingredients Section */}
 					<View className="mb-6">
 						<View className="flex flex-row justify-between items-center mb-4">
@@ -159,11 +164,6 @@ export default function RecipeDetails() {
 									);
 								})}
 						</View>
-					</View>
-
-					{/* Nutrition Section */}
-					<View className="mb-6">
-						<Macros recipe={recipe} />
 					</View>
 
 					{/* Instructions Section */}

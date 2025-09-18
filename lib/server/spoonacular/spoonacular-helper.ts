@@ -1,6 +1,7 @@
 import { Ingredient, Recipe } from "../../schemas/recipe-schema";
 
 import axios from "axios";
+
 const API_PATH = "https://api.spoonacular.com";
 export const THUMBNAIL_BASE_URL =
 	"https://spoonacular.com/cdn/ingredients_100x100/";
@@ -239,6 +240,7 @@ export const convertSpoonacularToIngredient = (
 export const convertSpoonacularExtendedIngredientToIngredient = (
 	extendedIngredient: SpoonacularExtendedIngredient,
 	nutrition: SpoonacularNutrition,
+	recipeServings: number,
 ): Ingredient => {
 	// Find nutrition info for this specific ingredient
 	const ingredientNutrition = nutrition.ingredients.find(
@@ -246,16 +248,19 @@ export const convertSpoonacularExtendedIngredientToIngredient = (
 	);
 
 	const calories = ingredientNutrition
-		? getNutrition(ingredientNutrition.nutrients, "Calories").amount
+		? getNutrition(ingredientNutrition.nutrients, "Calories").amount *
+			recipeServings
 		: 0;
 	const carbs = ingredientNutrition
-		? getNutrition(ingredientNutrition.nutrients, "Carbohydrates").amount
+		? getNutrition(ingredientNutrition.nutrients, "Carbohydrates").amount *
+			recipeServings
 		: 0;
 	const fat = ingredientNutrition
-		? getNutrition(ingredientNutrition.nutrients, "Fat").amount
+		? getNutrition(ingredientNutrition.nutrients, "Fat").amount * recipeServings
 		: 0;
 	const protein = ingredientNutrition
-		? getNutrition(ingredientNutrition.nutrients, "Protein").amount
+		? getNutrition(ingredientNutrition.nutrients, "Protein").amount *
+			recipeServings
 		: 0;
 
 	return {
@@ -299,6 +304,7 @@ export const convertSpoonacularRecipeToRecipe = (
 		convertSpoonacularExtendedIngredientToIngredient(
 			ingredient,
 			spoonacularRecipe.nutrition,
+			spoonacularRecipe.servings,
 		),
 	);
 
