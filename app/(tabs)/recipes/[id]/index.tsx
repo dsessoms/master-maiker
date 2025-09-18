@@ -1,8 +1,8 @@
 import { ActivityIndicator, ScrollView, View } from "react-native";
 import { ExpandedIngredient, InstructionRow } from "@/types";
 import { Minus, PencilIcon, Plus } from "@/lib/icons";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/recipe/header";
@@ -68,6 +68,11 @@ export default function RecipeDetails() {
 
 	return (
 		<View className="flex flex-1 bg-background">
+			<Stack.Screen
+				options={{
+					title: recipe.name,
+				}}
+			/>
 			<ScrollView className="flex-1">
 				<View className="p-4">
 					{/* Recipe Image */}
