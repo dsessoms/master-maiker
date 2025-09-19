@@ -24,6 +24,7 @@ export const colors = {
 		border: "hsl(0, 0%, 92.20%)",
 		input: "hsl(0, 0%, 92.20%)",
 		ring: "hsl(0, 0%, 70.80%)",
+		loading: "hsl(0, 0%, 25%)",
 	},
 	dark: {
 		background: "hsl(240, 10%, 3.90%)",
@@ -45,5 +46,6 @@ export const colors = {
 		border: "hsl(240, 3.70%, 15.90%)",
 		input: "hsl(240, 3.70%, 15.90%)",
 		ring: "hsl(240, 4.90%, 83.90%)",
+		loading: "hsl(0, 0%, 25%)",
 	},
 };
