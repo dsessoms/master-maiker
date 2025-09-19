@@ -168,7 +168,7 @@ export function EntityInput<ParsedType>({
 					shouldSaveOnBlur.current = false;
 				}}
 				onBlur={handleBlur}
-				className="overflow-hidden max-h-[40px] text-start"
+				className="overflow-hidden ios:pt-3"
 			/>
 			{!!value.raw && !!onClear && (
 				<Pressable
