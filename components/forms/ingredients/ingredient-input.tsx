@@ -1,15 +1,20 @@
-import { EntityInput, EntityInputProps } from "@/components/forms/entity-input";
+import {
+	EntityInput,
+	EntityInputProps,
+	EntityInputState,
+} from "@/components/forms/entity-input";
 import { FatSecretFood, FatSecretServing } from "@/lib/server/fat-secret/types";
+import { View } from "react-native";
 import React, { useState } from "react";
 
 import { EditableFatSecretFoodItem } from "@/components/food/editable-fat-secret-food-item";
 import { Image } from "@/components/image";
 import { Ingredient } from "@/lib/schemas";
+import { KeyboardHint } from "@/components/ui/keyboard-hint";
 import { Macros } from "@/components/meal-plan/macros";
 import { SearchFoodModal } from "@/components/food/search-food-modal";
 import { ShoppingBasket } from "@/lib/icons";
 import { Text } from "@/components/ui/text";
-import { View } from "react-native";
 
 export interface FoodData {
 	food: FatSecretFood;
@@ -137,14 +142,17 @@ export function IngredientInput({
 						: undefined
 				}
 			/>
+			<KeyboardHint
+				keyLabel="enter"
+				actionText="to save"
+				show={
+					props.value.state === EntityInputState.Dirty ||
+					props.value.state === EntityInputState.Editing
+				}
+			/>
 			{!!onFoodSelect && (
 				<SearchFoodModal
 					visible={showSearchModal}
-					// onDismiss={() => {
-					// 	shouldSaveOnBlur.current = false;
-					// 	isSearching.current = false;
-					// 	inputRef.current?.focus();
-					// }}
 					onClose={() => {
 						setShowSearchModal(false);
 					}}

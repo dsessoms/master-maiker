@@ -4,16 +4,13 @@ import {
 	EntityInputValue,
 } from "@/components/forms/entity-input";
 import { Header, Ingredient } from "@/lib/schemas";
-import { Plus, ShoppingBasket } from "@/lib/icons";
-import { Pressable, View } from "react-native";
 
 import { Button } from "@/components/ui/button";
-import { Image } from "@/components/image";
 import { IngredientInput } from "@/components/forms/ingredients/ingredient-input";
-import { Macros } from "../../meal-plan/macros";
+import { Plus } from "@/lib/icons";
+import { Pressable } from "react-native";
 import React from "react";
 import { Text } from "@/components/ui/text";
-import { plural } from "pluralize";
 import { useParseIngredients } from "../../../hooks/recipes/use-parse-ingredients";
 
 // Union type for ingredients or headers
@@ -313,15 +310,6 @@ export function IngredientInputs({
 						/>
 					);
 				}
-
-				// Handle ingredients (existing logic)
-				// Check if this ingredient should show fat secret editing UI
-				const editingFatSecretId =
-					ingredient.state === EntityInputState.Editing &&
-					ingredient.parsed?.type === "ingredient" &&
-					(ingredient.parsed as Ingredient)?.fat_secret_id
-						? (ingredient.parsed as Ingredient).fat_secret_id
-						: undefined;
 
 				return (
 					<IngredientInput
