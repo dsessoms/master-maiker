@@ -10,6 +10,7 @@ import { Image } from "@/components/image";
 import { Ingredient } from "@/components/recipe/ingredient";
 import { Instruction } from "@/components/recipe/instruction";
 import { Macros } from "@/components/recipe/macros";
+import { RecipeDetailsSkeleton } from "@/components/recipe/recipe-details-skeleton";
 import { Text } from "@/components/ui/text";
 import { useRecipe } from "@/hooks/recipes/use-recipe";
 import { useRecipeImage } from "@/hooks/recipes/use-recipe-image";
@@ -43,14 +44,15 @@ export default function RecipeDetails() {
 
 	if (isLoading) {
 		return (
-			<View className="flex flex-1 bg-background justify-center items-center">
+			<View className="flex flex-1 bg-background">
 				<Stack.Screen
 					options={{
 						title: "Recipe",
 					}}
 				/>
-				<ActivityIndicator size="large" />
-				<Text className="mt-2">Loading recipe...</Text>
+				<ScrollView className="flex-1">
+					<RecipeDetailsSkeleton />
+				</ScrollView>
 			</View>
 		);
 	}
@@ -92,18 +94,12 @@ export default function RecipeDetails() {
 
 					{/* Header Section */}
 					<View className="mb-6">
-						<View className="flex flex-row justify-between items-start mb-4">
-							<View className="flex-1 mr-4">
-								<Text className="text-2xl font-bold mb-2">{recipe.name}</Text>
-								{!!recipe.description && (
-									<Text className="text-base text-muted-foreground">
-										{recipe.description}
-									</Text>
-								)}
-							</View>
+						{/* Edit Button Row */}
+						<View className="flex flex-row justify-start mb-4">
 							<Button
 								size="icon"
 								variant="outline"
+								className="rounded-full"
 								onPress={() => {
 									router.push({
 										pathname: "/recipes/[id]/edit",
@@ -113,6 +109,16 @@ export default function RecipeDetails() {
 							>
 								<PencilIcon className="h-5 w-5" />
 							</Button>
+						</View>
+
+						{/* Recipe Title and Description */}
+						<View>
+							<Text className="text-2xl font-bold mb-2">{recipe.name}</Text>
+							{!!recipe.description && (
+								<Text className="text-base text-muted-foreground">
+									{recipe.description}
+								</Text>
+							)}
 						</View>
 					</View>
 
@@ -129,6 +135,7 @@ export default function RecipeDetails() {
 								<Button
 									size="icon"
 									variant="outline"
+									className="rounded-full"
 									onPress={removeRecipeServing}
 									disabled={recipeServings === 1}
 								>
@@ -140,6 +147,7 @@ export default function RecipeDetails() {
 								<Button
 									size="icon"
 									variant="outline"
+									className="rounded-full"
 									onPress={addRecipeServing}
 								>
 									<Plus className="h-4 w-4" />
