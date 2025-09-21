@@ -1,3 +1,12 @@
+import { ActivityIndicator, ScrollView, View } from "react-native";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -5,7 +14,6 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Link, Plus, Search } from "@/lib/icons";
-import { ScrollView, View } from "react-native";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +22,6 @@ import { RecipeCardSkeleton } from "@/components/recipe/recipe-card-skeleton";
 import { SafeAreaView } from "@/components/safe-area-view";
 import { Text } from "@/components/ui/text";
 import { router } from "expo-router";
-import { useConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useDeleteRecipeMutation } from "@/hooks/recipes/use-delete-recipe-mutation";
 import { useRecipes } from "@/hooks/recipes/use-recipes";
 import { useResponsiveColumns } from "@/hooks/useResponsiveColumns";
@@ -22,10 +29,11 @@ import { useState } from "react";
 
 export default function Recipes() {
 	const [searchQuery, setSearchQuery] = useState("");
+	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+	const [recipeToDelete, setRecipeToDelete] = useState<string | null>(null);
 	const { recipes, isLoading, isError } = useRecipes();
 	const { deleteRecipe, isPending: isDeleting } = useDeleteRecipeMutation();
 	const { columns, cardWidth } = useResponsiveColumns();
-	const { showDialog } = useConfirmDialog();
 
 	// Filter recipes based on search query
 	const filteredRecipes =
@@ -46,32 +54,32 @@ export default function Recipes() {
 	};
 
 	const handleDeleteRecipe = (recipeId: string) => {
-		showDialog({
-			title: "Delete Recipe",
-			message:
-				"Are you sure you want to delete this recipe? This action cannot be undone.",
-			confirmText: "Delete",
-			cancelText: "Cancel",
-			onConfirm: async () => {
-				try {
-					await deleteRecipe(recipeId);
-				} catch (error) {
-					console.error("Error deleting recipe:", error);
-					showDialog({
-						title: "Error",
-						message: "Failed to delete recipe. Please try again.",
-						confirmText: "OK",
-						onConfirm: () => {},
-					});
-				}
-			},
-		});
+		setRecipeToDelete(recipeId);
+		setDeleteDialogOpen(true);
+	};
+
+	const confirmDeleteRecipe = async () => {
+		if (!recipeToDelete) return;
+
+		try {
+			await deleteRecipe(recipeToDelete);
+			setDeleteDialogOpen(false);
+			setRecipeToDelete(null);
+		} catch (error) {
+			console.error("Error deleting recipe:", error);
+			// You could show another dialog or toast for error handling here
+		}
+	};
+
+	const cancelDeleteRecipe = () => {
+		setDeleteDialogOpen(false);
+		setRecipeToDelete(null);
 	};
 
 	return (
-		<View className="flex flex-1 bg-background">
+		<SafeAreaView className="flex flex-1 bg-background">
 			<ScrollView className="flex-1" contentContainerStyle={{ padding: 16 }}>
-				<View className="pb-2">
+				<View className="pb-4">
 					<View className="relative">
 						<Input
 							placeholder="Search recipes"
@@ -126,6 +134,32 @@ export default function Recipes() {
 				)}
 			</ScrollView>
 
+			{/* Delete Recipe Dialog */}
+			<Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>Delete Recipe</DialogTitle>
+						<DialogDescription>
+							Are you sure you want to delete this recipe? This action cannot be
+							undone.
+						</DialogDescription>
+					</DialogHeader>
+					<DialogFooter>
+						<Button variant="outline" onPress={cancelDeleteRecipe}>
+							<Text>Cancel</Text>
+						</Button>
+						<Button onPress={confirmDeleteRecipe} disabled={isDeleting}>
+							<View className="flex flex-row gap-2">
+								{!!isDeleting && (
+									<ActivityIndicator size="small" color="white" />
+								)}
+								<Text>Delete</Text>
+							</View>
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+
 			{/* Floating Action Button with Dropdown Menu */}
 			<View className="absolute bottom-6 right-6">
 				<DropdownMenu>
@@ -150,6 +184,6 @@ export default function Recipes() {
 					</DropdownMenuContent>
 				</DropdownMenu>
 			</View>
-		</View>
+		</SafeAreaView>
 	);
 }

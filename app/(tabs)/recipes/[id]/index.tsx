@@ -10,7 +10,6 @@ import { Image } from "@/components/image";
 import { Ingredient } from "@/components/recipe/ingredient";
 import { Instruction } from "@/components/recipe/instruction";
 import { Macros } from "@/components/recipe/macros";
-import { SafeAreaView } from "@/components/safe-area-view";
 import { Text } from "@/components/ui/text";
 import { useRecipe } from "@/hooks/recipes/use-recipe";
 import { useRecipeImage } from "@/hooks/recipes/use-recipe-image";
@@ -45,6 +44,11 @@ export default function RecipeDetails() {
 	if (isLoading) {
 		return (
 			<View className="flex flex-1 bg-background justify-center items-center">
+				<Stack.Screen
+					options={{
+						title: "Recipe",
+					}}
+				/>
 				<ActivityIndicator size="large" />
 				<Text className="mt-2">Loading recipe...</Text>
 			</View>
