@@ -1,10 +1,23 @@
-import { ActivityIndicator, ScrollView, View } from "react-native";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ExpandedIngredient, InstructionRow } from "@/types";
-import { Minus, PencilIcon, Plus } from "@/lib/icons";
+import {
+	Minus,
+	MoreHorizontalIcon,
+	PencilIcon,
+	Plus,
+	Trash2Icon,
+} from "@/lib/icons";
+import { ScrollView, View } from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { DeleteRecipeDialog } from "@/components/recipe/delete-recipe-dialog";
 import { Header } from "@/components/recipe/header";
 import { Image } from "@/components/image";
 import { Ingredient } from "@/components/recipe/ingredient";
@@ -12,6 +25,7 @@ import { Instruction } from "@/components/recipe/instruction";
 import { Macros } from "@/components/recipe/macros";
 import { RecipeDetailsSkeleton } from "@/components/recipe/recipe-details-skeleton";
 import { Text } from "@/components/ui/text";
+import { useDeleteRecipeMutation } from "@/hooks/recipes/use-delete-recipe-mutation";
 import { useRecipe } from "@/hooks/recipes/use-recipe";
 import { useRecipeImage } from "@/hooks/recipes/use-recipe-image";
 
@@ -20,7 +34,9 @@ export default function RecipeDetails() {
 	const router = useRouter();
 	const { recipe, isLoading, isError } = useRecipe(id!);
 	const imageUrl = useRecipeImage(recipe?.image_id);
+	const { deleteRecipe, isPending: isDeleting } = useDeleteRecipeMutation();
 	const [recipeServings, setRecipeServings] = useState<number>(1);
+	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
 	useEffect(() => {
 		if (recipe) {
@@ -40,6 +56,35 @@ export default function RecipeDetails() {
 			return;
 		}
 		setRecipeServings((servings) => servings - 1);
+	};
+
+	const handleEditRecipe = () => {
+		if (!recipe) return;
+		router.push({
+			pathname: "/recipes/[id]/edit",
+			params: { id: recipe.id },
+		});
+	};
+
+	const handleDeleteRecipe = () => {
+		setDeleteDialogOpen(true);
+	};
+
+	const confirmDeleteRecipe = async () => {
+		if (!id) return;
+
+		try {
+			await deleteRecipe(id);
+			setDeleteDialogOpen(false);
+			router.back();
+		} catch (error) {
+			console.error("Error deleting recipe:", error);
+			// You could show another dialog or toast for error handling here
+		}
+	};
+
+	const cancelDeleteRecipe = () => {
+		setDeleteDialogOpen(false);
 	};
 
 	if (isLoading) {
@@ -82,35 +127,48 @@ export default function RecipeDetails() {
 			<ScrollView className="flex-1">
 				<View className="p-4">
 					{/* Recipe Image */}
-					{imageUrl && (
-						<View className="mb-6">
+					<View className="mb-6 relative">
+						{!!imageUrl ? (
 							<Image
 								source={{ uri: imageUrl }}
 								className="h-64 w-full rounded-lg"
 								contentFit="cover"
 							/>
+						) : (
+							<View className="h-64 w-full bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+								<Text className="text-6xl font-bold text-muted-foreground opacity-20">
+									{recipe.name.toUpperCase()}
+								</Text>
+							</View>
+						)}
+						{/* Dropdown Menu over Image */}
+						<View className="absolute top-2 right-2">
+							<DropdownMenu>
+								<DropdownMenuTrigger asChild>
+									<Button
+										variant="outline"
+										size="icon"
+										className="w-8 h-8 rounded-full bg-background/80 backdrop-blur-sm border-border/50"
+									>
+										<MoreHorizontalIcon className="text-foreground" size={16} />
+									</Button>
+								</DropdownMenuTrigger>
+								<DropdownMenuContent side="bottom" align="end" className="w-32">
+									<DropdownMenuItem onPress={handleEditRecipe}>
+										<PencilIcon className="text-foreground mr-2" size={16} />
+										<Text>Edit</Text>
+									</DropdownMenuItem>
+									<DropdownMenuItem onPress={handleDeleteRecipe}>
+										<Trash2Icon className="text-destructive mr-2" size={16} />
+										<Text className="text-destructive">Delete</Text>
+									</DropdownMenuItem>
+								</DropdownMenuContent>
+							</DropdownMenu>
 						</View>
-					)}
+					</View>
 
 					{/* Header Section */}
 					<View className="mb-6">
-						{/* Edit Button Row */}
-						<View className="flex flex-row justify-start mb-4">
-							<Button
-								size="icon"
-								variant="outline"
-								className="rounded-full"
-								onPress={() => {
-									router.push({
-										pathname: "/recipes/[id]/edit",
-										params: { id: recipe.id },
-									});
-								}}
-							>
-								<PencilIcon className="h-5 w-5" />
-							</Button>
-						</View>
-
 						{/* Recipe Title and Description */}
 						<View>
 							<Text className="text-2xl font-bold mb-2">{recipe.name}</Text>
@@ -225,6 +283,15 @@ export default function RecipeDetails() {
 					</View>
 				</View>
 			</ScrollView>
+
+			{/* Delete Recipe Dialog */}
+			<DeleteRecipeDialog
+				open={deleteDialogOpen}
+				onOpenChange={setDeleteDialogOpen}
+				onConfirm={confirmDeleteRecipe}
+				onCancel={cancelDeleteRecipe}
+				isDeleting={isDeleting}
+			/>
 		</View>
 	);
 }

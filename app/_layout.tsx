@@ -8,7 +8,6 @@ import {
 } from "@tanstack/react-query";
 
 import { AuthProvider } from "@/context/supabase-provider";
-import { ConfirmDialogProvider } from "@/components/ui/confirm-dialog";
 import { PortalHost } from "@rn-primitives/portal";
 import { Stack } from "expo-router";
 import { colors } from "@/constants/colors";
@@ -36,52 +35,48 @@ export default function AppLayout() {
 		<>
 			<QueryClientProvider client={queryClient}>
 				<AuthProvider>
-					<ConfirmDialogProvider>
-						<Stack
-							screenOptions={{ headerShown: false, gestureEnabled: false }}
-						>
-							<Stack.Screen name="(tabs)" />
-							<Stack.Screen name="welcome" />
-							<Stack.Screen
-								name="sign-up"
-								options={{
-									presentation: "modal",
-									headerShown: true,
-									headerTitle: "Sign Up",
-									headerStyle: {
-										backgroundColor:
-											colorScheme === "dark"
-												? colors.dark.background
-												: colors.light.background,
-									},
-									headerTintColor:
+					<Stack screenOptions={{ headerShown: false, gestureEnabled: false }}>
+						<Stack.Screen name="(tabs)" />
+						<Stack.Screen name="welcome" />
+						<Stack.Screen
+							name="sign-up"
+							options={{
+								presentation: "modal",
+								headerShown: true,
+								headerTitle: "Sign Up",
+								headerStyle: {
+									backgroundColor:
 										colorScheme === "dark"
-											? colors.dark.foreground
-											: colors.light.foreground,
-									gestureEnabled: true,
-								}}
-							/>
-							<Stack.Screen
-								name="sign-in"
-								options={{
-									presentation: "modal",
-									headerShown: true,
-									headerTitle: "Sign In",
-									headerStyle: {
-										backgroundColor:
-											colorScheme === "dark"
-												? colors.dark.background
-												: colors.light.background,
-									},
-									headerTintColor:
+											? colors.dark.background
+											: colors.light.background,
+								},
+								headerTintColor:
+									colorScheme === "dark"
+										? colors.dark.foreground
+										: colors.light.foreground,
+								gestureEnabled: true,
+							}}
+						/>
+						<Stack.Screen
+							name="sign-in"
+							options={{
+								presentation: "modal",
+								headerShown: true,
+								headerTitle: "Sign In",
+								headerStyle: {
+									backgroundColor:
 										colorScheme === "dark"
-											? colors.dark.foreground
-											: colors.light.foreground,
-									gestureEnabled: true,
-								}}
-							/>
-						</Stack>
-					</ConfirmDialogProvider>
+											? colors.dark.background
+											: colors.light.background,
+								},
+								headerTintColor:
+									colorScheme === "dark"
+										? colors.dark.foreground
+										: colors.light.foreground,
+								gestureEnabled: true,
+							}}
+						/>
+					</Stack>
 				</AuthProvider>
 			</QueryClientProvider>
 			<PortalHost />

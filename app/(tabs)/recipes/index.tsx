@@ -1,13 +1,5 @@
 import { ActivityIndicator, ScrollView, View } from "react-native";
 import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
-import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
@@ -16,6 +8,7 @@ import {
 import { Link, Plus, Search } from "@/lib/icons";
 
 import { Button } from "@/components/ui/button";
+import { DeleteRecipeDialog } from "@/components/recipe/delete-recipe-dialog";
 import { Input } from "@/components/ui/input";
 import { RecipeCard } from "@/components/recipe/recipe-card";
 import { RecipeCardSkeleton } from "@/components/recipe/recipe-card-skeleton";
@@ -135,30 +128,13 @@ export default function Recipes() {
 			</ScrollView>
 
 			{/* Delete Recipe Dialog */}
-			<Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>Delete Recipe</DialogTitle>
-						<DialogDescription>
-							Are you sure you want to delete this recipe? This action cannot be
-							undone.
-						</DialogDescription>
-					</DialogHeader>
-					<DialogFooter>
-						<Button variant="outline" onPress={cancelDeleteRecipe}>
-							<Text>Cancel</Text>
-						</Button>
-						<Button onPress={confirmDeleteRecipe} disabled={isDeleting}>
-							<View className="flex flex-row gap-2">
-								{!!isDeleting && (
-									<ActivityIndicator size="small" color="white" />
-								)}
-								<Text>Delete</Text>
-							</View>
-						</Button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
+			<DeleteRecipeDialog
+				open={deleteDialogOpen}
+				onOpenChange={setDeleteDialogOpen}
+				onConfirm={confirmDeleteRecipe}
+				onCancel={cancelDeleteRecipe}
+				isDeleting={isDeleting}
+			/>
 
 			{/* Floating Action Button with Dropdown Menu */}
 			<View className="absolute bottom-6 right-6">
