@@ -5,7 +5,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Link, Plus, Search } from "@/lib/icons";
+import { Link, MoveDownRight, Plus, Sandwich, Search } from "@/lib/icons";
 
 import { Button } from "@/components/ui/button";
 import { DeleteRecipeDialog } from "@/components/recipe/delete-recipe-dialog";
@@ -100,7 +100,22 @@ export default function Recipes() {
 					</View>
 				)}
 				{!!isError && <Text>Error loading recipes.</Text>}
-				{!!recipes && recipes.length === 0 && <Text>No recipes found.</Text>}
+				{!!recipes && recipes.length === 0 && (
+					<View className="flex-1 items-center justify-center py-16">
+						<View className="items-center mb-8">
+							<Sandwich className="text-muted-foreground mb-4" size={48} />
+							<Text className="text-lg font-medium text-foreground mb-2">
+								No recipes saved
+							</Text>
+							<View className="flex-row items-center">
+								<Text className="text-base text-muted-foreground mr-2">
+									Create one
+								</Text>
+								<MoveDownRight className="text-muted-foreground" size={16} />
+							</View>
+						</View>
+					</View>
+				)}
 				{!!recipes &&
 					recipes.length > 0 &&
 					filteredRecipes.length === 0 &&

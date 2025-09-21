@@ -20,3 +20,5 @@ export * from "./trash";
 export * from "./more-horizontal";
 export * from "./search";
 export * from "./camera";
+export * from "./sandwich";
+export * from "./move-down-right";
