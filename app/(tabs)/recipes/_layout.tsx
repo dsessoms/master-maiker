@@ -20,6 +20,14 @@ export default function RecipesStackLayout() {
 					headerShown: true,
 				}}
 			/>
+			<Stack.Screen
+				name="generate"
+				options={{
+					title: "Generate Recipe",
+					presentation: "modal",
+					headerShown: true,
+				}}
+			/>
 		</Stack>
 	);
 }

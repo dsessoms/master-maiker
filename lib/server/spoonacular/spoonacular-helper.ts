@@ -1,5 +1,6 @@
 import { Ingredient, Recipe } from "../../schemas/recipe-schema";
 
+import { SpoonacularAnalyzeRecipe } from "@/lib/schemas";
 import axios from "axios";
 
 const API_PATH = "https://api.spoonacular.com";
@@ -362,6 +363,12 @@ export class Spoonacular {
 			...queryParams,
 		};
 
+		// Determine content type based on body type
+		const isFormData = typeof body === "string";
+		const contentType = isFormData
+			? "application/x-www-form-urlencoded"
+			: "application/json";
+
 		try {
 			const response = await axios({
 				method: httpMethod.toLowerCase() as any,
@@ -369,10 +376,7 @@ export class Spoonacular {
 				params: queryParamsWithApiKey,
 				data: httpMethod !== "GET" ? body : undefined,
 				headers: {
-					"Content-Type":
-						httpMethod !== "GET"
-							? "application/x-www-form-urlencoded"
-							: undefined,
+					"Content-Type": httpMethod !== "GET" ? contentType : undefined,
 				},
 			});
 			return response.data;
@@ -393,6 +397,20 @@ export class Spoonacular {
 			...params,
 			includeNutrition: true,
 		});
+	}
+
+	static analyzeRecipe(params: {
+		recipe: SpoonacularAnalyzeRecipe;
+	}): Promise<SpoonacularRecipeResponse> {
+		// Send JSON data instead of form-encoded for analyze endpoint
+		return this.makeApiCall(
+			"recipes/analyze",
+			{
+				includeNutrition: true,
+			},
+			params.recipe,
+			"POST",
+		);
 	}
 
 	static parseIngredients(params: {

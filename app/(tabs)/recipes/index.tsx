@@ -5,7 +5,14 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Link, MoveDownRight, Plus, Sandwich, Search } from "@/lib/icons";
+import {
+	Link,
+	MoveDownRight,
+	Plus,
+	Sandwich,
+	Search,
+	WandSparkles,
+} from "@/lib/icons";
 
 import { Button } from "@/components/ui/button";
 import { DeleteRecipeDialog } from "@/components/recipe/delete-recipe-dialog";
@@ -40,6 +47,10 @@ export default function Recipes() {
 
 	const handleImportRecipe = () => {
 		router.push("/recipes/import");
+	};
+
+	const handleGenerateRecipe = () => {
+		router.push("/recipes/generate");
 	};
 
 	const handleEditRecipe = (recipeId: string) => {
@@ -167,6 +178,10 @@ export default function Recipes() {
 						<DropdownMenuItem onPress={handleCreateRecipe}>
 							<Plus className="text-foreground mr-2" size={16} />
 							<Text>Create new recipe</Text>
+						</DropdownMenuItem>
+						<DropdownMenuItem onPress={handleGenerateRecipe}>
+							<WandSparkles className="text-foreground mr-2" size={16} />
+							<Text>Generate recipe</Text>
 						</DropdownMenuItem>
 						<DropdownMenuItem onPress={handleImportRecipe}>
 							<Link className="text-foreground mr-2" size={16} />
