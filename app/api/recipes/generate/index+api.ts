@@ -1,8 +1,4 @@
 import {
-	RecipePromptOptions,
-	generateRecipePrompt,
-} from "@/prompts/generate-recipe-prompt";
-import {
 	Spoonacular,
 	convertSpoonacularRecipeToRecipe,
 } from "@/lib/server/spoonacular/spoonacular-helper";
@@ -10,8 +6,17 @@ import {
 import { GoogleGenAI } from "@google/genai";
 import { Recipe } from "@/lib/schemas/recipe-schema";
 import { SpoonacularAnalyzeRecipeSchema } from "@/lib/schemas";
+import { generateRecipePrompt } from "@/prompts/generate-recipe-prompt";
 import { jsonResponse } from "@/lib/server/json-response";
 import { validateSession } from "@/lib/server/validate-session";
+
+export interface RecipePromptOptions {
+	ingredientsToInclude: string[];
+	ingredientsToExclude: string[];
+	complexity: "simple" | "moderate" | "complex";
+	additionalRequirements?: string;
+	chatContent?: string; // New field for chat-based generation
+}
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY as string;
 
