@@ -11,7 +11,7 @@ import { useCreateRecipeMutation } from "@/hooks/recipes/use-create-recipe-mutat
 import { useGenerateRecipeMutation } from "@/hooks/recipes/use-generate-recipe-mutation";
 
 export default function GenerateRecipe() {
-	const [activeTab, setActiveTab] = useState("form");
+	const [activeTab, setActiveTab] = useState("chat");
 	const { generateRecipe, isPending: isGenerating } =
 		useGenerateRecipeMutation();
 	const { createRecipe } = useCreateRecipeMutation();
@@ -83,11 +83,11 @@ export default function GenerateRecipe() {
 						className="flex-1"
 					>
 						<TabsList>
-							<TabsTrigger value="form">
-								<Text>Form</Text>
-							</TabsTrigger>
 							<TabsTrigger value="chat">
 								<Text>Chat</Text>
+							</TabsTrigger>
+							<TabsTrigger value="form">
+								<Text>Form</Text>
 							</TabsTrigger>
 						</TabsList>
 

@@ -1,9 +1,17 @@
 import React, { useEffect, useRef, useState } from "react";
-import { ScrollView, View } from "react-native";
+import {
+	ScrollView,
+	View,
+	TextInput,
+	NativeSyntheticEvent,
+	TextInputSubmitEditingEventData,
+	Platform,
+} from "react-native";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { KeyboardHint } from "@/components/ui/keyboard-hint";
 import { Text } from "@/components/ui/text";
 import {
 	useGenerateRecipeChat,
@@ -27,6 +35,7 @@ interface ChatTabProps {
 
 export const ChatTab = ({ onGenerate, isGenerating }: ChatTabProps) => {
 	const scrollViewRef = useRef<ScrollView>(null);
+	const inputRef = useRef<TextInput>(null);
 	const [messages, setMessages] = useState<ChatDisplayMessage[]>([
 		{
 			id: "1",
@@ -58,6 +67,13 @@ export const ChatTab = ({ onGenerate, isGenerating }: ChatTabProps) => {
 			const updatedMessages = [...messages, userMessage];
 			setMessages(updatedMessages);
 			setInputText("");
+
+			// Keep focus on web after sending message
+			if (Platform.OS === "web" && inputRef.current) {
+				setTimeout(() => {
+					inputRef.current?.focus();
+				}, 0);
+			}
 
 			try {
 				// Convert to API format
@@ -267,6 +283,17 @@ export const ChatTab = ({ onGenerate, isGenerating }: ChatTabProps) => {
 							)}
 					</View>
 				))}
+
+				{/* Thinking indicator - Show when bot is processing */}
+				{isPending && (
+					<View className="mb-3">
+						<View className="flex-row justify-start">
+							<View className="max-w-[80%] p-3 rounded-lg bg-secondary">
+								<Text className="text-foreground italic">thinking...</Text>
+							</View>
+						</View>
+					</View>
+				)}
 			</ScrollView>
 
 			{/* Fixed bottom section with generate button and input */}
@@ -285,23 +312,20 @@ export const ChatTab = ({ onGenerate, isGenerating }: ChatTabProps) => {
 				</Button>
 
 				{/* Input Row */}
-				<View className="flex-row gap-2">
+				<View className="flex-row">
 					<Input
+						ref={inputRef}
 						placeholder="Type your response..."
 						value={inputText}
 						onChangeText={setInputText}
 						onSubmitEditing={handleSendMessage}
 						returnKeyType="send"
 						className="flex-1"
-						editable={!isPending}
+						blurOnSubmit={Platform.OS !== "web"}
 					/>
-					<Button
-						onPress={handleSendMessage}
-						disabled={isPending || !inputText.trim()}
-					>
-						<Text>{isPending ? "..." : "Send"}</Text>
-					</Button>
 				</View>
+
+				<KeyboardHint keyLabel="Enter" actionText="to send" />
 			</View>
 		</View>
 	);
