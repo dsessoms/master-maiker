@@ -393,19 +393,6 @@ export const ChatTab = ({ onGenerate, isGenerating }: ChatTabProps) => {
 
 			{/* Fixed bottom section with generate button and input */}
 			<View className="border-t border-border bg-background px-4 py-3">
-				{/* Generate Recipe Button - Always visible above input */}
-				<Button
-					onPress={handleGenerate}
-					disabled={isGenerating || messages.length < 3 || isPending}
-					className="mb-3"
-				>
-					<Text>
-						{isGenerating
-							? "Generating Recipe..."
-							: "Generate Recipe from Chat"}
-					</Text>
-				</Button>
-
 				{/* Input Row */}
 				<View className="flex-row">
 					<Input
