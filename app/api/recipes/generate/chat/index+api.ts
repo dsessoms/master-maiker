@@ -98,9 +98,15 @@ CRITICAL RECIPE GENERATION RULES:
 
 RECIPE GENERATION WORKFLOW:
 - When you have enough information to create a recipe:
-  1. Create the recipePreview with title, description, and ingredients
+  1. Create the recipePreview with title, servings, ingredients, and instructions
   2. ALWAYS include quickOptions with "Generate Recipe" (and optionally other actions like "Modify recipe")
   3. Your content should introduce the preview, not ask for permission
+
+RECIPE PREVIEW SCHEMA:
+- title: string (name of the recipe)
+- servings: number (how many people it serves)
+- ingredients: array of strings (with quantities and measurements)
+- instructions: string (step-by-step cooking instructions)
 
 EXAMPLES:
 
@@ -114,7 +120,7 @@ Good no-options follow-up:
 {"content": "Great choice! Tell me about any specific vegetables or add-ins you'd like in your chicken salad."}
 
 CORRECT recipe generation (recipePreview + Generate Recipe quickOption together):
-{"content": "Perfect! I've created a delicious chicken salad recipe for you:", "quickOptions": [{"title": "Generate Recipe"}, {"title": "Modify recipe"}], "recipePreview": {"title": "Quick Chicken Salad", "description": "A fresh and creamy chicken salad", "ingredients": ["chicken", "celery", "mayo"]}}
+{"content": "Perfect! I've created a delicious chicken salad recipe for you:", "quickOptions": [{"title": "Generate Recipe"}, {"title": "Modify recipe"}], "recipePreview": {"title": "Quick Chicken Salad", "servings": 4, "ingredients": ["2 cups cooked chicken, diced", "1/2 cup celery, chopped", "1/4 cup mayonnaise"], "instructions": "1. Combine diced chicken and celery in a large bowl. 2. Add mayonnaise and mix until well coated. 3. Season with salt and pepper to taste. 4. Chill for 30 minutes before serving."}}
 
 WRONG - Generate Recipe without preview:
 {"content": "Ready to make your recipe?", "quickOptions": [{"title": "Generate Recipe"}]}
@@ -178,19 +184,22 @@ BAD - Mixed types:
 						},
 						recipePreview: {
 							type: Type.OBJECT,
-							required: ["title", "description", "ingredients"],
+							required: ["title", "servings", "ingredients", "instructions"],
 							properties: {
 								title: {
 									type: Type.STRING,
 								},
-								description: {
-									type: Type.STRING,
+								servings: {
+									type: Type.NUMBER,
 								},
 								ingredients: {
 									type: Type.ARRAY,
 									items: {
 										type: Type.STRING,
 									},
+								},
+								instructions: {
+									type: Type.STRING,
 								},
 							},
 						},

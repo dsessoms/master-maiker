@@ -32,7 +32,7 @@ export interface ChatDisplayMessage {
 }
 
 interface ChatTabProps {
-	onGenerate: (chatMessages: ChatDisplayMessage[]) => Promise<void>;
+	onGenerate: (recipePreview: RecipePreview) => Promise<void>;
 	isGenerating: boolean;
 }
 
@@ -125,7 +125,16 @@ export const ChatTab = ({ onGenerate, isGenerating }: ChatTabProps) => {
 	};
 
 	const handleGenerate = () => {
-		onGenerate(messages);
+		// Find the latest assistant message with a recipe preview
+		const latestAssistantMessage = [...messages]
+			.reverse()
+			.find((msg) => msg.role === "assistant" && msg.recipePreview);
+
+		if (latestAssistantMessage?.recipePreview) {
+			onGenerate(latestAssistantMessage.recipePreview);
+		} else {
+			console.error("No recipe preview found for generation");
+		}
 	};
 
 	const handleMultiOptionToggle = (optionTitle: string) => {
@@ -291,19 +300,31 @@ export const ChatTab = ({ onGenerate, isGenerating }: ChatTabProps) => {
 											{message.recipePreview.title}
 										</Text>
 										<Text className="text-muted-foreground text-sm mb-3">
-											{message.recipePreview.description}
+											Serves {message.recipePreview.servings}
 										</Text>
 										{message.recipePreview.ingredients &&
 											message.recipePreview.ingredients.length > 0 && (
-												<View>
+												<View className="mb-3">
 													<Text className="text-sm font-medium text-foreground mb-1">
-														Key Ingredients:
+														Ingredients:
 													</Text>
 													<Text className="text-muted-foreground text-xs">
 														{message.recipePreview.ingredients.join(", ")}
 													</Text>
 												</View>
 											)}
+										{message.recipePreview.instructions && (
+											<View>
+												<Text className="text-sm font-medium text-foreground mb-1">
+													Instructions:
+												</Text>
+												<Text className="text-muted-foreground text-xs">
+													{message.recipePreview.instructions.length > 200
+														? `${message.recipePreview.instructions.substring(0, 200)}...`
+														: message.recipePreview.instructions}
+												</Text>
+											</View>
+										)}
 									</Card>
 								</View>
 							)}

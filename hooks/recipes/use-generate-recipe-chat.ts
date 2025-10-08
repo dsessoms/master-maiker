@@ -17,8 +17,9 @@ export interface MultiSelectOptions {
 
 export interface RecipePreview {
 	title: string;
-	description: string;
+	servings: number;
 	ingredients: string[];
+	instructions: string;
 }
 
 export interface ChatRequest {

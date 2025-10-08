@@ -6,52 +6,10 @@ export interface RecipePromptOptions {
 	ingredientsToExclude: string[];
 	complexity: "simple" | "moderate" | "complex";
 	additionalRequirements?: string;
-	chatContent?: string; // New field for chat-based generation
 }
 
 export const generateRecipePrompt = (options: RecipePromptOptions) => {
-	const { chatContent } = options;
-
-	// If chatContent is provided, use chat-based prompt and ignore other options
-	if (chatContent) {
-		let prompt = `Based on the following conversation with a user, create a delicious and well-balanced recipe that addresses all their requirements and preferences:
-
-CONVERSATION:
-${chatContent}
-
-Please analyze the conversation to understand:
-- What type of dish the user wants
-- Any specific ingredients they mentioned
-- Dietary restrictions or preferences
-- Cooking time constraints
-- Skill level preferences
-- Complexity/difficulty preferences
-- Any other requirements mentioned
-
-RECIPE GUIDELINES:
-- Provide clear, step-by-step instructions
-- Include accurate serving size information
-- List all ingredients with specific quantities and measurements
-- Ensure the recipe is practical and achievable
-- Consider dietary balance and nutritional value
-- Make sure cooking times and temperatures are accurate
-- NO markdown code blocks or backticks
-
-Please return the recipe in the following JSON format:`;
-
-		prompt += `
-${JSON.stringify(
-	zodToJsonSchema(SpoonacularAnalyzeRecipeSchema, "output").definitions?.[
-		"output"
-	],
-	null,
-	2,
-)}`;
-
-		return prompt;
-	}
-
-	// Original prompt structure for form-based input
+	// Form-based recipe generation
 	const {
 		ingredientsToInclude = [],
 		ingredientsToExclude = [],

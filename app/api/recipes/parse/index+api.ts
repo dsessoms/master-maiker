@@ -4,12 +4,14 @@ import {
 } from "../../../../lib/server/spoonacular/spoonacular-helper";
 
 import { Recipe } from "../../../../lib/schemas/recipe-schema";
+import { SpoonacularAnalyzeRecipe } from "../../../../lib/schemas/spoonacular-analyze-recipe-schema";
 import { jsonResponse } from "../../../../lib/server/json-response";
 import { supabase } from "@/config/supabase-server";
 import { v4 as uuidv4 } from "uuid";
 import { validateSession } from "../../../../lib/server/validate-session";
 
 export type GetParsedRecipeResponse = Awaited<ReturnType<typeof GET>>;
+export type PostParsedRecipeResponse = Awaited<ReturnType<typeof POST>>;
 
 export async function GET(req: Request) {
 	const session = await validateSession(req);
@@ -55,5 +57,46 @@ export async function GET(req: Request) {
 	} catch (error) {
 		console.error(error);
 		return jsonResponse({ recipe: undefined }, { status: 404 });
+	}
+}
+
+export async function POST(req: Request) {
+	const session = await validateSession(req);
+
+	if (!session.user) {
+		return jsonResponse({ recipe: undefined }, { status: 401 });
+	}
+
+	try {
+		// Parse the request body to get the recipe data
+		const body: SpoonacularAnalyzeRecipe = await req.json();
+
+		// Validate required fields
+		if (!body.title || !body.ingredients || !body.instructions) {
+			return jsonResponse(
+				{
+					recipe: undefined,
+					error: "Missing required fields: title, ingredients, instructions",
+				},
+				{ status: 400 },
+			);
+		}
+
+		// Use Spoonacular to analyze the recipe
+		const spoonacularRecipe = await Spoonacular.analyzeRecipe({
+			recipe: body,
+		});
+
+		// Convert to our Recipe format
+		const recipe = convertSpoonacularRecipeToRecipe(spoonacularRecipe);
+
+		// Chat-generated recipes don't have images, so we don't need to process them
+		return jsonResponse({ recipe });
+	} catch (error) {
+		console.error("Error parsing recipe:", error);
+		return jsonResponse(
+			{ recipe: undefined, error: "Failed to parse recipe" },
+			{ status: 500 },
+		);
 	}
 }

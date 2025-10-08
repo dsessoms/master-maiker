@@ -15,7 +15,6 @@ export interface RecipePromptOptions {
 	ingredientsToExclude: string[];
 	complexity: "simple" | "moderate" | "complex";
 	additionalRequirements?: string;
-	chatContent?: string; // New field for chat-based generation
 }
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY as string;

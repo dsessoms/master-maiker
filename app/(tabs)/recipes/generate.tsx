@@ -4,17 +4,20 @@ import React, { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { FormTab } from "@/components/recipe/form-tab";
+import { RecipePreview } from "@/hooks/recipes/use-generate-recipe-chat";
 import { SafeAreaView } from "@/components/safe-area-view";
 import { Text } from "@/components/ui/text";
 import { router } from "expo-router";
 import { useCreateRecipeMutation } from "@/hooks/recipes/use-create-recipe-mutation";
 import { useGenerateRecipeMutation } from "@/hooks/recipes/use-generate-recipe-mutation";
+import { useParseRecipeMutation } from "@/hooks/recipes/use-parse-recipe-mutation";
 
 export default function GenerateRecipe() {
 	const [activeTab, setActiveTab] = useState("chat");
 	const { generateRecipe, isPending: isGenerating } =
 		useGenerateRecipeMutation();
 	const { createRecipe } = useCreateRecipeMutation();
+	const { parseRecipe, isPending: isParsing } = useParseRecipeMutation();
 
 	const handleFormGenerate = async (options: any) => {
 		try {
@@ -36,35 +39,23 @@ export default function GenerateRecipe() {
 		}
 	};
 
-	const handleChatGenerate = async (chatMessages: ChatDisplayMessage[]) => {
+	const handleChatGenerate = async (recipePreview: RecipePreview) => {
 		try {
-			// Convert chat messages to a single string for the API
-			const chatContent = chatMessages
-				.map((msg) => `${msg.role}: ${msg.content}`)
-				.join("\n");
-
-			// Use the chat content as additional requirements
-			const options = {
-				ingredientsToInclude: [],
-				ingredientsToExclude: [],
-				complexity: "moderate" as const,
-				additionalRequirements: `Based on this conversation:\n${chatContent}\n\nPlease create a recipe that addresses all the user's requirements and preferences mentioned in the chat.`,
-			};
-
-			const result = await generateRecipe(options);
+			// Use the parse endpoint with the recipe preview data
+			const result = await parseRecipe(recipePreview);
 
 			if (result.recipe) {
-				// Save the generated recipe
+				// Save the parsed recipe
 				const savedRecipe = await createRecipe(result.recipe);
 
 				// Navigate to the saved recipe
 				router.replace(`/recipes/${savedRecipe.id}`);
 			} else {
-				console.error("Failed to generate recipe - no recipe returned");
+				console.error("Failed to parse recipe - no recipe returned");
 				// TODO: You might want to show an error toast here
 			}
 		} catch (error) {
-			console.error("Error generating recipe:", error);
+			console.error("Error parsing recipe:", error);
 			// TODO: You might want to show an error toast here
 		}
 	};
@@ -107,7 +98,7 @@ export default function GenerateRecipe() {
 						<TabsContent value="chat" className="flex-1">
 							<ChatTab
 								onGenerate={handleChatGenerate}
-								isGenerating={isGenerating}
+								isGenerating={isGenerating || isParsing}
 							/>
 						</TabsContent>
 					</Tabs>
