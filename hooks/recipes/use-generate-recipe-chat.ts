@@ -10,6 +10,11 @@ export interface QuickOption {
 	title: string;
 }
 
+export interface MultiSelectOptions {
+	title: string;
+	options: QuickOption[];
+}
+
 export interface RecipePreview {
 	title: string;
 	description: string;
@@ -25,6 +30,7 @@ export interface ChatResponse {
 	text: string;
 	content?: string;
 	quickOptions?: QuickOption[];
+	multiSelectOptions?: MultiSelectOptions;
 	recipePreview?: RecipePreview;
 }
 

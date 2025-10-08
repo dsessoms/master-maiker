@@ -10,12 +10,14 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { KeyboardHint } from "@/components/ui/keyboard-hint";
 import { Text } from "@/components/ui/text";
 import {
 	useGenerateRecipeChat,
 	type QuickOption,
+	type MultiSelectOptions,
 	type RecipePreview,
 	type ChatMessage,
 } from "@/hooks/recipes/use-generate-recipe-chat";
@@ -25,6 +27,7 @@ export interface ChatDisplayMessage {
 	role: "assistant" | "user";
 	content: string;
 	quickOptions?: QuickOption[];
+	multiSelectOptions?: MultiSelectOptions;
 	recipePreview?: RecipePreview;
 }
 
@@ -45,6 +48,9 @@ export const ChatTab = ({ onGenerate, isGenerating }: ChatTabProps) => {
 		},
 	]);
 	const [inputText, setInputText] = useState("");
+	const [selectedMultiOptions, setSelectedMultiOptions] = useState<Set<string>>(
+		new Set(),
+	);
 	const { sendMessage, isPending } = useGenerateRecipeChat();
 
 	// Auto-scroll to bottom when messages change
@@ -54,6 +60,14 @@ export const ChatTab = ({ onGenerate, isGenerating }: ChatTabProps) => {
 				scrollViewRef.current.scrollToEnd({ animated: true });
 			}
 		}, 100);
+	}, [messages]);
+
+	// Clear multi-select state when new messages don't have multi-select options
+	useEffect(() => {
+		const lastMessage = messages[messages.length - 1];
+		if (lastMessage?.role === "assistant" && !lastMessage.multiSelectOptions) {
+			setSelectedMultiOptions(new Set());
+		}
 	}, [messages]);
 
 	const handleSendMessage = async () => {
@@ -90,6 +104,7 @@ export const ChatTab = ({ onGenerate, isGenerating }: ChatTabProps) => {
 					role: "assistant",
 					content: response.content || response.text || "",
 					quickOptions: response.quickOptions,
+					multiSelectOptions: response.multiSelectOptions,
 					recipePreview: response.recipePreview,
 				};
 
@@ -111,6 +126,37 @@ export const ChatTab = ({ onGenerate, isGenerating }: ChatTabProps) => {
 
 	const handleGenerate = () => {
 		onGenerate(messages);
+	};
+
+	const handleMultiOptionToggle = (optionTitle: string) => {
+		setSelectedMultiOptions((prev) => {
+			const newSet = new Set(prev);
+			if (newSet.has(optionTitle)) {
+				newSet.delete(optionTitle);
+			} else {
+				newSet.add(optionTitle);
+			}
+			return newSet;
+		});
+	};
+
+	const handleMultiSelectSubmit = async () => {
+		if (selectedMultiOptions.size === 0 || isPending) return;
+
+		// Create user message with selected options
+		const selectedOptionsText = Array.from(selectedMultiOptions).join(", ");
+		const userMessage: ChatDisplayMessage = {
+			id: Date.now().toString(),
+			role: "user",
+			content: selectedOptionsText,
+		};
+
+		const updatedMessages = [...messages, userMessage];
+		setMessages(updatedMessages);
+		setSelectedMultiOptions(new Set()); // Clear selections
+
+		// Send the message
+		await sendMessageWithOption(updatedMessages);
 	};
 
 	const handleQuickOptionSelect = async (option: QuickOption) => {
@@ -165,6 +211,7 @@ export const ChatTab = ({ onGenerate, isGenerating }: ChatTabProps) => {
 				role: "assistant",
 				content: response.content || response.text || "",
 				quickOptions: response.quickOptions,
+				multiSelectOptions: response.multiSelectOptions,
 				recipePreview: response.recipePreview,
 			};
 
@@ -279,6 +326,54 @@ export const ChatTab = ({ onGenerate, isGenerating }: ChatTabProps) => {
 											<Text className="text-sm">{option.title}</Text>
 										</Button>
 									))}
+								</View>
+							)}
+
+						{/* Multi-Select Options - Only show for assistant messages with multi-select options and if it's the latest message */}
+						{message.role === "assistant" &&
+							message.multiSelectOptions &&
+							message.multiSelectOptions.options.length > 0 &&
+							index === messages.length - 1 &&
+							!isPending && (
+								<View className="mt-3 max-w-[80%]">
+									<Card className="p-4 bg-card border border-border">
+										<Text className="text-sm font-medium text-foreground mb-3">
+											{message.multiSelectOptions.title}
+										</Text>
+										<View>
+											{message.multiSelectOptions.options.map(
+												(option, optionIndex) => (
+													<View
+														key={optionIndex}
+														className="flex-row items-center mb-2"
+													>
+														<Checkbox
+															checked={selectedMultiOptions.has(option.title)}
+															onCheckedChange={() =>
+																handleMultiOptionToggle(option.title)
+															}
+														/>
+														<Text className="text-sm text-foreground flex-1 ml-2">
+															{option.title}
+														</Text>
+													</View>
+												),
+											)}
+										</View>
+										<Button
+											onPress={handleMultiSelectSubmit}
+											disabled={selectedMultiOptions.size === 0}
+											className="mt-4"
+											size="sm"
+										>
+											<Text className="text-sm">
+												Submit Selection
+												{selectedMultiOptions.size > 0
+													? ` (${selectedMultiOptions.size})`
+													: ""}
+											</Text>
+										</Button>
+									</Card>
 								</View>
 							)}
 					</View>
