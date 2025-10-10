@@ -101,7 +101,7 @@ export function SignInForm() {
 												<Button
 													variant="link"
 													size="sm"
-													className="web:h-fit ml-auto h-4 px-1 py-0 sm:h-4"
+													className="web:h-fit ml-auto h-6 px-1 py-0 sm:h-6"
 													onPress={() => {
 														router.replace("/forgot-password" as any);
 													}}
@@ -134,8 +134,8 @@ export function SignInForm() {
 							</Button>
 						</View>
 					</Form>
-					<Text className="text-center text-sm">
-						Don&apos;t have an account?{" "}
+					<View className="flex-row justify-center items-baseline">
+						<Text className="text-sm">Don&apos;t have an account? </Text>
 						<Pressable
 							onPress={() => {
 								router.replace("/sign-up");
@@ -145,7 +145,7 @@ export function SignInForm() {
 								Sign up
 							</Text>
 						</Pressable>
-					</Text>
+					</View>
 					<View className="flex-row items-center">
 						<Separator className="flex-1" />
 						<Text className="text-muted-foreground px-4 text-sm">or</Text>

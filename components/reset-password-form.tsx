@@ -105,8 +105,8 @@ export function ResetPasswordForm() {
 							</Button>
 						</View>
 					</Form>
-					<Text className="text-center text-sm">
-						Remember your password?{" "}
+					<View className="flex-row justify-center items-baseline">
+						<Text className="text-sm">Remember your password? </Text>
 						<Pressable
 							onPress={() => {
 								router.replace("/sign-in");
@@ -116,7 +116,7 @@ export function ResetPasswordForm() {
 								Sign in
 							</Text>
 						</Pressable>
-					</Text>
+					</View>
 				</CardContent>
 			</Card>
 		</View>
