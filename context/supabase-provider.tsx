@@ -17,21 +17,31 @@ const authRoutes = ["/welcome", "/sign-in", "/sign-up", "/forgot-password"];
 type AuthState = {
 	initialized: boolean;
 	session: Session | null;
+	resetEmail: string | null;
 	signUp: (email: string, password: string) => Promise<void>;
 	signIn: (email: string, password: string) => Promise<void>;
 	signOut: () => Promise<void>;
 	resetPassword: (email: string) => Promise<void>;
 	confirmPasswordReset: (newPassword: string) => Promise<void>;
+	verifyOtpAndResetPassword: (
+		email: string,
+		token: string,
+		newPassword: string,
+	) => Promise<void>;
+	setResetEmail: (email: string | null) => void;
 };
 
 export const AuthContext = createContext<AuthState>({
 	initialized: false,
 	session: null,
+	resetEmail: null,
 	signUp: async () => {},
 	signIn: async () => {},
 	signOut: async () => {},
 	resetPassword: async () => {},
 	confirmPasswordReset: async () => {},
+	verifyOtpAndResetPassword: async () => {},
+	setResetEmail: () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -39,6 +49,7 @@ export const useAuth = () => useContext(AuthContext);
 export function AuthProvider({ children }: PropsWithChildren) {
 	const [initialized, setInitialized] = useState(false);
 	const [session, setSession] = useState<Session | null>(null);
+	const [resetEmail, setResetEmail] = useState<string | null>(null);
 	const router = useRouter();
 	const pathname = usePathname();
 
@@ -131,6 +142,40 @@ export function AuthProvider({ children }: PropsWithChildren) {
 		console.log("Password reset successful");
 	};
 
+	const verifyOtpAndResetPassword = async (
+		email: string,
+		token: string,
+		newPassword: string,
+	) => {
+		// First, verify the OTP token for password recovery
+		const { data, error: verifyError } = await supabase.auth.verifyOtp({
+			email,
+			token,
+			type: "recovery",
+		});
+
+		if (verifyError) {
+			console.error("Error verifying OTP:", verifyError);
+			throw verifyError;
+		}
+
+		if (!data.session) {
+			throw new Error("Failed to create session after OTP verification");
+		}
+
+		// Now update the password with the verified session
+		const { error: updateError } = await supabase.auth.updateUser({
+			password: newPassword,
+		});
+
+		if (updateError) {
+			console.error("Error updating password:", updateError);
+			throw updateError;
+		}
+
+		console.log("Password reset with OTP successful");
+	};
+
 	const initialize = async () => {
 		const sessionResponse = await supabase.auth.getSession();
 		setSession(sessionResponse.data.session);
@@ -166,11 +211,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
 			value={{
 				initialized,
 				session,
+				resetEmail,
 				signUp,
 				signIn,
 				signOut,
 				resetPassword,
 				confirmPasswordReset,
+				verifyOtpAndResetPassword,
+				setResetEmail,
 			}}
 		>
 			{children}

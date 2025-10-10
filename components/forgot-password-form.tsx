@@ -24,7 +24,7 @@ const formSchema = z.object({
 
 export function ForgotPasswordForm() {
 	const router = useRouter();
-	const { resetPassword } = useAuth();
+	const { resetPassword, setResetEmail } = useAuth();
 
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
@@ -36,8 +36,11 @@ export function ForgotPasswordForm() {
 	async function onSubmit(data: z.infer<typeof formSchema>) {
 		try {
 			await resetPassword(data.email);
+			// Store email in context securely
+			setResetEmail(data.email);
 			form.reset();
-			// TODO: Show success message or navigate to confirmation screen
+			// Navigate to reset password with code form without exposing email in URL
+			router.replace("/reset-password-with-code");
 		} catch (error: Error | any) {
 			console.error(error.message);
 		}
