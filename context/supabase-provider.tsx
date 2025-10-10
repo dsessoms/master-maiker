@@ -12,12 +12,16 @@ import { supabase } from "@/config/supabase";
 
 SplashScreen.preventAutoHideAsync();
 
+const authRoutes = ["/welcome", "/sign-in", "/sign-up", "/forgot-password"];
+
 type AuthState = {
 	initialized: boolean;
 	session: Session | null;
 	signUp: (email: string, password: string) => Promise<void>;
 	signIn: (email: string, password: string) => Promise<void>;
 	signOut: () => Promise<void>;
+	resetPassword: (email: string) => Promise<void>;
+	confirmPasswordReset: (newPassword: string) => Promise<void>;
 };
 
 export const AuthContext = createContext<AuthState>({
@@ -26,6 +30,8 @@ export const AuthContext = createContext<AuthState>({
 	signUp: async () => {},
 	signIn: async () => {},
 	signOut: async () => {},
+	resetPassword: async () => {},
+	confirmPasswordReset: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -85,6 +91,46 @@ export function AuthProvider({ children }: PropsWithChildren) {
 		}
 	};
 
+	const resetPassword = async (email: string) => {
+		const baseUrl = process.env.EXPO_PUBLIC_BASE_URL;
+
+		const { error } = await supabase.auth.resetPasswordForEmail(email, {
+			redirectTo: `${baseUrl}/reset-password`,
+		});
+
+		if (error) {
+			console.error("Error resetting password:", error);
+			throw error;
+		} else {
+			console.log("Password reset email sent");
+		}
+	};
+
+	const confirmPasswordReset = async (newPassword: string) => {
+		// Check if user is authenticated (should be from the URL tokens)
+		const {
+			data: { session },
+		} = await supabase.auth.getSession();
+
+		if (!session) {
+			throw new Error(
+				"No active session found. Please use the reset link from your email.",
+			);
+		}
+
+		// Update the password using the authenticated session
+		const { error: updateError } = await supabase.auth.updateUser({
+			password: newPassword,
+		});
+
+		if (updateError) {
+			console.error("Error updating password:", updateError);
+			throw updateError;
+		}
+
+		console.log("Password reset successful");
+	};
+
 	const initialize = async () => {
 		const sessionResponse = await supabase.auth.getSession();
 		setSession(sessionResponse.data.session);
@@ -103,11 +149,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
 		if (initialized) {
 			SplashScreen.hideAsync();
 			if (session) {
-				if (["/welcome", "/sign-in", "/sign-up"].includes(pathname)) {
+				if (authRoutes.includes(pathname)) {
 					router.replace("/");
 				}
 			} else {
-				router.replace("/welcome");
+				if (!authRoutes.includes(pathname)) {
+					router.replace("/welcome");
+				}
 			}
 		}
 		// eslint-disable-next-line
@@ -121,6 +169,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
 				signUp,
 				signIn,
 				signOut,
+				resetPassword,
+				confirmPasswordReset,
 			}}
 		>
 			{children}

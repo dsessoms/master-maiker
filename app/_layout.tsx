@@ -76,6 +76,44 @@ export default function AppLayout() {
 								gestureEnabled: true,
 							}}
 						/>
+						<Stack.Screen
+							name="forgot-password"
+							options={{
+								presentation: "modal",
+								headerShown: true,
+								headerTitle: "Reset Password",
+								headerStyle: {
+									backgroundColor:
+										colorScheme === "dark"
+											? colors.dark.background
+											: colors.light.background,
+								},
+								headerTintColor:
+									colorScheme === "dark"
+										? colors.dark.foreground
+										: colors.light.foreground,
+								gestureEnabled: true,
+							}}
+						/>
+						<Stack.Screen
+							name="reset-password"
+							options={{
+								presentation: "modal",
+								headerShown: true,
+								headerTitle: "Reset Password",
+								headerStyle: {
+									backgroundColor:
+										colorScheme === "dark"
+											? colors.dark.background
+											: colors.light.background,
+								},
+								headerTintColor:
+									colorScheme === "dark"
+										? colors.dark.foreground
+										: colors.light.foreground,
+								gestureEnabled: true,
+							}}
+						/>
 					</Stack>
 				</AuthProvider>
 			</QueryClientProvider>
