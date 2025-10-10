@@ -12,6 +12,7 @@ import {
 import { Form, FormField, FormInput } from "@/components/ui/form";
 
 import { Button } from "@/components/ui/button";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Separator } from "@/components/ui/separator";
 import { SocialConnections } from "@/components/social-connections";
 import { Text } from "@/components/ui/text";
@@ -20,45 +21,37 @@ import { useForm } from "react-hook-form";
 import { useRouter } from "expo-router";
 import { zodResolver } from "@hookform/resolvers/zod";
 
-const formSchema = z
-	.object({
-		email: z.string().email("Please enter a valid email address."),
-		password: z
-			.string()
-			.min(8, "Please enter at least 8 characters.")
-			.max(64, "Please enter fewer than 64 characters.")
-			.regex(
-				/^(?=.*[a-z])/,
-				"Your password must have at least one lowercase letter.",
-			)
-			.regex(
-				/^(?=.*[A-Z])/,
-				"Your password must have at least one uppercase letter.",
-			)
-			.regex(/^(?=.*[0-9])/, "Your password must have at least one number.")
-			.regex(
-				/^(?=.*[!@#$%^&*])/,
-				"Your password must have at least one special character.",
-			),
-		confirmPassword: z.string().min(8, "Please enter at least 8 characters."),
-	})
-	.refine((data) => data.password === data.confirmPassword, {
-		message: "Your passwords do not match.",
-		path: ["confirmPassword"],
-	});
+const formSchema = z.object({
+	email: z.string().email("Please enter a valid email address."),
+	password: z
+		.string()
+		.min(8, "Please enter at least 8 characters.")
+		.max(64, "Please enter fewer than 64 characters.")
+		.regex(
+			/^(?=.*[a-z])/,
+			"Your password must have at least one lowercase letter.",
+		)
+		.regex(
+			/^(?=.*[A-Z])/,
+			"Your password must have at least one uppercase letter.",
+		)
+		.regex(/^(?=.*[0-9])/, "Your password must have at least one number.")
+		.regex(
+			/^(?=.*[!@#$%^&*])/,
+			"Your password must have at least one special character.",
+		),
+});
 
 export function SignUpForm() {
 	const router = useRouter();
 	const { signUp } = useAuth();
 	const passwordInputRef = React.useRef<TextInput>(null);
-	const confirmPasswordInputRef = React.useRef<TextInput>(null);
 
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
 		defaultValues: {
 			email: "",
 			password: "",
-			confirmPassword: "",
 		},
 	});
 
@@ -67,7 +60,7 @@ export function SignUpForm() {
 	}
 
 	function onPasswordSubmitEditing() {
-		confirmPasswordInputRef.current?.focus();
+		form.handleSubmit(onSubmit)();
 	}
 
 	async function onSubmit(data: z.infer<typeof formSchema>) {
@@ -114,30 +107,11 @@ export function SignUpForm() {
 								control={form.control}
 								name="password"
 								render={({ field }) => (
-									<FormInput
+									<PasswordInput
 										label="Password"
 										placeholder="Password"
-										autoCapitalize="none"
-										autoCorrect={false}
-										secureTextEntry
-										returnKeyType="next"
-										onSubmitEditing={onPasswordSubmitEditing}
-										{...field}
-									/>
-								)}
-							/>
-							<FormField
-								control={form.control}
-								name="confirmPassword"
-								render={({ field }) => (
-									<FormInput
-										label="Confirm Password"
-										placeholder="Confirm password"
-										autoCapitalize="none"
-										autoCorrect={false}
-										secureTextEntry
 										returnKeyType="send"
-										onSubmitEditing={() => form.handleSubmit(onSubmit)()}
+										onSubmitEditing={onPasswordSubmitEditing}
 										{...field}
 									/>
 								)}

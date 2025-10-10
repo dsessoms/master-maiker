@@ -13,6 +13,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/text";
 import { Form, FormField, FormInput } from "@/components/ui/form";
+import { PasswordInput } from "@/components/ui/password-input";
 import { useAuth } from "@/context/supabase-provider";
 import * as React from "react";
 import {
@@ -110,11 +111,8 @@ export function SignInForm() {
 													</Text>
 												</Button>
 											</View>
-											<FormInput
+											<PasswordInput
 												placeholder="Password"
-												autoCapitalize="none"
-												autoCorrect={false}
-												secureTextEntry
 												returnKeyType="send"
 												onSubmitEditing={() => form.handleSubmit(onSubmit)()}
 												{...field}

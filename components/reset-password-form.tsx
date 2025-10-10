@@ -1,7 +1,7 @@
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
+import * as React from "react";
 import * as z from "zod";
-import { Button } from "@/components/ui/button";
+
+import { ActivityIndicator, Pressable, View } from "react-native";
 import {
 	Card,
 	CardContent,
@@ -9,62 +9,48 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
-import { Text } from "@/components/ui/text";
-import { Form, FormField, FormInput } from "@/components/ui/form";
-import { useAuth } from "@/context/supabase-provider";
-import * as React from "react";
-import {
-	ActivityIndicator,
-	Pressable,
-	type TextInput,
-	View,
-} from "react-native";
-import { useRouter } from "expo-router";
+import { Form, FormField } from "@/components/ui/form";
 
-const formSchema = z
-	.object({
-		newPassword: z
-			.string()
-			.min(8, "Please enter at least 8 characters.")
-			.max(64, "Please enter fewer than 64 characters.")
-			.regex(
-				/^(?=.*[a-z])/,
-				"Your password must have at least one lowercase letter.",
-			)
-			.regex(
-				/^(?=.*[A-Z])/,
-				"Your password must have at least one uppercase letter.",
-			)
-			.regex(/^(?=.*[0-9])/, "Your password must have at least one number.")
-			.regex(
-				/^(?=.*[!@#$%^&*])/,
-				"Your password must have at least one special character.",
-			),
-		confirmPassword: z.string().min(8, "Please enter at least 8 characters."),
-	})
-	.refine((data) => data.newPassword === data.confirmPassword, {
-		message: "Your passwords do not match.",
-		path: ["confirmPassword"],
-	});
+import { Button } from "@/components/ui/button";
+import { PasswordInput } from "@/components/ui/password-input";
+import { Text } from "@/components/ui/text";
+import { useAuth } from "@/context/supabase-provider";
+import { useForm } from "react-hook-form";
+import { useRouter } from "expo-router";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+const formSchema = z.object({
+	newPassword: z
+		.string()
+		.min(8, "Please enter at least 8 characters.")
+		.max(64, "Please enter fewer than 64 characters.")
+		.regex(
+			/^(?=.*[a-z])/,
+			"Your password must have at least one lowercase letter.",
+		)
+		.regex(
+			/^(?=.*[A-Z])/,
+			"Your password must have at least one uppercase letter.",
+		)
+		.regex(/^(?=.*[0-9])/, "Your password must have at least one number.")
+		.regex(
+			/^(?=.*[!@#$%^&*])/,
+			"Your password must have at least one special character.",
+		),
+});
 
 export function ResetPasswordForm() {
 	const router = useRouter();
 	const { confirmPasswordReset } = useAuth();
-	const confirmPasswordInputRef = React.useRef<TextInput>(null);
 
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
 		defaultValues: {
 			newPassword: "",
-			confirmPassword: "",
 		},
 	});
 
 	function onPasswordSubmitEditing() {
-		confirmPasswordInputRef.current?.focus();
-	}
-
-	function onConfirmPasswordSubmitEditing() {
 		form.handleSubmit(onSubmit)();
 	}
 
@@ -97,30 +83,11 @@ export function ResetPasswordForm() {
 								control={form.control}
 								name="newPassword"
 								render={({ field }) => (
-									<FormInput
+									<PasswordInput
 										label="New password"
 										placeholder="Enter new password"
-										autoCapitalize="none"
-										autoCorrect={false}
-										secureTextEntry
-										returnKeyType="next"
-										onSubmitEditing={onPasswordSubmitEditing}
-										{...field}
-									/>
-								)}
-							/>
-							<FormField
-								control={form.control}
-								name="confirmPassword"
-								render={({ field }) => (
-									<FormInput
-										label="Confirm password"
-										placeholder="Confirm new password"
-										autoCapitalize="none"
-										autoCorrect={false}
-										secureTextEntry
 										returnKeyType="send"
-										onSubmitEditing={onConfirmPasswordSubmitEditing}
+										onSubmitEditing={onPasswordSubmitEditing}
 										{...field}
 									/>
 								)}
