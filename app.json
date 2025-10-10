@@ -5,7 +5,7 @@
 		"scheme": "master-maiker",
 		"version": "1.0.0",
 		"orientation": "portrait",
-		"icon": "./assets/icon.png",
+		"icon": "./assets/logo-with-yellow-background.png",
 		"userInterfaceStyle": "automatic",
 		"assetBundlePatterns": ["**/*"],
 		"newArchEnabled": true,
@@ -25,14 +25,14 @@
 				}
 			},
 			"icon": {
-				"dark": "./assets/icon-dark.png",
-				"light": "./assets/icon.png"
+				"dark": "./assets/logo-with-yellow-background.png",
+				"light": "./assets/logo-with-yellow-background.png"
 			},
 			"bundleIdentifier": "com.flemingvincent.ExpoSupabaseStarter"
 		},
 		"android": {
 			"adaptiveIcon": {
-				"foregroundImage": "./assets/adaptive-icon.png"
+				"foregroundImage": "./assets/logo-with-yellow-background.png"
 			},
 			"splash": {
 				"image": "./assets/splash.png",
@@ -46,7 +46,8 @@
 			}
 		},
 		"web": {
-			"output": "server"
+			"output": "server",
+			"favicon": "./assets/favicon.png"
 		},
 		"experiments": {
 			"typedRoutes": true
