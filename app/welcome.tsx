@@ -20,11 +20,9 @@ export default function WelcomeScreen() {
 	return (
 		<SafeAreaView className="flex flex-1 bg-background p-4">
 			<View className="flex flex-1 items-center justify-center gap-y-4 web:m-4">
-				<Image source={appIcon} className="w-16 h-16 rounded-xl" />
+				<Image source={appIcon} className="w-28 h-28 rounded-xl" />
 				<H1 className="text-center">Mustrd</H1>
-				<Muted className="text-center">
-					Meal Utility System To Reduce Decisions
-				</Muted>
+				<Muted className="text-center">Mustrd helps you eat bro</Muted>
 			</View>
 			<View className="flex flex-col gap-y-4 web:m-4">
 				<Button
