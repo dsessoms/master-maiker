@@ -86,7 +86,7 @@ export function IngredientInput({
 
 					return (
 						<View className="flex-1 min-h-[60px]">
-							<View className="flex-row items-start py-2">
+							<View className="flex-row items-start py-2 items-center">
 								{/* Thumbnail image or placeholder */}
 								<View className="w-10 h-10 rounded-full mr-3 overflow-hidden justify-center items-center flex-shrink-0">
 									{image_url ? (
@@ -112,6 +112,11 @@ export function IngredientInput({
 										) : null}
 										<Text className="ml-2 text-base flex-shrink">{name}</Text>
 									</View>
+									{parsed.meta && (
+										<Text className="text-xs text-muted-foreground mb-1">
+											{parsed.meta}
+										</Text>
+									)}
 									<View>
 										<Macros
 											calories={caloriesPerServing}
