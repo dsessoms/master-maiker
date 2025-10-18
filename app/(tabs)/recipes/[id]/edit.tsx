@@ -55,6 +55,7 @@ export default function EditRecipe() {
 					}
 					return {
 						type: "ingredient" as const,
+						original_name: ing.original_name || undefined,
 						name: ing.food?.food_name || "",
 						number_of_servings: ing.number_of_servings || 1,
 						meta: ing.meta || undefined,

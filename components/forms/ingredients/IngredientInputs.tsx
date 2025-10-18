@@ -46,15 +46,12 @@ export function IngredientInputs({
 
 						// Handle ingredients
 						const ingredient = parsed as Ingredient;
-						const raw = `${
-							ingredient.number_of_servings * ingredient.serving.number_of_units
-						} ${ingredient.serving.measurement_description} ${ingredient.name}`;
-
+						const displayName = ingredient.original_name || ingredient.name;
 						return {
 							state: EntityInputState.Parsed,
-							raw,
+							raw: displayName,
 							parsed: ingredient,
-							previouslyParsedRaw: raw,
+							previouslyParsedRaw: displayName,
 						};
 					}),
 					{ state: EntityInputState.New, raw: "" },
@@ -143,6 +140,8 @@ export function IngredientInputs({
 			try {
 				const response = await parseIngredients(ingredientLines);
 
+				console.log("response", response);
+
 				if (
 					"ingredients" in response &&
 					response.ingredients &&
@@ -157,13 +156,12 @@ export function IngredientInputs({
 							const ingredientIndex = startIndex + i;
 							if (ingredientIndex < newIngredients.length) {
 								const ingredient = newIngredients[ingredientIndex];
-								const raw = `${parsed.number_of_servings * parsed.serving.number_of_units} ${parsed.serving.measurement_description} ${parsed.name}`;
-
+								const displayName = parsed.original_name || parsed.name;
 								Object.assign(ingredient, {
 									state: EntityInputState.Parsed,
 									parsed,
-									raw,
-									previouslyParsedRaw: raw,
+									raw: displayName,
+									previouslyParsedRaw: displayName,
 								});
 							}
 						});
@@ -343,6 +341,7 @@ export function IngredientInputs({
 							const ingredient: Ingredient = {
 								type: "ingredient",
 								name: foodData.food.food_name,
+								original_name: foodData.originalName,
 								number_of_servings: foodData.amount,
 								meta:
 									foodData.originalName &&
@@ -368,15 +367,15 @@ export function IngredientInputs({
 
 							const wasNewState =
 								ingredients[index].state === EntityInputState.New;
-							const raw = `${ingredient.number_of_servings * ingredient.serving.number_of_units} ${ingredient.serving.measurement_description} ${ingredient.name}`;
+							const displayName = ingredient.original_name || ingredient.name;
 
 							updateIngredients({
 								startIndex: index,
 								updates: {
 									state: EntityInputState.Parsed,
 									parsed: ingredient,
-									raw,
-									previouslyParsedRaw: raw,
+									raw: displayName,
+									previouslyParsedRaw: displayName,
 								},
 								addNewAtEnd: wasNewState,
 							});

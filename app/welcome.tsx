@@ -15,12 +15,16 @@ export default function WelcomeScreen() {
 	const appIcon =
 		colorScheme === "dark"
 			? require("@/assets/logo-with-yellow-background.png")
-			: require("@/assets/logo-with-no-background.png");
+			: require("@/assets/bottle-logo.png");
 
 	return (
 		<SafeAreaView className="flex flex-1 bg-background p-4">
 			<View className="flex flex-1 items-center justify-center gap-y-4 web:m-4">
-				<Image source={appIcon} className="w-28 h-28 rounded-xl" />
+				<Image
+					contentFit="contain"
+					source={appIcon}
+					className="w-28 h-28 rounded-xl"
+				/>
 				<H1 className="text-center">Mustrd</H1>
 				<Muted className="text-center">Mustrd helps you eat bro</Muted>
 			</View>

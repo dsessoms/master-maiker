@@ -15,6 +15,7 @@ export const ServingSchema = z.object({
 
 export const FoodItemSchema = z.object({
 	name: z.string(),
+	original_name: z.string().optional(), // The original user-entered or parsed name
 	// TODO: only allow specific urls in database
 	image_url: z.string().optional(),
 	serving: ServingSchema,

@@ -212,6 +212,7 @@ export const convertSpoonacularToIngredient = (
 	return {
 		type: "ingredient",
 		name: spoonacularIngredient.name,
+		original_name: spoonacularIngredient.original,
 		meta:
 			spoonacularIngredient.meta.length > 0
 				? spoonacularIngredient.meta.join(", ")
@@ -267,6 +268,7 @@ export const convertSpoonacularExtendedIngredientToIngredient = (
 	return {
 		type: "ingredient",
 		name: extendedIngredient.nameClean || extendedIngredient.name,
+		original_name: extendedIngredient.original,
 		meta:
 			extendedIngredient.meta.length > 0
 				? extendedIngredient.meta.join(", ")
