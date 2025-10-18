@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { EntityInputState } from "../entity-input";
 import { Plus } from "@/lib/icons";
 import { Text } from "@/components/ui/text";
+import { View } from "react-native";
 import { cn } from "@/lib/utils";
 
 interface InstructionInputsProps {
@@ -298,18 +299,35 @@ export function InstructionInputs({
 								deleteAtIndex: true,
 							});
 						}}
-						renderParsed={(parsed) => (
-							<Text
-								className={cn({
-									"text-foreground": true,
-									"font-semibold": parsed.type === "header",
-								})}
-							>
-								{parsed.type === "header"
-									? parsed.name
-									: `${instructionStepNumber}. ${parsed.value}`}
-							</Text>
-						)}
+						renderParsed={(parsed) => {
+							if (parsed.type === "header") {
+								return (
+									<Text
+										className={cn({
+											"text-foreground": true,
+											"font-semibold": true,
+										})}
+									>
+										{parsed.name}
+									</Text>
+								);
+							}
+
+							// For instructions, match the recipe details page format
+							return (
+								<View className="flex-row w-full">
+									<Text className="font-semibold text-base mr-3 text-primary">
+										{instructionStepNumber}.
+									</Text>
+									<Text
+										className="flex-1 text-base leading-6"
+										style={{ flexShrink: 1 }}
+									>
+										{parsed.value}
+									</Text>
+								</View>
+							);
+						}}
 						shouldFocus={focusedIndex === index}
 						onFocus={() => setFocusedIndex(null)}
 					/>
