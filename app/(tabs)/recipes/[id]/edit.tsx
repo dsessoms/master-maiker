@@ -8,16 +8,20 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
+import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import { Recipe } from "@/lib/schemas";
 import { RecipeForm } from "@/components/forms/RecipeForm";
 import { SafeAreaView } from "@/components/safe-area-view";
 import { Text } from "@/components/ui/text";
+import { colors } from "@/constants/colors";
 import { useRecipe } from "@/hooks/recipes/use-recipe";
+import { useTheme } from "@/context/theme-context";
 import { useUpdateRecipeMutation } from "@/hooks/recipes/use-update-recipe-mutation";
 
 export default function EditRecipe() {
 	const { id } = useLocalSearchParams<{ id: string }>();
 	const router = useRouter();
+	const { colors } = useTheme();
 	const { recipe, isLoading, error } = useRecipe(id!);
 	const { updateRecipe, isPending } = useUpdateRecipeMutation();
 
@@ -103,7 +107,7 @@ export default function EditRecipe() {
 		return (
 			<View className="flex flex-1 bg-background">
 				<View className="flex-1 justify-center items-center">
-					<ActivityIndicator size="large" />
+					<LoadingIndicator size="large" />
 					<Text className="mt-4">Loading recipe...</Text>
 				</View>
 			</View>
