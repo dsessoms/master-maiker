@@ -2,6 +2,7 @@ import {
 	ActivityIndicator,
 	Modal,
 	Platform,
+	Pressable,
 	ScrollView,
 	View,
 } from "react-native";
@@ -14,7 +15,10 @@ import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { FoodServingEditor } from "./food-serving-editor";
 import { Input } from "@/components/ui/input";
+import { LoadingIndicator } from "@/components/ui/loading-indicator";
+import { Search } from "@/lib/icons/search";
 import { Text } from "@/components/ui/text";
+import { X } from "@/lib/icons/x";
 import { useFatSecretFoodSearch } from "@/hooks/fat-secret/use-fat-secret-food-search";
 
 interface FoodItemToAdd {
@@ -125,19 +129,45 @@ export const SearchFoodModal: React.FC<SearchFoodModalProps> = ({
 
 				{/* Search Input */}
 				<View className="p-4">
-					<Input
-						value={searchQuery}
-						onChangeText={setSearchQuery}
-						placeholder="Search for foods..."
-						className="w-full"
-					/>
+					<View className="relative w-full">
+						{/* Search Icon */}
+						<View className="absolute left-3 top-1/2 -translate-y-1/2">
+							<Search className="text-muted-foreground" size={16} />
+						</View>
+
+						{/* Text Input */}
+						<Input
+							value={searchQuery}
+							onChangeText={setSearchQuery}
+							placeholder="Search for foods..."
+							className="pl-10 pr-10"
+						/>
+
+						{/* Right Element (Clear Button or Loading) */}
+						<View className="absolute right-3 top-0 bottom-0 flex items-center justify-center z-10">
+							{isLoading && !!debouncedQuery && (
+								<LoadingIndicator
+									size="small"
+									className="text-muted-foreground"
+								/>
+							)}
+							{!isLoading && searchQuery && (
+								<Pressable
+									onPress={() => setSearchQuery("")}
+									className="p-1 rounded-full active:bg-muted"
+									hitSlop={8}
+								>
+									<X className="h-4 w-4 text-muted-foreground" />
+								</Pressable>
+							)}
+						</View>
+					</View>
 				</View>
 
 				{/* Results */}
 				<ScrollView className="flex-1">
 					{isLoading && !!debouncedQuery && (
 						<View className="p-4 items-center">
-							<ActivityIndicator size="large" />
 							<Text className="mt-2 text-muted-foreground">Searching...</Text>
 						</View>
 					)}
