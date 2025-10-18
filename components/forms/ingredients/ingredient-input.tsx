@@ -4,7 +4,6 @@ import {
 	EntityInputState,
 } from "@/components/forms/entity-input";
 import { FatSecretFood, FatSecretServing } from "@/lib/server/fat-secret/types";
-import { View } from "react-native";
 import React, { useState } from "react";
 
 import { EditableFatSecretFoodItem } from "@/components/food/editable-fat-secret-food-item";
@@ -15,6 +14,7 @@ import { Macros } from "@/components/meal-plan/macros";
 import { SearchFoodModal } from "@/components/food/search-food-modal";
 import { ShoppingBasket } from "@/lib/icons";
 import { Text } from "@/components/ui/text";
+import { View } from "react-native";
 
 export interface FoodData {
 	food: FatSecretFood;
@@ -146,8 +146,9 @@ export function IngredientInput({
 				keyLabel="enter"
 				actionText="to save"
 				show={
-					props.value.state === EntityInputState.Dirty ||
-					props.value.state === EntityInputState.Editing
+					(props.value.state === EntityInputState.Dirty ||
+						props.value.state === EntityInputState.Editing) &&
+					!props.value.parsed?.fat_secret_id
 				}
 			/>
 			{!!onFoodSelect && (
