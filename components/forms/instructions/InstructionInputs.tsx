@@ -177,128 +177,144 @@ export function InstructionInputs({
 
 	return (
 		<>
-			{instructions.map((instruction, index) => (
-				<InstructionInput
-					key={index}
-					placeholder={
-						instruction.parsed?.type === "header"
-							? "Header name"
-							: "Add instruction"
-					}
-					value={instruction}
-					onMultiplePaste={(instructionLines: string[]) => {
-						// Handle pasting multiple instructions using centralized update
-						const additionalInstructions = instructionLines
-							.slice(1)
-							.map((parsed: string) => ({
-								state: EntityInputState.Parsed,
-								raw: parsed,
-								parsed: { type: "instruction" as const, value: parsed },
-							}));
+			{instructions.map((instruction, index) => {
+				// Calculate step number for instructions (excluding headers)
+				const instructionStepNumber =
+					instructions
+						.slice(0, index)
+						.filter(
+							(ins) =>
+								ins.parsed?.type === "instruction" &&
+								(ins.state === EntityInputState.Parsed ||
+									ins.state === EntityInputState.Editing ||
+									ins.state === EntityInputState.Dirty),
+						).length + 1;
 
-						updateInstructions({
-							startIndex: index,
-							updates: {
-								state: EntityInputState.Parsed,
-								raw: instructionLines[0],
-								parsed: {
-									type: "instruction",
-									value: instructionLines[0],
+				return (
+					<InstructionInput
+						key={index}
+						placeholder={
+							instruction.parsed?.type === "header"
+								? "Header name"
+								: `Step ${instructionStepNumber}`
+						}
+						value={instruction}
+						onMultiplePaste={(instructionLines: string[]) => {
+							// Handle pasting multiple instructions using centralized update
+							const additionalInstructions = instructionLines
+								.slice(1)
+								.map((parsed: string) => ({
+									state: EntityInputState.Parsed,
+									raw: parsed,
+									parsed: { type: "instruction" as const, value: parsed },
+								}));
+
+							updateInstructions({
+								startIndex: index,
+								updates: {
+									state: EntityInputState.Parsed,
+									raw: instructionLines[0],
+									parsed: {
+										type: "instruction",
+										value: instructionLines[0],
+									},
 								},
-							},
-							additionalInstructions,
-							addNewAtEnd: true,
-						});
+								additionalInstructions,
+								addNewAtEnd: true,
+							});
 
-						// Focus on the next new instruction after a short delay
-						setTimeout(() => {
-							const nextNewIndex = index + instructionLines.length;
-							setFocusedIndex(nextNewIndex);
-						}, 100);
-					}}
-					onChange={(rawValue: string) => {
-						const currentInstruction = instructions[index];
-						const wasNew = currentInstruction.state === EntityInputState.New;
+							// Focus on the next new instruction after a short delay
+							setTimeout(() => {
+								const nextNewIndex = index + instructionLines.length;
+								setFocusedIndex(nextNewIndex);
+							}, 100);
+						}}
+						onChange={(rawValue: string) => {
+							const currentInstruction = instructions[index];
+							const wasNew = currentInstruction.state === EntityInputState.New;
 
-						// Create updated parsed value
-						let updatedParsed: InstructionOrHeader;
-						if (currentInstruction.parsed) {
-							if (currentInstruction.parsed.type === "header") {
-								updatedParsed = { type: "header", name: rawValue };
+							// Create updated parsed value
+							let updatedParsed: InstructionOrHeader;
+							if (currentInstruction.parsed) {
+								if (currentInstruction.parsed.type === "header") {
+									updatedParsed = { type: "header", name: rawValue };
+								} else {
+									updatedParsed = { type: "instruction", value: rawValue };
+								}
 							} else {
 								updatedParsed = { type: "instruction", value: rawValue };
 							}
-						} else {
-							updatedParsed = { type: "instruction", value: rawValue };
-						}
 
-						updateInstructions({
-							startIndex: index,
-							updates: {
-								raw: rawValue,
-								parsed: updatedParsed,
-								state: wasNew
-									? EntityInputState.Dirty
-									: currentInstruction.state,
-							},
-							addNewAtEnd: wasNew && updatedParsed.type !== "header",
-						});
-					}}
-					onSave={() => {
-						const currentInstruction = instructions[index];
-						const isEmpty = !currentInstruction.raw.trim();
+							updateInstructions({
+								startIndex: index,
+								updates: {
+									raw: rawValue,
+									parsed: updatedParsed,
+									state: wasNew
+										? EntityInputState.Dirty
+										: currentInstruction.state,
+								},
+								addNewAtEnd: wasNew && updatedParsed.type !== "header",
+							});
+						}}
+						onSave={() => {
+							const currentInstruction = instructions[index];
+							const isEmpty = !currentInstruction.raw.trim();
 
-						// Handle empty instructions
-						if (
-							isEmpty &&
-							currentInstruction.state === EntityInputState.New &&
-							currentInstruction.parsed?.type !== "header"
-						) {
-							return;
-						}
+							// Handle empty instructions
+							if (
+								isEmpty &&
+								currentInstruction.state === EntityInputState.New &&
+								currentInstruction.parsed?.type !== "header"
+							) {
+								return;
+							}
 
-						if (isEmpty) {
-							// Delete empty instruction
+							if (isEmpty) {
+								// Delete empty instruction
+								updateInstructions({
+									startIndex: index,
+									deleteAtIndex: true,
+								});
+								return;
+							}
+
+							// Mark as parsed and focus next NEW instruction
+							updateInstructions({
+								startIndex: index,
+								updates: { state: EntityInputState.Parsed },
+								focusNextNew: true,
+							});
+						}}
+						onEdit={() => {
+							updateInstructions({
+								startIndex: index,
+								updates: { state: EntityInputState.Editing },
+							});
+						}}
+						onClear={() => {
 							updateInstructions({
 								startIndex: index,
 								deleteAtIndex: true,
 							});
-							return;
-						}
-
-						// Mark as parsed and focus next NEW instruction
-						updateInstructions({
-							startIndex: index,
-							updates: { state: EntityInputState.Parsed },
-							focusNextNew: true,
-						});
-					}}
-					onEdit={() => {
-						updateInstructions({
-							startIndex: index,
-							updates: { state: EntityInputState.Editing },
-						});
-					}}
-					onClear={() => {
-						updateInstructions({
-							startIndex: index,
-							deleteAtIndex: true,
-						});
-					}}
-					renderParsed={(parsed) => (
-						<Text
-							className={cn({
-								"text-foreground": true,
-								"font-semibold": parsed.type === "header",
-							})}
-						>
-							{parsed.type === "header" ? parsed.name : parsed.value}
-						</Text>
-					)}
-					shouldFocus={focusedIndex === index}
-					onFocus={() => setFocusedIndex(null)}
-				/>
-			))}
+						}}
+						renderParsed={(parsed) => (
+							<Text
+								className={cn({
+									"text-foreground": true,
+									"font-semibold": parsed.type === "header",
+								})}
+							>
+								{parsed.type === "header"
+									? parsed.name
+									: `${instructionStepNumber}. ${parsed.value}`}
+							</Text>
+						)}
+						shouldFocus={focusedIndex === index}
+						onFocus={() => setFocusedIndex(null)}
+					/>
+				);
+			})}
 
 			<Button
 				variant="outline"
