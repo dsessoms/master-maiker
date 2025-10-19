@@ -1,29 +1,79 @@
-import { H1, Muted } from "@/components/ui/typography";
+import { ChevronRight, Settings, User, Users } from "@/lib/icons";
+import { ScrollView, TouchableOpacity, View } from "react-native";
 
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Muted } from "@/components/ui/typography";
 import { Text } from "@/components/ui/text";
-import { View } from "react-native";
 import { useAuth } from "@/context/supabase-provider";
+import { useColorScheme } from "@/lib/useColorScheme";
+import { useRouter } from "expo-router";
 
 export default function Account() {
-	const { signOut } = useAuth();
+	const { signOut, session } = useAuth();
+	const router = useRouter();
+	const { colorScheme } = useColorScheme();
+
+	const iconColor = colorScheme === "dark" ? "#ffffff" : "#000000";
 
 	return (
-		<View className="flex-1 items-center justify-center bg-background p-4 gap-y-4">
-			<H1 className="text-center">Sign Out</H1>
-			<Muted className="text-center">
-				Sign out and return to the welcome screen.
-			</Muted>
-			<Button
-				className="w-full"
-				size="default"
-				variant="default"
-				onPress={async () => {
-					await signOut();
-				}}
-			>
-				<Text>Sign Out</Text>
-			</Button>
-		</View>
+		<ScrollView className="flex-1 bg-background">
+			<View className="p-4 gap-y-6">
+				<View>
+					<Card className="p-6 relative">
+						<View className="items-center gap-y-3">
+							<View className="w-16 h-16 bg-primary rounded-full items-center justify-center">
+								<User size={28} color="white" />
+							</View>
+							<View className="items-center">
+								<Text className="text-lg font-semibold text-center">
+									{session?.user?.email || "User"}
+								</Text>
+							</View>
+						</View>
+
+						<Button
+							size="icon"
+							variant="ghost"
+							className="absolute top-2 right-2"
+							onPress={() => router.push("/(tabs)/account/settings")}
+						>
+							<Settings size={18} color={iconColor} />
+						</Button>
+					</Card>
+				</View>
+
+				<View>
+					<Card className="p-0">
+						<TouchableOpacity
+							className="flex-row items-center justify-between p-4"
+							onPress={() => router.push("/(tabs)/account/household-members")}
+						>
+							<View className="flex-row items-center gap-x-3">
+								<Users size={20} color={iconColor} />
+								<View>
+									<Text className="font-medium">Household Members</Text>
+									<Muted className="text-sm">Manage family members</Muted>
+								</View>
+							</View>
+							<ChevronRight size={16} color={iconColor} />
+						</TouchableOpacity>
+					</Card>
+				</View>
+
+				<View>
+					<Button
+						className="w-full"
+						size="default"
+						variant="secondary"
+						onPress={async () => {
+							await signOut();
+						}}
+					>
+						<Text>Sign Out</Text>
+					</Button>
+				</View>
+			</View>
+		</ScrollView>
 	);
 }

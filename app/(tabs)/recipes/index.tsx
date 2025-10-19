@@ -1,4 +1,3 @@
-import { ActivityIndicator, ScrollView, View } from "react-native";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -13,6 +12,7 @@ import {
 	Search,
 	WandSparkles,
 } from "@/lib/icons";
+import { ScrollView, View } from "react-native";
 
 import { Button } from "@/components/ui/button";
 import { DeleteRecipeDialog } from "@/components/recipe/delete-recipe-dialog";

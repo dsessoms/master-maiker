@@ -1,15 +1,8 @@
-import {
-	ActivityIndicator,
-	Modal,
-	Platform,
-	Pressable,
-	ScrollView,
-	View,
-} from "react-native";
 import type {
 	FatSecretFood,
 	FatSecretServing,
 } from "@/lib/server/fat-secret/types";
+import { Modal, Platform, Pressable, ScrollView, View } from "react-native";
 import React, { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
