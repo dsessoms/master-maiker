@@ -31,15 +31,6 @@ export default function Account() {
 								</Text>
 							</View>
 						</View>
-
-						<Button
-							size="icon"
-							variant="ghost"
-							className="absolute top-2 right-2"
-							onPress={() => router.push("/(tabs)/account/settings")}
-						>
-							<Settings size={18} color={iconColor} />
-						</Button>
 					</Card>
 				</View>
 
@@ -47,13 +38,13 @@ export default function Account() {
 					<Card className="p-0">
 						<TouchableOpacity
 							className="flex-row items-center justify-between p-4"
-							onPress={() => router.push("/(tabs)/account/household-members")}
+							onPress={() => router.push("/(tabs)/account/profiles")}
 						>
 							<View className="flex-row items-center gap-x-3">
 								<Users size={20} color={iconColor} />
 								<View>
-									<Text className="font-medium">Household Members</Text>
-									<Muted className="text-sm">Manage family members</Muted>
+									<Text className="font-medium">Profiles</Text>
+									<Muted className="text-sm">Manage profiles</Muted>
 								</View>
 							</View>
 							<ChevronRight size={16} color={iconColor} />

@@ -1,7 +1,8 @@
 insert into storage.buckets
   (id, name, public)
 values
-  ('recipe-photos', 'recipe-photos', TRUE);
+  ('recipe-photos', 'recipe-photos', TRUE),
+  ('avatar-photos', 'avatar-photos', TRUE);
 
 -- Insert a test user
 insert into auth.users

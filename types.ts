@@ -30,6 +30,8 @@ export type ExpandedRecipe = Omit<RecipeRow, "user_id"> & {
 	macros: RecipeMacrosRow[];
 };
 
+export type Profile = Database["public"]["Tables"]["profile"]["Row"];
+
 export type ExpandedFood = FoodRow & { serving: ServingRow[] };
 
 // Custom

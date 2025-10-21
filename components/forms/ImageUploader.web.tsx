@@ -7,11 +7,15 @@ import { Text } from "@/components/ui/text";
 export interface ImageUploaderProps {
 	selectedImageUri?: string;
 	onImageSelected: (imageData?: { file: File; uri: string } | string) => void;
+	variant?: "rectangular" | "circular";
+	size?: number;
 }
 
 export function ImageUploader({
 	selectedImageUri,
 	onImageSelected,
+	variant = "rectangular",
+	size = 120,
 }: ImageUploaderProps) {
 	const inputFileRef = useRef<HTMLInputElement>(null);
 
@@ -35,6 +39,70 @@ export function ImageUploader({
 		}
 	};
 
+	if (variant === "circular") {
+		if (selectedImageUri) {
+			return (
+				<div className="flex items-center justify-center">
+					<div
+						className="relative rounded-full border-2 border-border"
+						style={{ width: size, height: size }}
+					>
+						<div
+							className="overflow-hidden rounded-full"
+							style={{ width: size, height: size }}
+						>
+							<Image
+								source={{ uri: selectedImageUri }}
+								className="h-full w-full"
+								contentFit="cover"
+							/>
+						</div>
+						<button
+							type="button"
+							onClick={handleRemovePhoto}
+							className="absolute -bottom-1 -right-1 rounded-full bg-destructive p-1.5 border-2 border-background hover:bg-destructive/90 transition-colors"
+						>
+							<Trash2Icon className="h-3 w-3 text-destructive-foreground" />
+						</button>
+					</div>
+					<input
+						ref={inputFileRef}
+						type="file"
+						accept="image/*"
+						onChange={onFileChangeCapture}
+						className="hidden"
+					/>
+				</div>
+			);
+		}
+
+		return (
+			<div className="flex items-center justify-center">
+				<button
+					type="button"
+					onClick={handleAddPhoto}
+					className="flex items-center justify-center rounded-full border-2 border-dashed border-border bg-muted hover:bg-muted/80 transition-colors"
+					style={{ width: size, height: size }}
+				>
+					<div className="flex flex-col items-center">
+						<CameraIcon className="h-6 w-6 text-primary mb-1" />
+						<Text className="text-xs text-muted-foreground text-center px-2">
+							Add Photo
+						</Text>
+					</div>
+				</button>
+				<input
+					ref={inputFileRef}
+					type="file"
+					accept="image/*"
+					onChange={onFileChangeCapture}
+					className="hidden"
+				/>
+			</div>
+		);
+	}
+
+	// Rectangular variant (original behavior)
 	if (selectedImageUri) {
 		return (
 			<div className="relative h-44 w-full overflow-hidden rounded-md border border-border">

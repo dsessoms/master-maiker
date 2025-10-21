@@ -30,3 +30,4 @@ export * from "./sandwich";
 export * from "./move-down-right";
 export * from "./wand-sparkles";
 export * from "./x";
+export * from "./calendar";

@@ -12,16 +12,23 @@ export default function AccountStackLayout() {
 				options={{ title: "Account", headerShown: false }}
 			/>
 			<Stack.Screen
-				name="household-members"
+				name="profiles/index"
 				options={{
-					title: "Household Members",
+					title: "Profiles",
 					headerShown: true,
 				}}
 			/>
 			<Stack.Screen
-				name="settings"
+				name="profiles/[id]/edit"
 				options={{
-					title: "Settings",
+					title: "Edit Profile",
+					headerShown: true,
+				}}
+			/>
+			<Stack.Screen
+				name="profiles/create"
+				options={{
+					title: "Create Profile",
 					headerShown: true,
 				}}
 			/>

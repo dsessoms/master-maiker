@@ -57,8 +57,7 @@ export function Ingredient({
 			<View style={{ flex: 1 }}>
 				<View className="flex flex-row items-center flex-wrap">
 					<Text className="font-medium text-base">
-						{displayUnits.toFixed(displayUnits % 1 === 0 ? 0 : 1)}{" "}
-						{ingredient.serving.measurement_description}{" "}
+						{`${displayUnits} ${ingredient.serving.measurement_description}`}{" "}
 					</Text>
 					<Text className="text-base">
 						{ingredient.food.food_name}

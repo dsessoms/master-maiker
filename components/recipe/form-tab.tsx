@@ -1,18 +1,12 @@
-import { Pressable, View } from "react-native";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import React, { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { ChipsInput } from "@/components/ui/chips-input";
 import { Label } from "@/components/ui/label";
 import { Text } from "@/components/ui/text";
 import { Textarea } from "@/components/ui/textarea";
-import { X } from "@/lib/icons";
-
-interface IngredientChip {
-	id: string;
-	name: string;
-}
+import { View } from "react-native";
 
 interface FormTabProps {
 	onGenerate: (options: any) => Promise<void>;
@@ -20,121 +14,46 @@ interface FormTabProps {
 }
 
 export const FormTab = ({ onGenerate, isGenerating }: FormTabProps) => {
-	const [ingredientsToInclude, setIngredientsToInclude] = useState<
-		IngredientChip[]
-	>([]);
-	const [ingredientsToExclude, setIngredientsToExclude] = useState<
-		IngredientChip[]
-	>([]);
-	const [includeInput, setIncludeInput] = useState("");
-	const [excludeInput, setExcludeInput] = useState("");
+	const [ingredientsToInclude, setIngredientsToInclude] = useState<string[]>(
+		[],
+	);
+	const [ingredientsToExclude, setIngredientsToExclude] = useState<string[]>(
+		[],
+	);
 	const [complexity, setComplexity] = useState<
 		"simple" | "moderate" | "complex"
 	>("moderate");
 	const [additionalRequirements, setAdditionalRequirements] = useState("");
 
-	const addIngredientToInclude = () => {
-		if (includeInput.trim()) {
-			const newIngredient: IngredientChip = {
-				id: Date.now().toString(),
-				name: includeInput.trim(),
-			};
-			setIngredientsToInclude([...ingredientsToInclude, newIngredient]);
-			setIncludeInput("");
-		}
-	};
-
-	const addIngredientToExclude = () => {
-		if (excludeInput.trim()) {
-			const newIngredient: IngredientChip = {
-				id: Date.now().toString(),
-				name: excludeInput.trim(),
-			};
-			setIngredientsToExclude([...ingredientsToExclude, newIngredient]);
-			setExcludeInput("");
-		}
-	};
-
-	const removeIngredientToInclude = (id: string) => {
-		setIngredientsToInclude(
-			ingredientsToInclude.filter((ing) => ing.id !== id),
-		);
-	};
-
-	const removeIngredientToExclude = (id: string) => {
-		setIngredientsToExclude(
-			ingredientsToExclude.filter((ing) => ing.id !== id),
-		);
-	};
-
 	const handleGenerate = () => {
 		const options = {
-			ingredientsToInclude: ingredientsToInclude.map((ing) => ing.name),
-			ingredientsToExclude: ingredientsToExclude.map((ing) => ing.name),
+			ingredientsToInclude,
+			ingredientsToExclude,
 			complexity,
 			additionalRequirements: additionalRequirements.trim() || undefined,
 		};
 		onGenerate(options);
 	};
 
-	const IngredientChips = ({
-		ingredients,
-		onRemove,
-	}: {
-		ingredients: IngredientChip[];
-		onRemove: (id: string) => void;
-	}) => (
-		<View className="flex-row flex-wrap gap-2 mt-2">
-			{ingredients.map((ingredient) => (
-				<View
-					key={ingredient.id}
-					className="flex-row items-center bg-secondary rounded-full px-3 py-1 gap-1"
-				>
-					<Text className="text-sm">{ingredient.name}</Text>
-					<Pressable
-						onPress={() => onRemove(ingredient.id)}
-						className="ml-1 p-0.5"
-					>
-						<X size={12} className="text-muted-foreground" />
-					</Pressable>
-				</View>
-			))}
-		</View>
-	);
-
 	return (
 		<View className="gap-6">
 			{/* Include Ingredients */}
-			<View className="gap-3">
-				<Label nativeID="include-ingredients">Ingredients to Include</Label>
-				<Input
-					placeholder="Type an ingredient and press Enter"
-					value={includeInput}
-					onChangeText={setIncludeInput}
-					onSubmitEditing={addIngredientToInclude}
-					returnKeyType="done"
-				/>
-				<IngredientChips
-					ingredients={ingredientsToInclude}
-					onRemove={removeIngredientToInclude}
-				/>
-			</View>
+			<ChipsInput
+				label="Ingredients to Include"
+				placeholder="Type an ingredient and press Enter"
+				chips={ingredientsToInclude}
+				onChipsChange={setIngredientsToInclude}
+				disabled={isGenerating}
+			/>
 
 			{/* Exclude Ingredients */}
-			<View className="gap-3">
-				<Label nativeID="exclude-ingredients">Ingredients to Exclude</Label>
-				<Input
-					placeholder="Type an ingredient and press Enter"
-					value={excludeInput}
-					onChangeText={setExcludeInput}
-					onSubmitEditing={addIngredientToExclude}
-					returnKeyType="done"
-				/>
-				<IngredientChips
-					ingredients={ingredientsToExclude}
-					onRemove={removeIngredientToExclude}
-				/>
-			</View>
+			<ChipsInput
+				label="Ingredients to Exclude"
+				placeholder="Type an ingredient and press Enter"
+				chips={ingredientsToExclude}
+				onChipsChange={setIngredientsToExclude}
+				disabled={isGenerating}
+			/>
 
 			{/* Complexity */}
 			<View className="gap-3">
