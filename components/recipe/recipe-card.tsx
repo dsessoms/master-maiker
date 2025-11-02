@@ -1,66 +1,43 @@
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { MoreHorizontalIcon, PencilIcon, Trash2Icon } from "@/lib/icons";
 import { TouchableOpacity, View } from "react-native";
 
-import { Button } from "@/components/ui/button";
 import { Image } from "@/components/image";
+import { ReactNode } from "react";
 import { Text } from "@/components/ui/text";
 import { useRecipeImage } from "@/hooks/recipes/use-recipe-image";
-import { useRouter } from "expo-router";
 
 type Recipe = {
 	id: string;
 	name: string;
-	description?: string;
-	image_id?: string;
-	prep_time_hours?: number;
-	prep_time_minutes?: number;
-	cook_time_hours?: number;
-	cook_time_minutes?: number;
+	description?: string | null;
+	image_id?: string | null;
+	prep_time_hours?: number | null;
+	prep_time_minutes?: number | null;
+	cook_time_hours?: number | null;
+	cook_time_minutes?: number | null;
 	macros?: {
-		calories?: number;
-		protein?: number;
+		[key: string]: any;
 	}[];
+};
+
+type RecipeCardProps = {
+	recipe: Recipe;
+	onPress: () => void;
+	overlay?: ReactNode;
+	children?: ReactNode;
 };
 
 export const RecipeCard = ({
 	recipe,
-	onEdit,
-	onDelete,
-}: {
-	recipe: Recipe;
-	onEdit: () => void;
-	onDelete: () => void;
-}) => {
-	const router = useRouter();
-	const { id, image_id, name, description } = recipe;
+	onPress,
+	overlay,
+	children,
+}: RecipeCardProps) => {
+	const { image_id, name } = recipe;
 	const imageUrl = useRecipeImage(image_id);
-
-	const handlePress = () => {
-		router.push({
-			pathname: "/recipes/[id]",
-			params: { id },
-		});
-	};
-
-	const handleEditPress = (e: any) => {
-		e.stopPropagation();
-		onEdit();
-	};
-
-	const handleDeletePress = (e: any) => {
-		e.stopPropagation();
-		onDelete();
-	};
 
 	return (
 		<TouchableOpacity
-			onPress={handlePress}
+			onPress={onPress}
 			className="flex flex-col bg-card border border-border rounded-lg overflow-hidden active:bg-muted"
 		>
 			<View className="relative">
@@ -78,34 +55,12 @@ export const RecipeCard = ({
 					</View>
 				)}
 
-				<View className="absolute top-2 right-2">
-					<DropdownMenu>
-						<DropdownMenuTrigger asChild>
-							<Button
-								variant="outline"
-								size="icon"
-								className="w-8 h-8 rounded-full bg-background/80 backdrop-blur-sm border-border/50"
-								onPress={(e) => e.stopPropagation()}
-							>
-								<MoreHorizontalIcon className="text-foreground" size={16} />
-							</Button>
-						</DropdownMenuTrigger>
-						<DropdownMenuContent side="bottom" align="end" className="w-32">
-							<DropdownMenuItem onPress={handleEditPress}>
-								<PencilIcon className="text-foreground mr-2" size={16} />
-								<Text>Edit</Text>
-							</DropdownMenuItem>
-							<DropdownMenuItem onPress={handleDeletePress}>
-								<Trash2Icon className="text-destructive mr-2" size={16} />
-								<Text className="text-destructive">Delete</Text>
-							</DropdownMenuItem>
-						</DropdownMenuContent>
-					</DropdownMenu>
-				</View>
+				{overlay}
 			</View>
 
 			<View className="flex flex-col p-2 h-16">
 				<Text className="text-sm font-semibold mb-1 line-clamp-2">{name}</Text>
+				{children}
 			</View>
 		</TouchableOpacity>
 	);

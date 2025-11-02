@@ -110,8 +110,12 @@ export function ProfileDropdown({
 					<ChevronDown />
 				</Button>
 			</DropdownMenuTrigger>
-			<DropdownMenuContent className="w-64 native:w-72">
-				<DropdownMenuLabel>Profile Profiles</DropdownMenuLabel>
+			<DropdownMenuContent
+				className="w-64 native:w-72"
+				align="start"
+				sideOffset={2}
+			>
+				<DropdownMenuLabel>Profiles</DropdownMenuLabel>
 				<DropdownMenuSeparator />
 				<DropdownMenuGroup>
 					{profiles.map((profile) => (

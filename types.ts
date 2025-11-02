@@ -32,6 +32,8 @@ export type ExpandedRecipe = Omit<RecipeRow, "user_id"> & {
 
 export type Profile = Database["public"]["Tables"]["profile"]["Row"];
 
+export type MealType = Database["public"]["Enums"]["meal_type_enum"];
+
 export type ExpandedFood = FoodRow & { serving: ServingRow[] };
 
 // Custom

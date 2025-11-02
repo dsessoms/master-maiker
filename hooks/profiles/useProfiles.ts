@@ -23,7 +23,7 @@ export const useProfiles = () => {
 							.from("avatar-photos")
 							.getPublicUrl(profile.avatar_id).data.publicUrl
 					: undefined,
-			})),
+			})) || [],
 		[data],
 	);
 

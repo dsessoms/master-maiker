@@ -195,7 +195,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 			SplashScreen.hideAsync();
 			if (session) {
 				if (authRoutes.includes(pathname)) {
-					router.replace("/");
+					router.replace("/(tabs)/meal-plan");
 				}
 			} else {
 				if (!authRoutes.includes(pathname)) {

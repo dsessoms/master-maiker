@@ -6,10 +6,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
 	Link,
+	MoreHorizontalIcon,
 	MoveDownRight,
+	PencilIcon,
 	Plus,
 	Sandwich,
 	Search,
+	Trash2Icon,
 	WandSparkles,
 } from "@/lib/icons";
 import { ScrollView, View } from "react-native";
@@ -24,7 +27,6 @@ import { Text } from "@/components/ui/text";
 import { router } from "expo-router";
 import { useDeleteRecipeMutation } from "@/hooks/recipes/use-delete-recipe-mutation";
 import { useRecipes } from "@/hooks/recipes/use-recipes";
-import { useResponsiveColumns } from "@/hooks/useResponsiveColumns";
 import { useState } from "react";
 
 export default function Recipes() {
@@ -33,7 +35,6 @@ export default function Recipes() {
 	const [recipeToDelete, setRecipeToDelete] = useState<string | null>(null);
 	const { recipes, isLoading, isError } = useRecipes();
 	const { deleteRecipe, isPending: isDeleting } = useDeleteRecipeMutation();
-	const { columns, cardWidth } = useResponsiveColumns();
 
 	// Filter recipes based on search query
 	const filteredRecipes =
@@ -97,14 +98,9 @@ export default function Recipes() {
 					</View>
 				</View>
 				{!!isLoading && (
-					<View className="flex flex-row flex-wrap gap-2">
+					<View className="native:flex-row native:flex-wrap native:gap-2 web:grid web:grid-cols-2 md:web:grid-cols-3 web:gap-2">
 						{Array.from({ length: 6 }).map((_, index) => (
-							<View
-								key={`skeleton-${index}`}
-								style={{
-									width: cardWidth,
-								}}
-							>
+							<View key={`skeleton-${index}`} className="native:w-[48%]">
 								<RecipeCardSkeleton />
 							</View>
 						))}
@@ -134,21 +130,67 @@ export default function Recipes() {
 						<Text>No recipes match your search for "{searchQuery}".</Text>
 					)}
 				{!!filteredRecipes && filteredRecipes.length > 0 && (
-					<View className="flex flex-row flex-wrap gap-2">
-						{filteredRecipes.map((recipe: any) => (
-							<View
-								key={recipe.id}
-								style={{
-									width: cardWidth,
-								}}
-							>
-								<RecipeCard
-									recipe={recipe}
-									onEdit={() => handleEditRecipe(recipe.id)}
-									onDelete={() => handleDeleteRecipe(recipe.id)}
-								/>
-							</View>
-						))}
+					<View className="native:flex-row native:flex-wrap native:gap-2 web:grid web:grid-cols-2 md:web:grid-cols-3 web:gap-2">
+						{filteredRecipes.map((recipe: any) => {
+							const recipeOverlay = (
+								<View className="absolute top-2 right-2">
+									<DropdownMenu>
+										<DropdownMenuTrigger asChild>
+											<Button
+												variant="outline"
+												size="icon"
+												className="w-8 h-8 rounded-full bg-background/80 backdrop-blur-sm border-border/50"
+												onPress={(e) => e.stopPropagation()}
+											>
+												<MoreHorizontalIcon
+													className="text-foreground"
+													size={16}
+												/>
+											</Button>
+										</DropdownMenuTrigger>
+										<DropdownMenuContent
+											side="bottom"
+											align="end"
+											className="w-32"
+										>
+											<DropdownMenuItem
+												onPress={() => handleEditRecipe(recipe.id)}
+											>
+												<PencilIcon
+													className="text-foreground mr-2"
+													size={16}
+												/>
+												<Text>Edit</Text>
+											</DropdownMenuItem>
+											<DropdownMenuItem
+												onPress={() => handleDeleteRecipe(recipe.id)}
+											>
+												<Trash2Icon
+													className="text-destructive mr-2"
+													size={16}
+												/>
+												<Text className="text-destructive">Delete</Text>
+											</DropdownMenuItem>
+										</DropdownMenuContent>
+									</DropdownMenu>
+								</View>
+							);
+
+							return (
+								<View key={recipe.id} className="native:w-[48%]">
+									<RecipeCard
+										recipe={recipe}
+										onPress={() => {
+											router.push({
+												pathname: "/recipes/[id]",
+												params: { id: recipe.id },
+											});
+										}}
+										overlay={recipeOverlay}
+									/>
+								</View>
+							);
+						})}
 					</View>
 				)}
 			</ScrollView>

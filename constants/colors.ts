@@ -5,6 +5,7 @@
 
 export const colors = {
 	light: {
+		mutedBackground: "hsl(0, 0%, 98%)",
 		background: "hsl(0, 0%, 100%)",
 		foreground: "hsl(20, 14.3%, 4.1%)",
 		card: "hsl(0, 0%, 100%)",
@@ -32,6 +33,7 @@ export const colors = {
 		loading: "hsl(0, 0%, 75%)",
 	},
 	dark: {
+		mutedBackground: "hsl(0, 0%, 98%)",
 		background: "hsl(20, 14.3%, 4.1%)",
 		foreground: "hsl(60, 9.1%, 97.8%)",
 		card: "hsl(20, 14.3%, 4.1%)",

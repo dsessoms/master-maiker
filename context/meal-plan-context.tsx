@@ -1,5 +1,12 @@
 import { add, startOfWeek, sub } from "date-fns";
-import { createContext, useState } from "react";
+import { createContext, useEffect, useState } from "react";
+
+import { Profile } from "@/types";
+import { useProfiles } from "@/hooks/profiles/useProfiles";
+
+type SelectableProfile = Profile & {
+	isSelected: boolean;
+};
 
 interface MealPlanContextInterface {
 	startDate: Date;
@@ -8,6 +15,10 @@ interface MealPlanContextInterface {
 	viewPrevious: () => void;
 	viewThisWeek: () => void;
 	viewNextWeek: () => void;
+	selectableProfiles: SelectableProfile[];
+	onProfileToggle: (profileId: string) => void;
+	setSelectableProfiles: (profiles: SelectableProfile[]) => void;
+	isLoadingProfiles: boolean;
 }
 
 function getStartOfWeek() {
@@ -21,6 +32,10 @@ const INITIAL_MEAL_PLAN_CONTEXT: MealPlanContextInterface = {
 	viewPrevious: () => null,
 	viewThisWeek: () => null,
 	viewNextWeek: () => null,
+	selectableProfiles: [],
+	onProfileToggle: () => null,
+	setSelectableProfiles: () => null,
+	isLoadingProfiles: false,
 };
 
 export const MealPlanContext = createContext<MealPlanContextInterface>(
@@ -30,6 +45,19 @@ export const MealPlanContext = createContext<MealPlanContextInterface>(
 export const MealPlanContextProvider = ({ children }: { children: any }) => {
 	const [startDate, setStartDate] = useState(getStartOfWeek());
 	const endDate = add(startDate, { days: 6 });
+	const [selectableProfiles, setSelectableProfiles] = useState<
+		SelectableProfile[]
+	>([]);
+
+	// Fetch profiles
+	const { profiles, isLoading: isLoadingProfiles } = useProfiles();
+
+	// Auto-initialize selectable profiles when profiles are loaded
+	useEffect(() => {
+		setSelectableProfiles(
+			profiles.map((profile) => ({ ...profile, isSelected: true })),
+		);
+	}, [profiles]);
 
 	const viewNext = () => {
 		setStartDate(add(startDate, { weeks: 1 }));
@@ -49,6 +77,18 @@ export const MealPlanContextProvider = ({ children }: { children: any }) => {
 		);
 	};
 
+	const onProfileToggle = (profileId: string) => {
+		const newProfileArray = [...selectableProfiles];
+		const profileIndex = newProfileArray.findIndex(
+			(profile) => profile.id === profileId,
+		);
+		if (profileIndex >= 0) {
+			newProfileArray[profileIndex].isSelected =
+				!newProfileArray[profileIndex].isSelected;
+			setSelectableProfiles(newProfileArray);
+		}
+	};
+
 	return (
 		<MealPlanContext.Provider
 			value={{
@@ -58,6 +98,10 @@ export const MealPlanContextProvider = ({ children }: { children: any }) => {
 				viewPrevious,
 				viewThisWeek,
 				viewNextWeek,
+				selectableProfiles,
+				onProfileToggle,
+				setSelectableProfiles,
+				isLoadingProfiles,
 			}}
 		>
 			{children}

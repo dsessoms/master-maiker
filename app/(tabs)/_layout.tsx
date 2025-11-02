@@ -42,7 +42,7 @@ export default function TabsLayout() {
 				}}
 			>
 				<Tabs.Screen
-					name="(meal-plan)/index"
+					name="meal-plan"
 					options={{
 						title: "Meal Plan",
 						tabBarIcon: ({ color }) => <NotebookText size={20} color={color} />,
