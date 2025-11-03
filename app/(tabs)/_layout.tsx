@@ -3,7 +3,6 @@ import { Redirect, Tabs } from "expo-router";
 
 import { MealPlanContextProvider } from "@/context/meal-plan-context";
 import React from "react";
-import { Text } from "@/components/ui/text";
 import { colors } from "@/constants/colors";
 import { useAuth } from "@/context/supabase-provider";
 import { useColorScheme } from "@/lib/useColorScheme";
@@ -42,14 +41,14 @@ export default function TabsLayout() {
 				}}
 			>
 				<Tabs.Screen
-					name="meal-plan"
+					name="(meal-plan)"
 					options={{
 						title: "Meal Plan",
 						tabBarIcon: ({ color }) => <NotebookText size={20} color={color} />,
 					}}
 				/>
 				<Tabs.Screen
-					name="recipes"
+					name="(recipes)"
 					options={{
 						title: "Recipes",
 						tabBarIcon: ({ color }) => <Bookmark size={20} color={color} />,

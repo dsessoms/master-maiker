@@ -31,7 +31,7 @@ export default function AddRecipeScreen() {
 	);
 
 	if (!mealType || !date) {
-		return <Redirect href="/(tabs)/meal-plan" />;
+		return <Redirect href="/(tabs)/(meal-plan)/meal-plan" />;
 	}
 
 	const handleRecipeToggle = (recipeId: string) => {

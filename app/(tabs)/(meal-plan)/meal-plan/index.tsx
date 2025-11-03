@@ -91,7 +91,7 @@ export default function MealPlanScreen() {
 								recipeEntries={foodEntriesByDay[dateString]}
 								onAdd={(mealType) =>
 									router.push(
-										`/(tabs)/meal-plan/add-recipe?mealType=${mealType}&date=${dateString}`,
+										`/(tabs)/(meal-plan)/meal-plan/add-recipe?mealType=${mealType}&date=${dateString}`,
 									)
 								}
 							/>
