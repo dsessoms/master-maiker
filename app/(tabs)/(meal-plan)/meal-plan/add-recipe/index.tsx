@@ -1,5 +1,5 @@
 import { ActivityIndicator, ScrollView, View } from "react-native";
-import { Redirect, useLocalSearchParams, useRouter } from "expo-router";
+import { Redirect, Stack, useLocalSearchParams, useRouter } from "expo-router";
 
 import { Button } from "@/components/ui/button";
 import { CircleCheck } from "@/lib/icons/circle-check";
@@ -91,6 +91,11 @@ export default function AddRecipeScreen() {
 
 	return (
 		<SafeAreaView className="flex flex-1 bg-background">
+			<Stack.Screen
+				options={{
+					title: "Add Recipes",
+				}}
+			/>
 			<View className="flex flex-1 gap-4 p-4">
 				{/* Header */}
 				<View className="flex flex-col gap-2">

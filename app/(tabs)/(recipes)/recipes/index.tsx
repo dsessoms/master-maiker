@@ -16,6 +16,7 @@ import {
 	WandSparkles,
 } from "@/lib/icons";
 import { ScrollView, View } from "react-native";
+import { Stack, router } from "expo-router";
 
 import { Button } from "@/components/ui/button";
 import { DeleteRecipeDialog } from "@/components/recipe/delete-recipe-dialog";
@@ -24,7 +25,6 @@ import { RecipeCard } from "@/components/recipe/recipe-card";
 import { RecipeCardSkeleton } from "@/components/recipe/recipe-card-skeleton";
 import { SafeAreaView } from "@/components/safe-area-view";
 import { Text } from "@/components/ui/text";
-import { router } from "expo-router";
 import { useDeleteRecipeMutation } from "@/hooks/recipes/use-delete-recipe-mutation";
 import { useRecipes } from "@/hooks/recipes/use-recipes";
 import { useState } from "react";
@@ -83,6 +83,11 @@ export default function Recipes() {
 
 	return (
 		<SafeAreaView className="flex flex-1 bg-background">
+			<Stack.Screen
+				options={{
+					headerShown: false,
+				}}
+			/>
 			<ScrollView className="flex-1" contentContainerStyle={{ padding: 16 }}>
 				<View className="pb-4">
 					<View className="relative">

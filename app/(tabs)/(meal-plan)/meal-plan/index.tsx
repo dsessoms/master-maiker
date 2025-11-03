@@ -1,4 +1,5 @@
 import { ScrollView, View } from "react-native";
+import { Stack, useRouter } from "expo-router";
 import { eachDayOfInterval, format } from "date-fns";
 import { useContext, useEffect, useMemo } from "react";
 
@@ -8,7 +9,6 @@ import { ProfileDropdown } from "@/components//user-dropdown";
 import { SafeAreaView } from "@/components//safe-area-view";
 import { WeekSelector } from "@/components//week-selector";
 import { useFoodEntries } from "@/hooks/recipes/use-food-entries";
-import { useRouter } from "expo-router";
 
 export default function MealPlanScreen() {
 	const router = useRouter();
@@ -63,6 +63,11 @@ export default function MealPlanScreen() {
 			className="flex flex-1 bg-background"
 			edges={{ top: "additive", bottom: "off" }}
 		>
+			<Stack.Screen
+				options={{
+					headerShown: false,
+				}}
+			/>
 			<View className="flex flex-1 bg-muted-background">
 				<View className="flex flex-row justify-between p-4 bg-background">
 					<ProfileDropdown

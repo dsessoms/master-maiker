@@ -10,20 +10,5 @@ export const unstable_settings = {
 };
 
 export default function StackLayout() {
-	return (
-		<Stack>
-			<Stack.Screen
-				name="recipes/index"
-				options={{
-					headerShown: false,
-				}}
-			/>
-			<Stack.Screen
-				name="meal-plan/index"
-				options={{
-					headerShown: false,
-				}}
-			/>
-		</Stack>
-	);
+	return <Stack />;
 }
