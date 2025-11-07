@@ -30,6 +30,8 @@ export const DaySection = ({
 
 		return finalMap;
 	}, [recipeEntries]);
+	const dateString = format(date, "yyyy-MM-dd");
+
 	return (
 		<View className="min-w-96">
 			<View className="mb-4 mt-8">
@@ -38,21 +40,25 @@ export const DaySection = ({
 			<View>
 				<MealSection
 					mealType="Breakfast"
+					date={dateString}
 					foodEntries={recipeEntriesByMealType["Breakfast"]}
 					onAdd={() => onAdd("Breakfast")}
 				/>
 				<MealSection
 					mealType="Lunch"
+					date={dateString}
 					foodEntries={recipeEntriesByMealType["Lunch"]}
 					onAdd={() => onAdd("Lunch")}
 				/>
 				<MealSection
 					mealType="Dinner"
+					date={dateString}
 					foodEntries={recipeEntriesByMealType["Dinner"]}
 					onAdd={() => onAdd("Dinner")}
 				/>
 				<MealSection
 					mealType="Snack"
+					date={dateString}
 					foodEntries={recipeEntriesByMealType["Snack"]}
 					onAdd={() => onAdd("Snack")}
 				/>

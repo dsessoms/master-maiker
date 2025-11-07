@@ -8,6 +8,7 @@ import {
 } from "@tanstack/react-query";
 
 import { AuthProvider } from "@/context/supabase-provider";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { PortalHost } from "@rn-primitives/portal";
 import { Stack } from "expo-router";
 import { ThemeContextProvider } from "@/context/theme-context";
@@ -33,7 +34,7 @@ export default function AppLayout() {
 	useAppState(onAppStateChange);
 
 	return (
-		<>
+		<GestureHandlerRootView style={{ flex: 1 }}>
 			<QueryClientProvider client={queryClient}>
 				<AuthProvider>
 					<ThemeContextProvider>
@@ -123,6 +124,6 @@ export default function AppLayout() {
 				</AuthProvider>
 			</QueryClientProvider>
 			<PortalHost />
-		</>
+		</GestureHandlerRootView>
 	);
 }

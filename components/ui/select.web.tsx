@@ -41,7 +41,10 @@ function SelectRoot({ children, value, onValueChange }: SelectRootProps) {
 		const extractedOptions: Option[] = [];
 
 		const extractFromChildren = (children: React.ReactNode) => {
-			React.Children.forEach(children, (child) => {
+			// Convert children to array without using React.Children utilities
+			const childrenArray = Array.isArray(children) ? children : [children];
+
+			childrenArray.forEach((child) => {
 				if (React.isValidElement(child)) {
 					if (child.type === SelectItem) {
 						const props = child.props as SelectItemProps;

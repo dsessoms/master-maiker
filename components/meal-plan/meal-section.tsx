@@ -1,31 +1,50 @@
 import { Apple, Egg, Hamburger, Plus, Salad } from "../../lib/icons";
+import { useCallback, useContext, useState } from "react";
 
 import { Button } from "../ui/button";
+import { DroppableArea } from "../ui/dnd/droppable-area";
 import { FoodEntry } from "./food-entry";
 import { MealPlanContext } from "@/context/meal-plan-context";
 import { MealType } from "@/types";
 import { Text } from "../ui/text";
 import { View } from "react-native";
 import { cn } from "../../lib/utils";
-import { useContext } from "react";
+import { useUpdateFoodEntry } from "@/hooks/recipes/use-update-food-entry";
 
-const MealTypeIcon = {
-	Breakfast: <Egg className="mb-1 h-4 w-4" />,
-	Lunch: <Hamburger className="mb-1 h-4 w-4" />,
-	Dinner: <Salad className="mb-1 h-4 w-4" />,
-	Snack: <Apple className="mb-1 h-4 w-4" />,
+const MealTypeIcon = ({
+	mealType,
+	className,
+}: {
+	mealType: MealType;
+	className?: string;
+}) => {
+	switch (mealType) {
+		case "Breakfast":
+			return <Egg className={className} />;
+		case "Lunch":
+			return <Hamburger className={className} />;
+		case "Dinner":
+			return <Salad className={className} />;
+		case "Snack":
+			return <Apple className={className} />;
+	}
 };
 
 export const MealSection = ({
 	mealType,
+	date,
 	foodEntries,
 	onAdd,
 }: {
 	mealType: MealType;
+	date: string;
 	foodEntries?: any[];
 	onAdd: () => void;
 }) => {
 	const { selectableProfiles } = useContext(MealPlanContext);
+	const [isDropActive, setIsDropActive] = useState(false);
+	const { mutate: updateFoodEntry } = useUpdateFoodEntry();
+
 	// Create a set of selected profile IDs
 	const selectedProfileIds = new Set(
 		selectableProfiles.filter((p: any) => p.isSelected).map((p: any) => p.id),
@@ -38,46 +57,92 @@ export const MealSection = ({
 				pfe.number_of_servings > 0 && selectedProfileIds.has(pfe.profile_id),
 		),
 	);
+
+	const handleDrop = useCallback(
+		(draggedData: any) => {
+			const entry = draggedData?.entry;
+			const sourceMealType = draggedData?.mealType;
+
+			if (!entry) {
+				return;
+			}
+
+			// Only update if the meal type is different from the source
+			if (sourceMealType === mealType && entry.date === date) {
+				return;
+			}
+
+			// Update the food entry with the new meal type and/or date
+			updateFoodEntry({
+				foodEntryId: entry.id,
+				mealType: mealType,
+				date: entry.date !== date ? date : undefined,
+			});
+		},
+		[mealType, date, updateFoodEntry],
+	);
+
 	return (
-		<View className="flex flex-row w-full">
-			<View className="flex flex-col items-center pr-2 pt-[6px]">
-				{MealTypeIcon[mealType]}
-				<View className={cn("w-0.5 flex-1 rounded-full", "bg-foreground")} />
-			</View>
-			<View className="flex min-w-0 flex-1 flex-col pb-4">
-				<View className="mb-3 flex flex-col">
-					<View className="flex flex-row items-start justify-between">
-						<Text className="mr-2 w-24 text-lg font-semibold">{mealType}</Text>
+		<DroppableArea
+			dropId={`meal-${date}-${mealType}`}
+			onDrop={handleDrop}
+			onActiveChange={setIsDropActive}
+		>
+			<View className="flex flex-row w-full">
+				<View className="flex flex-col items-center pr-2 pt-[6px]">
+					<MealTypeIcon
+						mealType={mealType}
+						className={cn("mb-1 h-4 w-4", isDropActive && "text-primary")}
+					/>
+					<View
+						className={cn(
+							"w-0.5 flex-1 rounded-full",
+							isDropActive ? "bg-primary" : "bg-foreground",
+						)}
+					/>
+				</View>
+				<View className="flex min-w-0 flex-1 flex-col pb-4">
+					<View className="mb-3 flex flex-col">
+						<View className="flex flex-row items-start justify-between">
+							<Text
+								className={cn(
+									"mr-2 w-24 text-lg font-semibold",
+									isDropActive && "text-primary",
+								)}
+							>
+								{mealType}
+							</Text>
+							<Button
+								size="icon"
+								onPress={onAdd}
+								variant="outline"
+								className="md:hidden rounded-full"
+							>
+								<Plus className="h-4 w-4 max-h-4 max-w-4" />
+							</Button>
+						</View>
+					</View>
+					<View className="space-y-1">
+						{(!filteredFoodEntries || filteredFoodEntries.length === 0) && (
+							<Text className="text-sm text-base-content/50">
+								No {mealType.toLowerCase()} items added
+							</Text>
+						)}
+						{filteredFoodEntries?.map((entry: any) => (
+							<FoodEntry key={entry.id} entry={entry} />
+						))}
 						<Button
-							size="icon"
 							onPress={onAdd}
 							variant="outline"
-							className="md:hidden rounded-full"
+							size="sm"
+							className="hidden md:flex md:flex-row max-w-32"
 						>
-							<Plus className="h-4 w-4 max-h-4 max-w-4" />
+							<Plus className="h-4 w-4" />
+							<Text>Add</Text>
 						</Button>
 					</View>
 				</View>
-				<View className="space-y-1">
-					{(!filteredFoodEntries || filteredFoodEntries.length === 0) && (
-						<Text className="text-sm text-base-content/50">
-							No {mealType.toLowerCase()} items added
-						</Text>
-					)}
-					{filteredFoodEntries?.map((entry: any) => (
-						<FoodEntry key={entry.id} entry={entry} />
-					))}
-					<Button
-						onPress={onAdd}
-						variant="outline"
-						size="sm"
-						className="hidden md:flex md:flex-row max-w-32"
-					>
-						<Plus className="h-4 w-4" />
-						<Text>Add</Text>
-					</Button>
-				</View>
 			</View>
-		</View>
+		</DroppableArea>
 	);
 };
