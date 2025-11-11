@@ -1,11 +1,6 @@
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, ScrollView, View } from "react-native";
 import { Form, FormField, FormInput, FormTextarea } from "../ui/form";
-import {
-	Ingredient,
-	Instruction,
-	Recipe,
-	RecipeSchema,
-} from "../../lib/schemas";
+import { Ingredient, Recipe, RecipeSchema } from "../../lib/schemas";
 
 import { Button } from "../ui/button";
 import { ImageUploader } from "./ImageUploader";
@@ -118,177 +113,182 @@ export function RecipeForm({
 	};
 
 	return (
-		<View className="p-4">
-			<Form {...form}>
-				<View className="gap-4">
-					<FormField
-						control={form.control}
-						name="name"
-						render={({ field }) => (
-							<FormInput
-								label="Recipe Name"
-								labelClassName="text-xl font-semibold"
-								placeholder="Recipe Name"
-								autoCapitalize="none"
-								autoCorrect={false}
-								{...field}
-							/>
-						)}
-					/>
-
-					<View>
-						<Label className="text-xl font-semibold mb-2">Photo</Label>
-						<ImageUploader
-							selectedImageUri={
-								typeof selectedImage === "string"
-									? selectedImage
-									: selectedImage?.uri
-							}
-							onImageSelected={setSelectedImage}
+		<ScrollView
+			contentContainerStyle={{ flexGrow: 1 }}
+			keyboardShouldPersistTaps="handled"
+		>
+			<View className="p-4">
+				<Form {...form}>
+					<View className="gap-4">
+						<FormField
+							control={form.control}
+							name="name"
+							render={({ field }) => (
+								<FormInput
+									label="Recipe Name"
+									labelClassName="text-xl font-semibold"
+									placeholder="Recipe Name"
+									autoCapitalize="none"
+									autoCorrect={false}
+									{...field}
+								/>
+							)}
 						/>
-					</View>
 
-					<FormField
-						control={form.control}
-						name="description"
-						render={({ field }) => (
-							<FormTextarea
-								label="Description"
-								labelClassName="text-xl font-semibold"
-								placeholder="A brief description of the recipe"
-								autoCapitalize="none"
-								autoCorrect={false}
-								{...field}
-							/>
-						)}
-					/>
-					<FormField
-						control={form.control}
-						name="servings"
-						render={({ field }) => (
-							<FormInput
-								label="Servings"
-								labelClassName="text-xl font-semibold"
-								placeholder="Number of servings"
-								autoCapitalize="none"
-								autoCorrect={false}
-								keyboardType="numeric"
-								{...field}
-								value={field.value?.toString() ?? ""}
-								onChangeText={(v) =>
-									field.onChange(v === "" ? null : Number(v))
+						<View>
+							<Label className="text-xl font-semibold mb-2">Photo</Label>
+							<ImageUploader
+								selectedImageUri={
+									typeof selectedImage === "string"
+										? selectedImage
+										: selectedImage?.uri
 								}
-							/>
-						)}
-					/>
-					<Label className="text-xl font-semibold">Ingredients</Label>
-					<IngredientInputs
-						onIngredientsChange={setParsedIngredients}
-						recipeServings={form.watch("servings") || 1}
-						initialValues={initialValues?.ingredients}
-					/>
-					<Label className="text-xl font-semibold">Instructions</Label>
-					<InstructionInputs
-						onInstructionsChange={setParsedInstructions}
-						initialValues={initialValues?.instructions}
-					/>
-					{/* Prep Time Section */}
-					<Label className="text-xl font-semibold">Prep Time</Label>
-					<View className="flex-row gap-3">
-						<View className="flex-1">
-							<FormField
-								control={form.control}
-								name="prep_time_hours"
-								render={({ field }) => (
-									<FormInput
-										label="Hours"
-										placeholder="0"
-										keyboardType="numeric"
-										{...field}
-										value={field.value?.toString() ?? ""}
-										onChangeText={(v) =>
-											field.onChange(v === "" ? 0 : Number(v))
-										}
-									/>
-								)}
+								onImageSelected={setSelectedImage}
 							/>
 						</View>
-						<View className="flex-1">
-							<FormField
-								control={form.control}
-								name="prep_time_minutes"
-								render={({ field }) => (
-									<FormInput
-										label="Minutes"
-										placeholder="0"
-										keyboardType="numeric"
-										{...field}
-										value={field.value?.toString() ?? ""}
-										onChangeText={(v) =>
-											field.onChange(v === "" ? 0 : Number(v))
-										}
-									/>
-								)}
-							/>
+
+						<FormField
+							control={form.control}
+							name="description"
+							render={({ field }) => (
+								<FormTextarea
+									label="Description"
+									labelClassName="text-xl font-semibold"
+									placeholder="A brief description of the recipe"
+									autoCapitalize="none"
+									autoCorrect={false}
+									{...field}
+								/>
+							)}
+						/>
+						<FormField
+							control={form.control}
+							name="servings"
+							render={({ field }) => (
+								<FormInput
+									label="Servings"
+									labelClassName="text-xl font-semibold"
+									placeholder="Number of servings"
+									autoCapitalize="none"
+									autoCorrect={false}
+									keyboardType="numeric"
+									{...field}
+									value={field.value?.toString() ?? ""}
+									onChangeText={(v) =>
+										field.onChange(v === "" ? null : Number(v))
+									}
+								/>
+							)}
+						/>
+						<Label className="text-xl font-semibold">Ingredients</Label>
+						<IngredientInputs
+							onIngredientsChange={setParsedIngredients}
+							recipeServings={form.watch("servings") || 1}
+							initialValues={initialValues?.ingredients}
+						/>
+						<Label className="text-xl font-semibold">Instructions</Label>
+						<InstructionInputs
+							onInstructionsChange={setParsedInstructions}
+							initialValues={initialValues?.instructions}
+						/>
+						{/* Prep Time Section */}
+						<Label className="text-xl font-semibold">Prep Time</Label>
+						<View className="flex-row gap-3">
+							<View className="flex-1">
+								<FormField
+									control={form.control}
+									name="prep_time_hours"
+									render={({ field }) => (
+										<FormInput
+											label="Hours"
+											placeholder="0"
+											keyboardType="numeric"
+											{...field}
+											value={field.value?.toString() ?? ""}
+											onChangeText={(v) =>
+												field.onChange(v === "" ? 0 : Number(v))
+											}
+										/>
+									)}
+								/>
+							</View>
+							<View className="flex-1">
+								<FormField
+									control={form.control}
+									name="prep_time_minutes"
+									render={({ field }) => (
+										<FormInput
+											label="Minutes"
+											placeholder="0"
+											keyboardType="numeric"
+											{...field}
+											value={field.value?.toString() ?? ""}
+											onChangeText={(v) =>
+												field.onChange(v === "" ? 0 : Number(v))
+											}
+										/>
+									)}
+								/>
+							</View>
+						</View>
+						{/* Cook Time Section */}
+						<Label className="text-xl font-semibold">Cook Time</Label>
+						<View className="flex-row gap-3">
+							<View className="flex-1">
+								<FormField
+									control={form.control}
+									name="cook_time_hours"
+									render={({ field }) => (
+										<FormInput
+											label="Hours"
+											placeholder="0"
+											keyboardType="numeric"
+											{...field}
+											value={field.value?.toString() ?? ""}
+											onChangeText={(v) =>
+												field.onChange(v === "" ? 0 : Number(v))
+											}
+										/>
+									)}
+								/>
+							</View>
+							<View className="flex-1">
+								<FormField
+									control={form.control}
+									name="cook_time_minutes"
+									render={({ field }) => (
+										<FormInput
+											label="Minutes"
+											placeholder="0"
+											keyboardType="numeric"
+											{...field}
+											value={field.value?.toString() ?? ""}
+											onChangeText={(v) =>
+												field.onChange(v === "" ? 0 : Number(v))
+											}
+										/>
+									)}
+								/>
+							</View>
 						</View>
 					</View>
-					{/* Cook Time Section */}
-					<Label className="text-xl font-semibold">Cook Time</Label>
-					<View className="flex-row gap-3">
-						<View className="flex-1">
-							<FormField
-								control={form.control}
-								name="cook_time_hours"
-								render={({ field }) => (
-									<FormInput
-										label="Hours"
-										placeholder="0"
-										keyboardType="numeric"
-										{...field}
-										value={field.value?.toString() ?? ""}
-										onChangeText={(v) =>
-											field.onChange(v === "" ? 0 : Number(v))
-										}
-									/>
-								)}
-							/>
-						</View>
-						<View className="flex-1">
-							<FormField
-								control={form.control}
-								name="cook_time_minutes"
-								render={({ field }) => (
-									<FormInput
-										label="Minutes"
-										placeholder="0"
-										keyboardType="numeric"
-										{...field}
-										value={field.value?.toString() ?? ""}
-										onChangeText={(v) =>
-											field.onChange(v === "" ? 0 : Number(v))
-										}
-									/>
-								)}
-							/>
-						</View>
-					</View>
-				</View>
-			</Form>
-			<Button
-				size="default"
-				variant="default"
-				onPress={form.handleSubmit(handleSubmit, (formErrors) => {
-					console.error("Form submission errors:", formErrors);
-				})}
-				disabled={form.formState.isSubmitting || isUploadingImage}
-				className="my-4"
-			>
-				{form.formState.isSubmitting || isUploadingImage ? (
-					<ActivityIndicator size="small" />
-				) : (
-					<Text>{isEdit ? "Save Changes" : "Create Recipe"}</Text>
-				)}
-			</Button>
-		</View>
+				</Form>
+				<Button
+					size="default"
+					variant="default"
+					onPress={form.handleSubmit(handleSubmit, (formErrors) => {
+						console.error("Form submission errors:", formErrors);
+					})}
+					disabled={form.formState.isSubmitting || isUploadingImage}
+					className="my-4"
+				>
+					{form.formState.isSubmitting || isUploadingImage ? (
+						<ActivityIndicator size="small" />
+					) : (
+						<Text>{isEdit ? "Save Changes" : "Create Recipe"}</Text>
+					)}
+				</Button>
+			</View>
+		</ScrollView>
 	);
 }

@@ -6,7 +6,7 @@ import {
 	ScrollView,
 	View,
 } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 
 import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import { Recipe } from "@/lib/schemas";
@@ -131,16 +131,11 @@ export default function EditRecipe() {
 				behavior={Platform.OS === "ios" ? "padding" : "height"}
 				keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
 			>
-				<ScrollView
-					contentContainerStyle={{ flexGrow: 1 }}
-					keyboardShouldPersistTaps="handled"
-				>
-					<RecipeForm
-						initialValues={getInitialValues()}
-						onSubmit={handleSubmit}
-						isEdit={true}
-					/>
-				</ScrollView>
+				<RecipeForm
+					initialValues={getInitialValues()}
+					onSubmit={handleSubmit}
+					isEdit={true}
+				/>
 			</KeyboardAvoidingView>
 		</View>
 	);

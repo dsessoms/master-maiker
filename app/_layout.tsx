@@ -8,6 +8,7 @@ import {
 } from "@tanstack/react-query";
 
 import { AuthProvider } from "@/context/supabase-provider";
+import { DnDProvider } from "@/components/ui/dnd/dnd-context";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { PortalHost } from "@rn-primitives/portal";
 import { Stack } from "expo-router";
@@ -35,94 +36,96 @@ export default function AppLayout() {
 
 	return (
 		<GestureHandlerRootView style={{ flex: 1 }}>
-			<QueryClientProvider client={queryClient}>
-				<AuthProvider>
-					<ThemeContextProvider>
-						<Stack
-							screenOptions={{ headerShown: false, gestureEnabled: false }}
-						>
-							<Stack.Screen name="(tabs)" />
-							<Stack.Screen name="welcome" />
-							<Stack.Screen
-								name="sign-up"
-								options={{
-									presentation: "modal",
-									headerShown: true,
-									headerTitle: "Sign Up",
-									headerStyle: {
-										backgroundColor:
+			<DnDProvider>
+				<QueryClientProvider client={queryClient}>
+					<AuthProvider>
+						<ThemeContextProvider>
+							<Stack
+								screenOptions={{ headerShown: false, gestureEnabled: false }}
+							>
+								<Stack.Screen name="(tabs)" />
+								<Stack.Screen name="welcome" />
+								<Stack.Screen
+									name="sign-up"
+									options={{
+										presentation: "modal",
+										headerShown: true,
+										headerTitle: "Sign Up",
+										headerStyle: {
+											backgroundColor:
+												colorScheme === "dark"
+													? colors.dark.background
+													: colors.light.background,
+										},
+										headerTintColor:
 											colorScheme === "dark"
-												? colors.dark.background
-												: colors.light.background,
-									},
-									headerTintColor:
-										colorScheme === "dark"
-											? colors.dark.foreground
-											: colors.light.foreground,
-									gestureEnabled: true,
-								}}
-							/>
-							<Stack.Screen
-								name="sign-in"
-								options={{
-									presentation: "modal",
-									headerShown: true,
-									headerTitle: "Sign In",
-									headerStyle: {
-										backgroundColor:
+												? colors.dark.foreground
+												: colors.light.foreground,
+										gestureEnabled: true,
+									}}
+								/>
+								<Stack.Screen
+									name="sign-in"
+									options={{
+										presentation: "modal",
+										headerShown: true,
+										headerTitle: "Sign In",
+										headerStyle: {
+											backgroundColor:
+												colorScheme === "dark"
+													? colors.dark.background
+													: colors.light.background,
+										},
+										headerTintColor:
 											colorScheme === "dark"
-												? colors.dark.background
-												: colors.light.background,
-									},
-									headerTintColor:
-										colorScheme === "dark"
-											? colors.dark.foreground
-											: colors.light.foreground,
-									gestureEnabled: true,
-								}}
-							/>
-							<Stack.Screen
-								name="forgot-password"
-								options={{
-									presentation: "modal",
-									headerShown: true,
-									headerTitle: "Reset Password",
-									headerStyle: {
-										backgroundColor:
+												? colors.dark.foreground
+												: colors.light.foreground,
+										gestureEnabled: true,
+									}}
+								/>
+								<Stack.Screen
+									name="forgot-password"
+									options={{
+										presentation: "modal",
+										headerShown: true,
+										headerTitle: "Reset Password",
+										headerStyle: {
+											backgroundColor:
+												colorScheme === "dark"
+													? colors.dark.background
+													: colors.light.background,
+										},
+										headerTintColor:
 											colorScheme === "dark"
-												? colors.dark.background
-												: colors.light.background,
-									},
-									headerTintColor:
-										colorScheme === "dark"
-											? colors.dark.foreground
-											: colors.light.foreground,
-									gestureEnabled: true,
-								}}
-							/>
-							<Stack.Screen
-								name="reset-password"
-								options={{
-									presentation: "modal",
-									headerShown: true,
-									headerTitle: "Reset Password",
-									headerStyle: {
-										backgroundColor:
+												? colors.dark.foreground
+												: colors.light.foreground,
+										gestureEnabled: true,
+									}}
+								/>
+								<Stack.Screen
+									name="reset-password"
+									options={{
+										presentation: "modal",
+										headerShown: true,
+										headerTitle: "Reset Password",
+										headerStyle: {
+											backgroundColor:
+												colorScheme === "dark"
+													? colors.dark.background
+													: colors.light.background,
+										},
+										headerTintColor:
 											colorScheme === "dark"
-												? colors.dark.background
-												: colors.light.background,
-									},
-									headerTintColor:
-										colorScheme === "dark"
-											? colors.dark.foreground
-											: colors.light.foreground,
-									gestureEnabled: true,
-								}}
-							/>
-						</Stack>
-					</ThemeContextProvider>
-				</AuthProvider>
-			</QueryClientProvider>
+												? colors.dark.foreground
+												: colors.light.foreground,
+										gestureEnabled: true,
+									}}
+								/>
+							</Stack>
+						</ThemeContextProvider>
+					</AuthProvider>
+				</QueryClientProvider>
+			</DnDProvider>
 			<PortalHost />
 		</GestureHandlerRootView>
 	);

@@ -3,7 +3,6 @@ import { eachDayOfInterval, format } from "date-fns";
 import { useContext, useEffect, useMemo } from "react";
 
 import { DaySection } from "@/components//meal-plan/day-section";
-import { DnDProvider } from "@/components/ui/dnd/dnd-context";
 import { DnDScrollView } from "@/components/ui/dnd/dnd-scroll-view";
 import { MealPlanContext } from "@/context/meal-plan-context";
 import { ProfileDropdown } from "@/components//user-dropdown";
@@ -13,14 +12,6 @@ import { WeekSelector } from "@/components//week-selector";
 import { useFoodEntries } from "@/hooks/recipes/use-food-entries";
 
 export default function MealPlanScreen() {
-	return (
-		<DnDProvider>
-			<MealPlanContent />
-		</DnDProvider>
-	);
-}
-
-function MealPlanContent() {
 	const router = useRouter();
 	const {
 		startDate,
