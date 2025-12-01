@@ -1,12 +1,19 @@
-import { add, startOfWeek, sub } from "date-fns";
-import { createContext, useEffect, useState } from "react";
+import { add, format, startOfWeek, sub } from "date-fns";
+import { createContext, useEffect, useMemo, useState } from "react";
 
 import { Profile } from "@/types";
+import { useFoodEntries } from "@/hooks/recipes/use-food-entries";
 import { useProfiles } from "@/hooks/profiles/useProfiles";
 
 type SelectableProfile = Profile & {
 	isSelected: boolean;
 };
+
+// Note action for triggering note creation
+interface AddNoteAction {
+	date: string;
+	mealType: "Breakfast" | "Lunch" | "Dinner" | "Snack";
+}
 
 interface MealPlanContextInterface {
 	startDate: Date;
@@ -19,6 +26,17 @@ interface MealPlanContextInterface {
 	onProfileToggle: (profileId: string) => void;
 	setSelectableProfiles: (profiles: SelectableProfile[]) => void;
 	isLoadingProfiles: boolean;
+	// Food entries
+	foodEntries: any[];
+	foodEntriesByDay: { [key: string]: any[] };
+	isLoadingFoodEntries: boolean;
+	// Notes modal
+	notesModalState: AddNoteAction | null;
+	openNotesModal: (
+		date: string,
+		mealType: "Breakfast" | "Lunch" | "Dinner" | "Snack",
+	) => void;
+	closeNotesModal: () => void;
 }
 
 function getStartOfWeek() {
@@ -36,6 +54,12 @@ const INITIAL_MEAL_PLAN_CONTEXT: MealPlanContextInterface = {
 	onProfileToggle: () => null,
 	setSelectableProfiles: () => null,
 	isLoadingProfiles: false,
+	foodEntries: [],
+	foodEntriesByDay: {},
+	isLoadingFoodEntries: false,
+	notesModalState: null,
+	openNotesModal: () => null,
+	closeNotesModal: () => null,
 };
 
 export const MealPlanContext = createContext<MealPlanContextInterface>(
@@ -48,9 +72,35 @@ export const MealPlanContextProvider = ({ children }: { children: any }) => {
 	const [selectableProfiles, setSelectableProfiles] = useState<
 		SelectableProfile[]
 	>([]);
+	const [addNoteAction, setAddNoteAction] = useState<AddNoteAction | null>(
+		null,
+	);
 
 	// Fetch profiles
 	const { profiles, isLoading: isLoadingProfiles } = useProfiles();
+
+	// Fetch food entries
+	const { foodEntries = [], isLoading: isLoadingFoodEntries } = useFoodEntries(
+		startDate,
+		endDate,
+	);
+
+	// Memoize food entries by day
+	const foodEntriesByDay = useMemo(() => {
+		const finalMap: { [key: string]: typeof foodEntries } = {};
+		foodEntries?.forEach((entry) => {
+			const dateString =
+				typeof entry.date === "string"
+					? entry.date
+					: format(new Date(entry.date), "yyyy-MM-dd");
+			if (finalMap[dateString]) {
+				finalMap[dateString].push(entry);
+			} else {
+				finalMap[dateString] = [entry];
+			}
+		});
+		return finalMap;
+	}, [foodEntries]);
 
 	// Auto-initialize selectable profiles when profiles are loaded
 	useEffect(() => {
@@ -89,6 +139,17 @@ export const MealPlanContextProvider = ({ children }: { children: any }) => {
 		}
 	};
 
+	const openNotesModal = (
+		date: string,
+		mealType: "Breakfast" | "Lunch" | "Dinner" | "Snack",
+	) => {
+		setAddNoteAction({ date, mealType });
+	};
+
+	const closeNotesModal = () => {
+		setAddNoteAction(null);
+	};
+
 	return (
 		<MealPlanContext.Provider
 			value={{
@@ -102,6 +163,12 @@ export const MealPlanContextProvider = ({ children }: { children: any }) => {
 				onProfileToggle,
 				setSelectableProfiles,
 				isLoadingProfiles,
+				foodEntries,
+				foodEntriesByDay,
+				isLoadingFoodEntries,
+				notesModalState: addNoteAction,
+				openNotesModal,
+				closeNotesModal,
 			}}
 		>
 			{children}

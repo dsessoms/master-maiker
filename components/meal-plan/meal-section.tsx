@@ -1,4 +1,17 @@
-import { Apple, Egg, Hamburger, Plus, Salad } from "../../lib/icons";
+import {
+	Apple,
+	Egg,
+	Hamburger,
+	NotebookText,
+	Plus,
+	Salad,
+} from "../../lib/icons";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
 import { useCallback, useContext, useState } from "react";
 
 import { Button } from "../ui/button";
@@ -6,6 +19,7 @@ import { DroppableArea } from "../ui/dnd/droppable-area";
 import { FoodEntry } from "./food-entry";
 import { MealPlanContext } from "@/context/meal-plan-context";
 import { MealType } from "@/types";
+import { NotesList } from "./notes-list";
 import { Text } from "../ui/text";
 import { View } from "react-native";
 import { cn } from "../../lib/utils";
@@ -41,7 +55,7 @@ export const MealSection = ({
 	foodEntries?: any[];
 	onAdd: () => void;
 }) => {
-	const { selectableProfiles } = useContext(MealPlanContext);
+	const { selectableProfiles, openNotesModal } = useContext(MealPlanContext);
 	const [isDropActive, setIsDropActive] = useState(false);
 	const { mutate: updateFoodEntry } = useUpdateFoodEntry();
 
@@ -112,16 +126,32 @@ export const MealSection = ({
 							>
 								{mealType}
 							</Text>
-							<Button
-								size="icon"
-								onPress={onAdd}
-								variant="outline"
-								className="md:hidden rounded-full"
-							>
-								<Plus className="h-4 w-4 max-h-4 max-w-4" />
-							</Button>
+							<DropdownMenu>
+								<DropdownMenuTrigger asChild>
+									<Button
+										size="icon"
+										variant="outline"
+										className="md:hidden rounded-full"
+									>
+										<Plus className="h-4 w-4 max-h-4 max-w-4" />
+									</Button>
+								</DropdownMenuTrigger>
+								<DropdownMenuContent align="end">
+									<DropdownMenuItem onPress={onAdd}>
+										<Plus className="mr-2 h-4 w-4" />
+										<Text>Add Recipe</Text>
+									</DropdownMenuItem>
+									<DropdownMenuItem
+										onPress={() => openNotesModal(date, mealType)}
+									>
+										<NotebookText className="mr-2 h-4 w-4" />
+										<Text>Add Note</Text>
+									</DropdownMenuItem>
+								</DropdownMenuContent>
+							</DropdownMenu>
 						</View>
 					</View>
+					<NotesList date={date} mealType={mealType} />
 					<View className="space-y-1">
 						{(!filteredFoodEntries || filteredFoodEntries.length === 0) && (
 							<Text className="text-sm text-base-content/50">
@@ -131,15 +161,30 @@ export const MealSection = ({
 						{filteredFoodEntries?.map((entry: any) => (
 							<FoodEntry key={entry.id} entry={entry} />
 						))}
-						<Button
-							onPress={onAdd}
-							variant="outline"
-							size="sm"
-							className="hidden md:flex md:flex-row max-w-32"
-						>
-							<Plus className="h-4 w-4" />
-							<Text>Add</Text>
-						</Button>
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<Button
+									variant="outline"
+									size="sm"
+									className="hidden md:flex md:flex-row max-w-32"
+								>
+									<Plus className="h-4 w-4" />
+									<Text>Add</Text>
+								</Button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent align="end">
+								<DropdownMenuItem onPress={onAdd}>
+									<Plus className="mr-2 h-4 w-4" />
+									<Text>Add Recipe</Text>
+								</DropdownMenuItem>
+								<DropdownMenuItem
+									onPress={() => openNotesModal(date, mealType)}
+								>
+									<NotebookText className="mr-2 h-4 w-4" />
+									<Text>Add Note</Text>
+								</DropdownMenuItem>
+							</DropdownMenuContent>
+						</DropdownMenu>
 					</View>
 				</View>
 			</View>

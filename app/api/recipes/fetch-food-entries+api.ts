@@ -34,10 +34,6 @@ export async function GET(req: Request) {
 			);
 		}
 
-		console.log(
-			`Fetching food entries for user ${session.user.id} from ${startDate} to ${endDate}`,
-		);
-
 		// Fetch food entries for the user within the date range
 		const { data: foodEntries, error } = await supabase
 			.from("food_entry")
@@ -90,7 +86,7 @@ export async function GET(req: Request) {
 			.order("meal_type", { ascending: true });
 
 		if (error) {
-			console.error("Error fetching food entries:", error);
+			console.error("Error  entries:", error);
 			return jsonResponse(
 				{
 					success: false,
@@ -100,8 +96,6 @@ export async function GET(req: Request) {
 				{ status: 400 },
 			);
 		}
-
-		console.log(`Found ${foodEntries?.length || 0} food entries`);
 
 		return jsonResponse({
 			success: true,

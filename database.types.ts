@@ -236,6 +236,56 @@ export type Database = {
           },
         ]
       }
+      note: {
+        Row: {
+          created_at: string
+          date: string | null
+          display_order: number
+          food_entry_id: string | null
+          id: string
+          is_checkbox: boolean
+          is_checked: boolean
+          meal_type: Database["public"]["Enums"]["meal_type_enum"] | null
+          note_type: Database["public"]["Enums"]["note_type"]
+          user_id: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          date?: string | null
+          display_order?: number
+          food_entry_id?: string | null
+          id?: string
+          is_checkbox?: boolean
+          is_checked?: boolean
+          meal_type?: Database["public"]["Enums"]["meal_type_enum"] | null
+          note_type: Database["public"]["Enums"]["note_type"]
+          user_id: string
+          value: string
+        }
+        Update: {
+          created_at?: string
+          date?: string | null
+          display_order?: number
+          food_entry_id?: string | null
+          id?: string
+          is_checkbox?: boolean
+          is_checked?: boolean
+          meal_type?: Database["public"]["Enums"]["meal_type_enum"] | null
+          note_type?: Database["public"]["Enums"]["note_type"]
+          user_id?: string
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "note_food_entry_id_fkey"
+            columns: ["food_entry_id"]
+            isOneToOne: false
+            referencedRelation: "food_entry"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profile: {
         Row: {
           activity_level:
@@ -680,6 +730,7 @@ export type Database = {
       food_type: "Brand" | "Generic"
       gender_enum: "male" | "female" | "other"
       meal_type_enum: "Breakfast" | "Lunch" | "Dinner" | "Snack"
+      note_type: "day_meal" | "food_entry"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -747,6 +798,27 @@ export type Database = {
         Update: {
           created_at?: string
           format?: string
+          id?: string
+          type?: Database["storage"]["Enums"]["buckettype"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      buckets_vectors: {
+        Row: {
+          created_at: string
+          id: string
+          type: Database["storage"]["Enums"]["buckettype"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          type?: Database["storage"]["Enums"]["buckettype"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
           id?: string
           type?: Database["storage"]["Enums"]["buckettype"]
           updated_at?: string
@@ -1037,6 +1109,50 @@ export type Database = {
           },
         ]
       }
+      vector_indexes: {
+        Row: {
+          bucket_id: string
+          created_at: string
+          data_type: string
+          dimension: number
+          distance_metric: string
+          id: string
+          metadata_configuration: Json | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          bucket_id: string
+          created_at?: string
+          data_type: string
+          dimension: number
+          distance_metric: string
+          id?: string
+          metadata_configuration?: Json | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          bucket_id?: string
+          created_at?: string
+          data_type?: string
+          dimension?: number
+          distance_metric?: string
+          id?: string
+          metadata_configuration?: Json | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vector_indexes_bucket_id_fkey"
+            columns: ["bucket_id"]
+            isOneToOne: false
+            referencedRelation: "buckets_vectors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -1190,7 +1306,7 @@ export type Database = {
       }
     }
     Enums: {
-      buckettype: "STANDARD" | "ANALYTICS"
+      buckettype: "STANDARD" | "ANALYTICS" | "VECTOR"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1333,11 +1449,12 @@ export const Constants = {
       food_type: ["Brand", "Generic"],
       gender_enum: ["male", "female", "other"],
       meal_type_enum: ["Breakfast", "Lunch", "Dinner", "Snack"],
+      note_type: ["day_meal", "food_entry"],
     },
   },
   storage: {
     Enums: {
-      buckettype: ["STANDARD", "ANALYTICS"],
+      buckettype: ["STANDARD", "ANALYTICS", "VECTOR"],
     },
   },
 } as const

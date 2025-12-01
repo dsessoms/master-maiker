@@ -2,14 +2,16 @@ import { Stack, useRouter } from "expo-router";
 import { eachDayOfInterval, format } from "date-fns";
 import { useContext, useEffect, useMemo } from "react";
 
+import { Button } from "@/components/ui/button";
 import { DaySection } from "@/components//meal-plan/day-section";
 import { DnDScrollView } from "@/components/ui/dnd/dnd-scroll-view";
 import { MealPlanContext } from "@/context/meal-plan-context";
+import { NotesModal } from "@/components/meal-plan/notes-modal";
 import { ProfileDropdown } from "@/components//user-dropdown";
 import { SafeAreaView } from "@/components//safe-area-view";
 import { View } from "react-native";
 import { WeekSelector } from "@/components//week-selector";
-import { useFoodEntries } from "@/hooks/recipes/use-food-entries";
+import { useToggle } from "@/hooks/useToggle";
 
 export default function MealPlanScreen() {
 	const router = useRouter();
@@ -21,25 +23,10 @@ export default function MealPlanScreen() {
 		viewPrevious,
 		selectableProfiles,
 		onProfileToggle,
+		foodEntriesByDay,
+		notesModalState,
+		closeNotesModal,
 	} = useContext(MealPlanContext);
-	const { foodEntries, isLoading, error } = useFoodEntries(startDate, endDate);
-
-	const foodEntriesByDay = useMemo(() => {
-		const finalMap: { [key: string]: typeof foodEntries } = {};
-		foodEntries?.forEach((entry) => {
-			// Ensure we're treating entry.date as a string for comparison
-			const dateString =
-				typeof entry.date === "string"
-					? entry.date
-					: format(new Date(entry.date), "yyyy-MM-dd");
-			if (finalMap[dateString]) {
-				finalMap[dateString].push(entry);
-			} else {
-				finalMap[dateString] = [entry];
-			}
-		});
-		return finalMap;
-	}, [foodEntries]);
 
 	const weekDates = useMemo(
 		() =>
@@ -109,6 +96,14 @@ export default function MealPlanScreen() {
 					})}
 				</DnDScrollView>
 			</View>
+			{notesModalState && (
+				<NotesModal
+					isVisible={!!notesModalState}
+					toggleIsVisible={closeNotesModal}
+					date={notesModalState.date}
+					mealType={notesModalState.mealType}
+				/>
+			)}
 		</SafeAreaView>
 	);
 }
