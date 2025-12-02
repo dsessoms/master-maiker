@@ -1,10 +1,10 @@
-import {
-	EntityInput,
-	EntityInputProps,
-	EntityInputState,
-	EntityInputValue,
-} from "../entity-input";
 import { Header, Instruction } from "@/lib/schemas";
+import {
+	StatefulInput,
+	StatefulInputProps,
+	StatefulInputState,
+	StatefulInputValue,
+} from "../stateful-input/stateful-input";
 
 import { KeyboardHint } from "@/components/ui/keyboard-hint";
 import React from "react";
@@ -12,21 +12,18 @@ import { View } from "react-native";
 
 export type InstructionOrHeader = Instruction | Header;
 
-export type InstructionInputValue = EntityInputValue<InstructionOrHeader>;
+export type InstructionInputValue = StatefulInputValue<InstructionOrHeader>;
 
 export function InstructionInput({
 	...props
-}: EntityInputProps<InstructionOrHeader>) {
+}: StatefulInputProps<InstructionOrHeader>) {
 	return (
 		<View className="relative w-full">
-			<EntityInput<InstructionOrHeader> {...props} />
+			<StatefulInput<InstructionOrHeader> {...props} />
 			<KeyboardHint
 				keyLabel="enter"
 				actionText="to save"
-				show={
-					props.value.state === EntityInputState.Dirty ||
-					props.value.state === EntityInputState.Editing
-				}
+				show={props.value.state === StatefulInputState.Edit}
 			/>
 		</View>
 	);

@@ -1,9 +1,9 @@
-import {
-	EntityInput,
-	EntityInputState,
-	EntityInputValue,
-} from "@/components/forms/entity-input";
 import { Header, Ingredient } from "@/lib/schemas";
+import {
+	StatefulInput,
+	StatefulInputState,
+	StatefulInputValue,
+} from "@/components/forms/stateful-input/stateful-input";
 
 import { Button } from "@/components/ui/button";
 import { IngredientInput } from "@/components/forms/ingredients/ingredient-input";
@@ -22,117 +22,219 @@ interface IngredientInputsProps {
 	recipeServings?: number;
 }
 
+type IngredientInputValue = StatefulInputValue<IngredientOrHeader> & {
+	previouslyParsedRaw?: string;
+};
+
+type IngredientsAction =
+	| {
+			type: "UPDATE";
+			index: number;
+			updates: Partial<IngredientInputValue>;
+	  }
+	| {
+			type: "DELETE";
+			index: number;
+	  }
+	| {
+			type: "INSERT";
+			index: number;
+			ingredient: IngredientInputValue;
+			setFocus?: boolean;
+	  }
+	| {
+			type: "MULTIPLE_UPDATE";
+			startIndex: number;
+			updates: Array<Partial<IngredientInputValue>>;
+			addNewAtEnd?: boolean;
+	  }
+	| {
+			type: "CLEAR_FOCUS";
+	  };
+
+interface IngredientsState {
+	ingredients: IngredientInputValue[];
+	focusedIndex: number | null;
+}
+
+function ingredientsReducer(
+	state: IngredientsState,
+	action: IngredientsAction,
+): IngredientsState {
+	switch (action.type) {
+		case "UPDATE": {
+			const newIngredients = [...state.ingredients];
+			const wasNew =
+				state.ingredients[action.index].state === StatefulInputState.New;
+			const isHeader = action.updates.parsed?.type === "header";
+
+			Object.assign(newIngredients[action.index], action.updates);
+
+			// Auto-add new ingredient at end if this was a New ingredient becoming Edit/View (but not for headers)
+			if (
+				wasNew &&
+				!isHeader &&
+				action.updates.state !== StatefulInputState.New
+			) {
+				newIngredients.push({
+					state: StatefulInputState.New,
+					raw: "",
+				});
+			}
+
+			// Auto-focus when entering edit state
+			const shouldFocus = action.updates.state === StatefulInputState.Edit;
+
+			// After saving (View state), focus next new ingredient
+			let focusedIndex = state.focusedIndex;
+			if (action.updates.state === StatefulInputState.View) {
+				const nextNewIndex = newIngredients.findIndex(
+					(ing, idx) =>
+						idx > action.index && ing.state === StatefulInputState.New,
+				);
+				focusedIndex = nextNewIndex !== -1 ? nextNewIndex : null;
+			} else if (shouldFocus) {
+				focusedIndex = action.index;
+			}
+
+			return {
+				ingredients: newIngredients,
+				focusedIndex,
+			};
+		}
+
+		case "DELETE": {
+			const newIngredients = [...state.ingredients];
+			newIngredients.splice(action.index, 1);
+			return {
+				ingredients: newIngredients,
+				focusedIndex: state.focusedIndex,
+			};
+		}
+
+		case "INSERT": {
+			const newIngredients = [...state.ingredients];
+			newIngredients.splice(action.index, 0, action.ingredient);
+			return {
+				ingredients: newIngredients,
+				focusedIndex: action.setFocus ? action.index : state.focusedIndex,
+			};
+		}
+
+		case "MULTIPLE_UPDATE": {
+			const newIngredients = [...state.ingredients];
+
+			// Apply updates starting from startIndex
+			action.updates.forEach((update, i) => {
+				const targetIndex = action.startIndex + i;
+				if (targetIndex < newIngredients.length) {
+					// Update existing ingredient
+					Object.assign(newIngredients[targetIndex], update);
+				} else {
+					// Insert new ingredient
+					newIngredients.push({
+						state: StatefulInputState.New,
+						raw: "",
+						...update,
+					} as IngredientInputValue);
+				}
+			});
+
+			// Add new ingredient at end if requested
+			if (action.addNewAtEnd) {
+				newIngredients.push({
+					state: StatefulInputState.New,
+					raw: "",
+				});
+			}
+
+			// Set focus to the new ingredient at the end if we added multiple
+			let focusedIndex = state.focusedIndex;
+			if (action.addNewAtEnd && action.updates.length > 0) {
+				focusedIndex = action.startIndex + action.updates.length;
+			} else if (action.updates[0]?.state === StatefulInputState.Edit) {
+				focusedIndex = action.startIndex;
+			}
+
+			return {
+				ingredients: newIngredients,
+				focusedIndex,
+			};
+		}
+
+		case "CLEAR_FOCUS": {
+			return {
+				...state,
+				focusedIndex: null,
+			};
+		}
+
+		default:
+			return state;
+	}
+}
+
+function getInitialState(
+	initialValues?: IngredientOrHeader[],
+): IngredientsState {
+	const ingredients: IngredientInputValue[] =
+		initialValues && initialValues.length > 0
+			? initialValues.map((parsed) => {
+					// Handle headers differently from ingredients
+					if (parsed.type === "header") {
+						return {
+							state: StatefulInputState.View,
+							raw: parsed.name,
+							parsed,
+							previouslyParsedRaw: parsed.name,
+						};
+					}
+
+					// Handle ingredients
+					const ingredient = parsed as Ingredient;
+					const displayName = ingredient.original_name || ingredient.name;
+					return {
+						state: StatefulInputState.View,
+						raw: displayName,
+						parsed: ingredient,
+						previouslyParsedRaw: displayName,
+					};
+				})
+			: [];
+
+	// Always add a new empty ingredient at the end
+	ingredients.push({ state: StatefulInputState.New, raw: "" });
+
+	return {
+		ingredients,
+		focusedIndex: null,
+	};
+}
+
 export function IngredientInputs({
 	onIngredientsChange,
 	initialValues,
 	recipeServings = 1,
 }: IngredientInputsProps) {
 	const { parseIngredients } = useParseIngredients();
-	const [ingredients, setIngredients] = React.useState<
-		(EntityInputValue<IngredientOrHeader> & { previouslyParsedRaw?: string })[]
-	>(
-		initialValues && initialValues.length > 0
-			? [
-					...initialValues.map((parsed) => {
-						// Handle headers differently from ingredients
-						if (parsed.type === "header") {
-							return {
-								state: EntityInputState.Parsed,
-								raw: parsed.name,
-								parsed,
-								previouslyParsedRaw: parsed.name,
-							};
-						}
-
-						// Handle ingredients
-						const ingredient = parsed as Ingredient;
-						const displayName = ingredient.original_name || ingredient.name;
-						return {
-							state: EntityInputState.Parsed,
-							raw: displayName,
-							parsed: ingredient,
-							previouslyParsedRaw: displayName,
-						};
-					}),
-					{ state: EntityInputState.New, raw: "" },
-				]
-			: [{ state: EntityInputState.New, raw: "" }],
+	const [{ ingredients, focusedIndex }, dispatch] = React.useReducer(
+		ingredientsReducer,
+		initialValues,
+		getInitialState,
 	);
-	const [focusedIndex, setFocusedIndex] = React.useState<number | null>(null);
 
 	// Keep parent in sync with parsed ingredients and headers
 	React.useEffect(() => {
 		const parsedItems = ingredients
 			.filter(
 				(item) =>
-					item.state === EntityInputState.Parsed &&
+					item.state === StatefulInputState.View &&
 					item.parsed &&
 					item.raw.trim() !== "",
 			)
 			.map((item) => item.parsed!);
 		onIngredientsChange(parsedItems);
 	}, [ingredients, onIngredientsChange]);
-
-	// Centralized ingredient update function
-	const updateIngredients = React.useCallback(
-		(options: {
-			startIndex: number;
-			updates?: Partial<
-				EntityInputValue<IngredientOrHeader> & { previouslyParsedRaw?: string }
-			>;
-			additionalIngredients?: Array<
-				EntityInputValue<IngredientOrHeader> & { previouslyParsedRaw?: string }
-			>;
-			addNewAtEnd?: boolean;
-			focusNextNew?: boolean;
-		}) => {
-			const {
-				startIndex,
-				updates = {},
-				additionalIngredients,
-				addNewAtEnd,
-				focusNextNew,
-			} = options;
-
-			setIngredients((prev) => {
-				const newIngredients = [...prev];
-
-				// Update the ingredient at startIndex
-				Object.assign(newIngredients[startIndex], updates);
-
-				// Insert additional ingredients after startIndex if provided
-				if (additionalIngredients && additionalIngredients.length > 0) {
-					newIngredients.splice(startIndex + 1, 0, ...additionalIngredients);
-				}
-
-				// Add new ingredient at end if requested
-				if (addNewAtEnd) {
-					newIngredients.push({
-						state: EntityInputState.New,
-						raw: "",
-					});
-				}
-
-				if (updates.state === EntityInputState.Editing) {
-					setFocusedIndex(startIndex);
-				} else if (
-					focusNextNew &&
-					!newIngredients.some((ing) => ing.state === EntityInputState.Editing)
-				) {
-					const nextNewIndex = ingredients.findIndex(
-						(ing, idx) =>
-							idx > startIndex && ing.state === EntityInputState.New,
-					);
-					if (nextNewIndex !== -1) {
-						setFocusedIndex(nextNewIndex);
-					}
-				}
-
-				return newIngredients;
-			});
-		},
-		[ingredients],
-	);
 
 	// Parse ingredients helper
 	const parseIngredientsAndUpdate = React.useCallback(
@@ -149,38 +251,30 @@ export function IngredientInputs({
 				) {
 					const parsedIngredients = response.ingredients;
 
-					setIngredients((prev) => {
-						const newIngredients = [...prev];
-
-						parsedIngredients.forEach((parsed, i) => {
-							const ingredientIndex = startIndex + i;
-							if (ingredientIndex < newIngredients.length) {
-								const ingredient = newIngredients[ingredientIndex];
-								const displayName = parsed.original_name || parsed.name;
-								Object.assign(ingredient, {
-									state: EntityInputState.Parsed,
-									parsed,
-									raw: displayName,
-									previouslyParsedRaw: displayName,
-								});
-							}
-						});
-
-						return newIngredients;
+					// Update all parsed ingredients
+					dispatch({
+						type: "MULTIPLE_UPDATE",
+						startIndex,
+						updates: parsedIngredients.map((parsed) => {
+							const displayName = parsed.original_name || parsed.name;
+							return {
+								state: StatefulInputState.View,
+								parsed,
+								raw: displayName,
+								previouslyParsedRaw: displayName,
+							};
+						}),
 					});
 				}
 			} catch (error) {
 				console.error("Failed to parse ingredients:", error);
 				// Revert to editing state on error
-				setIngredients((prev) => {
-					const newIngredients = [...prev];
-					ingredientLines.forEach((_, i) => {
-						const ingredientIndex = startIndex + i;
-						if (ingredientIndex < newIngredients.length) {
-							newIngredients[ingredientIndex].state = EntityInputState.Editing;
-						}
-					});
-					return newIngredients;
+				dispatch({
+					type: "MULTIPLE_UPDATE",
+					startIndex,
+					updates: ingredientLines.map(() => ({
+						state: StatefulInputState.Edit,
+					})),
 				});
 			}
 		},
@@ -189,32 +283,27 @@ export function IngredientInputs({
 
 	// Function to add a header above the first New ingredient input
 	const addHeader = React.useCallback(() => {
-		setIngredients((prev) => {
-			// Find the first ingredient with New state
-			const firstNewIndex = prev.findIndex(
-				(item) => item.state === EntityInputState.New,
-			);
+		// Find the first ingredient with New state
+		const firstNewIndex = ingredients.findIndex(
+			(item) => item.state === StatefulInputState.New,
+		);
 
-			const newIngredients = [...prev];
-			const headerItem = {
-				state: EntityInputState.New,
-				raw: "",
-				parsed: { type: "header", name: "" } as Header,
-			};
+		const headerItem = {
+			state: StatefulInputState.New,
+			raw: "",
+			parsed: { type: "header", name: "" } as Header,
+		};
 
-			if (firstNewIndex !== -1) {
-				// Insert header before the first New ingredient
-				newIngredients.splice(firstNewIndex, 0, headerItem);
-				setFocusedIndex(firstNewIndex);
-			} else {
-				// If no New ingredient found, add at the end
-				newIngredients.push(headerItem);
-				setFocusedIndex(newIngredients.length - 1);
-			}
+		const insertIndex =
+			firstNewIndex !== -1 ? firstNewIndex : ingredients.length;
 
-			return newIngredients;
+		dispatch({
+			type: "INSERT",
+			index: insertIndex,
+			ingredient: headerItem,
+			setFocus: true,
 		});
-	}, []);
+	}, [ingredients]);
 
 	return (
 		<>
@@ -223,14 +312,15 @@ export function IngredientInputs({
 				if (ingredient.parsed?.type === "header") {
 					const headerItem = ingredient.parsed as Header;
 
-					if (ingredient.state === EntityInputState.Parsed) {
+					if (ingredient.state === StatefulInputState.View) {
 						return (
 							<Pressable
 								key={index}
 								onPress={() => {
-									updateIngredients({
-										startIndex: index,
-										updates: { state: EntityInputState.Editing },
+									dispatch({
+										type: "UPDATE",
+										index,
+										updates: { state: StatefulInputState.Edit },
 									});
 								}}
 								className="mb-2 min-h-[40px] rounded px-2 py-1 active:bg-muted/50"
@@ -244,13 +334,14 @@ export function IngredientInputs({
 
 					// Render header input for editing/new states
 					return (
-						<EntityInput<Header>
+						<StatefulInput<Header>
 							key={index}
 							placeholder="Header name (e.g., 'For the sauce')"
-							value={ingredient as EntityInputValue<Header>}
+							value={ingredient as StatefulInputValue<Header>}
 							onChange={(rawValue) => {
-								updateIngredients({
-									startIndex: index,
+								dispatch({
+									type: "UPDATE",
+									index,
 									updates: {
 										raw: rawValue,
 										parsed: { type: "header", name: rawValue } as Header,
@@ -259,44 +350,38 @@ export function IngredientInputs({
 							}}
 							onSave={() => {
 								if (ingredient.raw.trim()) {
-									updateIngredients({
-										startIndex: index,
+									dispatch({
+										type: "UPDATE",
+										index,
 										updates: {
-											state: EntityInputState.Parsed,
+											state: StatefulInputState.View,
 											parsed: {
 												type: "header",
 												name: ingredient.raw,
 											} as Header,
 										},
-										focusNextNew: true,
 									});
 								} else {
 									// Delete empty header
-									setIngredients((prev) => {
-										const newIngredients = [...prev];
-										newIngredients.splice(index, 1);
-										return newIngredients;
-									});
+									dispatch({ type: "DELETE", index });
 								}
 							}}
 							onEdit={() => {
-								updateIngredients({
-									startIndex: index,
-									updates: { state: EntityInputState.Editing },
+								dispatch({
+									type: "UPDATE",
+									index,
+									updates: { state: StatefulInputState.Edit },
 								});
 							}}
 							onCancel={() => {
-								updateIngredients({
-									startIndex: index,
-									updates: { state: EntityInputState.Parsed },
+								dispatch({
+									type: "UPDATE",
+									index,
+									updates: { state: StatefulInputState.View },
 								});
 							}}
 							onClear={() => {
-								setIngredients((prev) => {
-									const newIngredients = [...prev];
-									newIngredients.splice(index, 1);
-									return newIngredients;
-								});
+								dispatch({ type: "DELETE", index });
 							}}
 							renderParsed={(parsed) => (
 								<Text className="text-lg font-semibold text-foreground">
@@ -304,7 +389,7 @@ export function IngredientInputs({
 								</Text>
 							)}
 							shouldFocus={focusedIndex === index}
-							onFocus={() => setFocusedIndex(null)}
+							onFocus={() => dispatch({ type: "CLEAR_FOCUS" })}
 						/>
 					);
 				}
@@ -313,25 +398,25 @@ export function IngredientInputs({
 					<IngredientInput
 						key={index}
 						placeholder="something tasty"
-						value={ingredient as EntityInputValue<Ingredient>}
+						value={ingredient as StatefulInputValue<Ingredient>}
 						recipeServings={recipeServings}
 						onMultiplePaste={async (ingredientLines) => {
 							// Set current ingredient to parsing and add additional parsing ingredients
-							updateIngredients({
+							dispatch({
+								type: "MULTIPLE_UPDATE",
 								startIndex: index,
-								updates: {
-									raw: ingredientLines[0] || "",
-									state: EntityInputState.Parsing,
-								},
-								additionalIngredients: ingredientLines.slice(1).map((line) => ({
-									state: EntityInputState.Parsing as const,
-									raw: line,
-								})),
+								updates: [
+									{
+										raw: ingredientLines[0] || "",
+										state: StatefulInputState.Load,
+									},
+									...ingredientLines.slice(1).map((line) => ({
+										state: StatefulInputState.Load as const,
+										raw: line,
+									})),
+								],
 								addNewAtEnd: true,
 							});
-
-							// Focus on the new input
-							setFocusedIndex(index + ingredientLines.length);
 
 							// Parse all pasted ingredients
 							await parseIngredientsAndUpdate(ingredientLines, index);
@@ -365,39 +450,27 @@ export function IngredientInputs({
 								},
 							};
 
-							const wasNewState =
-								ingredients[index].state === EntityInputState.New;
 							const displayName = ingredient.original_name || ingredient.name;
 
-							updateIngredients({
-								startIndex: index,
+							dispatch({
+								type: "UPDATE",
+								index,
 								updates: {
-									state: EntityInputState.Parsed,
+									state: StatefulInputState.View,
 									parsed: ingredient,
 									raw: displayName,
 									previouslyParsedRaw: displayName,
 								},
-								addNewAtEnd: wasNewState,
 							});
-
-							// Focus on next NEW ingredient if this was a new ingredient
-							if (wasNewState) {
-								setFocusedIndex(index + 1);
-							}
 						}}
 						onChange={(rawValue) => {
-							const currentIngredient = ingredients[index];
-							const wasNew = currentIngredient.state === EntityInputState.New;
-
-							updateIngredients({
-								startIndex: index,
+							dispatch({
+								type: "UPDATE",
+								index,
 								updates: {
 									raw: rawValue,
-									state: wasNew
-										? EntityInputState.Dirty
-										: currentIngredient.state,
+									state: StatefulInputState.Edit,
 								},
-								addNewAtEnd: wasNew,
 							});
 						}}
 						onSave={async () => {
@@ -405,65 +478,58 @@ export function IngredientInputs({
 
 							if (
 								currentIngredient.raw.trim() === "" &&
-								currentIngredient.state === EntityInputState.New
+								currentIngredient.state === StatefulInputState.New
 							) {
 								return;
 							}
 
 							// Delete empty ingredients
 							if (currentIngredient.raw.trim() === "") {
-								setIngredients((prev) => {
-									const newIngredients = [...prev];
-									newIngredients.splice(index, 1);
-									return newIngredients;
-								});
+								dispatch({ type: "DELETE", index });
 								return;
 							}
-
-							// Focus next NEW ingredient immediately
-							updateIngredients({ startIndex: index, focusNextNew: true });
 
 							// Handle unchanged previously parsed ingredients
 							if (
 								currentIngredient.previouslyParsedRaw === currentIngredient.raw
 							) {
-								updateIngredients({
-									startIndex: index,
-									updates: { state: EntityInputState.Parsed },
+								dispatch({
+									type: "UPDATE",
+									index,
+									updates: { state: StatefulInputState.View },
 								});
 								return;
 							}
 
 							// Set to parsing state
-							updateIngredients({
-								startIndex: index,
-								updates: { state: EntityInputState.Parsing },
+							dispatch({
+								type: "UPDATE",
+								index,
+								updates: { state: StatefulInputState.Load },
 							});
 
 							// Parse the ingredient
 							await parseIngredientsAndUpdate([currentIngredient.raw], index);
 						}}
 						onEdit={() => {
-							updateIngredients({
-								startIndex: index,
-								updates: { state: EntityInputState.Editing },
+							dispatch({
+								type: "UPDATE",
+								index,
+								updates: { state: StatefulInputState.Edit },
 							});
 						}}
 						onCancel={() => {
-							updateIngredients({
-								startIndex: index,
-								updates: { state: EntityInputState.Parsed },
+							dispatch({
+								type: "UPDATE",
+								index,
+								updates: { state: StatefulInputState.View },
 							});
 						}}
 						onClear={() => {
-							setIngredients((prev) => {
-								const newIngredients = [...prev];
-								newIngredients.splice(index, 1);
-								return newIngredients;
-							});
+							dispatch({ type: "DELETE", index });
 						}}
 						shouldFocus={focusedIndex === index}
-						onFocus={() => setFocusedIndex(null)}
+						onFocus={() => dispatch({ type: "CLEAR_FOCUS" })}
 					/>
 				);
 			})}

@@ -1,10 +1,10 @@
-import {
-	EntityInput,
-	EntityInputProps,
-	EntityInputState,
-} from "@/components/forms/entity-input";
 import { FatSecretFood, FatSecretServing } from "@/lib/server/fat-secret/types";
 import React, { useState } from "react";
+import {
+	StatefulInput,
+	StatefulInputProps,
+	StatefulInputState,
+} from "@/components/forms/stateful-input/stateful-input";
 
 import { EditableFatSecretFoodItem } from "@/components/food/editable-fat-secret-food-item";
 import { Image } from "@/components/image";
@@ -25,7 +25,7 @@ export interface FoodData {
 }
 
 export interface IngredientInputProps
-	extends Omit<EntityInputProps<Ingredient>, "onSearch"> {
+	extends Omit<StatefulInputProps<Ingredient>, "onSearch"> {
 	recipeServings: number;
 	onFoodSelect: (foodData: FoodData) => void;
 	onCancel: () => void;
@@ -65,7 +65,7 @@ export function IngredientInput({
 
 	return (
 		<View className="relative w-full">
-			<EntityInput<Ingredient>
+			<StatefulInput<Ingredient>
 				{...props}
 				onSearch={() => setShowSearchModal(true)}
 				renderParsed={(parsed) => {
@@ -151,8 +151,7 @@ export function IngredientInput({
 				keyLabel="enter"
 				actionText="to save"
 				show={
-					(props.value.state === EntityInputState.Dirty ||
-						props.value.state === EntityInputState.Editing) &&
+					props.value.state === StatefulInputState.Edit &&
 					!props.value.parsed?.fat_secret_id
 				}
 			/>

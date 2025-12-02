@@ -1,38 +1,37 @@
 import { Pressable, TextInput, View } from "react-native";
 import React, { useEffect, useRef } from "react";
 
-import { Input } from "../ui/input";
+import { Input } from "../../ui/input";
 import { Search } from "@/lib/icons";
 import { Skeleton } from "@/components/ui/skeleton";
 import { X } from "@/lib/icons/x";
 import { cn } from "@/lib/utils";
 
-export enum EntityInputState {
+export enum StatefulInputState {
 	New = "new",
-	Dirty = "dirty",
-	Parsing = "parsing",
-	Parsed = "parsed",
-	Editing = "editing",
+	Load = "load",
+	View = "view",
+	Edit = "edit",
 }
 
-export type EntityInputValue<T> =
+export type StatefulInputValue<T> =
 	| {
 			state:
-				| EntityInputState.New
-				| EntityInputState.Dirty
-				| EntityInputState.Parsing;
+				| StatefulInputState.New
+				| StatefulInputState.Load
+				| StatefulInputState.Edit;
 			raw: string;
 			parsed?: T;
 	  }
 	| {
-			state: EntityInputState.Parsed | EntityInputState.Editing;
+			state: StatefulInputState.View;
 			raw: string;
 			parsed: T;
 	  };
 
-export interface EntityInputProps<ParsedType> {
+export interface StatefulInputProps<ParsedType> {
 	value: {
-		state: EntityInputState;
+		state: StatefulInputState;
 		raw: string;
 		parsed?: ParsedType;
 	};
@@ -50,7 +49,7 @@ export interface EntityInputProps<ParsedType> {
 	onFocus?: () => void;
 }
 
-export function EntityInput<ParsedType>({
+export function StatefulInput<ParsedType>({
 	value,
 	onChange,
 	onSave,
@@ -63,7 +62,7 @@ export function EntityInput<ParsedType>({
 	placeholder,
 	shouldFocus,
 	onFocus,
-}: EntityInputProps<ParsedType>) {
+}: StatefulInputProps<ParsedType>) {
 	const inputRef = useRef<TextInput>(null);
 	const shouldSaveOnBlur = useRef(false);
 	const isDeleting = useRef(false);
@@ -98,11 +97,11 @@ export function EntityInput<ParsedType>({
 		}
 	}, [shouldFocus, onFocus]);
 
-	if (value.state === EntityInputState.Parsing) {
-		return <Skeleton className="h-[40px] w-full rounded-full" />;
+	if (value.state === StatefulInputState.Load) {
+		return <Skeleton className="h-[40px] w-full rounded-md" />;
 	}
 
-	if (value.state === EntityInputState.Parsed && value.parsed) {
+	if (value.state === StatefulInputState.View && value.parsed) {
 		if (renderParsed) {
 			return (
 				<Pressable
