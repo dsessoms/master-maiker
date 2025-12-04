@@ -3,7 +3,7 @@ import {
 	convertSpoonacularRecipeToRecipe,
 } from "../../../../lib/server/spoonacular/spoonacular-helper";
 
-import { Recipe } from "../../../../lib/schemas/recipe-schema";
+import { Recipe } from "../../../../lib/schemas/recipes/recipe-schema";
 import { SpoonacularAnalyzeRecipe } from "../../../../lib/schemas/spoonacular-analyze-recipe-schema";
 import { jsonResponse } from "../../../../lib/server/json-response";
 import { supabase } from "@/config/supabase-server";

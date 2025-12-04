@@ -1,5 +1,5 @@
 export * from "./meal-plan-schema";
-export * from "./recipe-schema";
+export * from "./recipes/recipe-schema";
 export * from "./food-entry-schema";
 export * from "./food-item-schema";
 export * from "./spoonacular-analyze-recipe-schema";

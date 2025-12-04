@@ -4,7 +4,7 @@ import {
 } from "@/lib/server/spoonacular/spoonacular-helper";
 
 import { GoogleGenAI } from "@google/genai";
-import { Recipe } from "@/lib/schemas/recipe-schema";
+import { Recipe } from "@/lib/schemas/recipes/recipe-schema";
 import { SpoonacularAnalyzeRecipeSchema } from "@/lib/schemas";
 import { generateRecipePrompt } from "@/prompts/generate-recipe-prompt";
 import { jsonResponse } from "@/lib/server/json-response";

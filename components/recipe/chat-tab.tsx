@@ -1,12 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import {
-	ScrollView,
-	View,
-	TextInput,
-	NativeSyntheticEvent,
-	TextInputSubmitEditingEventData,
-	Platform,
-} from "react-native";
+import { ScrollView, View, TextInput, Platform } from "react-native";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -170,24 +163,7 @@ export const ChatTab = ({ onGenerate, isGenerating }: ChatTabProps) => {
 
 	const handleQuickOptionSelect = async (option: QuickOption) => {
 		if (!isPending) {
-			// Special handling for "Generate Recipe" option
-			if (option.title === "Generate Recipe") {
-				// Add user message indicating they chose to generate recipe
-				const userMessage: ChatDisplayMessage = {
-					id: Date.now().toString(),
-					role: "user",
-					content: option.title,
-				};
-
-				const updatedMessages = [...messages, userMessage];
-				setMessages(updatedMessages);
-
-				// Trigger recipe generation with the current chat messages
-				handleGenerate();
-				return;
-			}
-
-			// Normal quick option handling for other options
+			// Normal quick option handling
 			const userMessage: ChatDisplayMessage = {
 				id: Date.now().toString(),
 				role: "user",
@@ -326,6 +302,17 @@ export const ChatTab = ({ onGenerate, isGenerating }: ChatTabProps) => {
 											</View>
 										)}
 									</Card>
+
+									{/* Generate Recipe Button - Always show when recipePreview is present */}
+									<Button
+										onPress={handleGenerate}
+										disabled={isGenerating}
+										className="mt-3"
+									>
+										<Text>
+											{isGenerating ? "Generating..." : "Generate Recipe"}
+										</Text>
+									</Button>
 								</View>
 							)}
 

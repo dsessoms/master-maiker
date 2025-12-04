@@ -1,7 +1,8 @@
-import { GoogleGenAI, Type } from "@google/genai";
-
+import { GoogleGenAI } from "@google/genai";
+import { chatResponseSchema } from "@/lib/schemas/recipes/generate/chat-response";
 import { jsonResponse } from "@/lib/server/json-response";
 import { validateSession } from "@/lib/server/validate-session";
+import { zodToJsonSchema } from "zod-to-json-schema";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY as string;
 
@@ -80,7 +81,8 @@ OPTION TYPES & WHEN TO USE:
    - Cuisine selection: "What cuisine?" → [{"title": "Italian"}, {"title": "Asian"}, {"title": "Mexican"}]
    - Meal type: "What meal?" → [{"title": "Breakfast"}, {"title": "Lunch"}, {"title": "Dinner"}]
    - Main protein: "What protein?" → [{"title": "Chicken"}, {"title": "Beef"}, {"title": "Fish"}]
-   - Action choices: [{"title": "Add ingredients"}, {"title": "Generate Recipe"}]
+   - Modifications: [{"title": "Change ingredients"}, {"title": "Adjust servings"}, {"title": "Different cuisine"}]
+   - CRITICAL: NEVER include "Generate Recipe" as a quickOption - the UI automatically shows a generate button when recipePreview is present
 
 2. multiSelectOptions - Use for questions where users can pick MULTIPLE related options:
    - Time + Difficulty: "Select your preferences:" → [{"title": "Quick (under 30 mins)"}, {"title": "Easy"}, {"title": "Medium difficulty"}]
@@ -92,21 +94,16 @@ OPTION TYPES & WHEN TO USE:
    - "What flavors are you in the mood for?"
 
 OPTION QUALITY RULES:
-- Don't mix action verbs with descriptive choices (BAD: [{"title": "Add ingredients"}, {"title": "Italian"}])
 - Keep similar types together (all cuisines, all difficulties, all times, etc.)
 - Use 3-6 options maximum
 - Make options specific and actionable
+- NEVER include "Generate Recipe" in quickOptions
 
-CRITICAL RECIPE GENERATION RULES:
-1. NEVER include "Generate Recipe" in quickOptions without also including recipePreview
-2. NEVER include recipePreview without also including "Generate Recipe" in quickOptions
-3. These two elements MUST ALWAYS appear together - no exceptions!
-
-RECIPE GENERATION WORKFLOW:
-- When you have enough information to create a recipe:
-  1. Create the recipePreview with title, servings, ingredients, and instructions
-  2. ALWAYS include quickOptions with "Generate Recipe" (and optionally other actions like "Modify recipe")
-  3. Your content should introduce the preview, not ask for permission
+RECIPE PREVIEW & GENERATION:
+1. When you have enough information to create a recipe, include the recipePreview field
+2. The UI will automatically display a "Generate Recipe" button when recipePreview is present
+3. You may optionally include quickOptions for modification actions (e.g., "Change ingredients", "Adjust servings")
+4. Your content should introduce the preview positively
 
 RECIPE PREVIEW SCHEMA:
 - title: string (name of the recipe)
@@ -127,17 +124,14 @@ Good multi-selection:
 Good no-options follow-up:
 {"content": "Great choice! Tell me about any specific vegetables or add-ins you'd like in your chicken salad."}
 
-CORRECT recipe generation (recipePreview + Generate Recipe quickOption together):
-{"content": "Perfect! I've created a delicious chicken salad recipe for you:", "quickOptions": [{"title": "Generate Recipe"}, {"title": "Modify recipe"}], "recipePreview": {"title": "Quick Chicken Salad", "servings": 4, "ingredients": ["2 cups cooked chicken, diced", "1/2 cup celery, chopped", "1/4 cup mayonnaise"], "instructions": "1. Combine diced chicken and celery in a large bowl. 2. Add mayonnaise and mix until well coated. 3. Season with salt and pepper to taste. 4. Chill for 30 minutes before serving."}}
+CORRECT recipe generation (recipePreview + optional modification quickOptions):
+{"content": "Perfect! I've created a delicious chicken salad recipe for you. If you'd like to make changes, use the options below, or click 'Generate Recipe' when you're ready.", "quickOptions": [{"title": "Change ingredients"}, {"title": "Adjust servings"}], "recipePreview": {"title": "Classic Chicken Salad", "servings": 4, "ingredients": ["2 cups cooked chicken, diced", "1/2 cup celery, chopped", "1/4 cup mayonnaise"], "instructions": "1. Combine diced chicken and celery in a large bowl. 2. Add mayonnaise and mix until well coated. 3. Season with salt and pepper to taste. 4. Chill for 30 minutes before serving."}}
 
-WRONG - Generate Recipe without preview:
-{"content": "Ready to make your recipe?", "quickOptions": [{"title": "Generate Recipe"}]}
+ALSO CORRECT - Recipe without modification options:
+{"content": "I've created a delicious chicken salad recipe for you!", "recipePreview": {"title": "Classic Chicken Salad", "servings": 4, "ingredients": ["2 cups cooked chicken, diced", "1/2 cup celery, chopped", "1/4 cup mayonnaise"], "instructions": "1. Combine diced chicken and celery in a large bowl. 2. Add mayonnaise and mix until well coated. 3. Season with salt and pepper to taste. 4. Chill for 30 minutes before serving."}}
 
-WRONG - Preview without Generate Recipe option:
-{"content": "Here's your recipe:", "recipePreview": {"title": "Chicken Salad", "description": "Delicious salad", "ingredients": ["chicken"]}}
-
-BAD - Mixed types:
-{"content": "What would you like?", "quickOptions": [{"title": "Add ingredients"}, {"title": "Italian"}, {"title": "Spicy"}]}`,
+WRONG - Including "Generate Recipe" in quickOptions:
+{"content": "Here's your recipe:", "quickOptions": [{"title": "Generate Recipe"}], "recipePreview": {"title": "Chicken Salad", "servings": 4, "ingredients": ["chicken"], "instructions": "Mix ingredients."}}`,
 				},
 			],
 		};
@@ -150,69 +144,7 @@ BAD - Mixed types:
 			contents: allContents,
 			config: {
 				responseMimeType: "application/json",
-				responseSchema: {
-					type: Type.OBJECT,
-					required: ["content"],
-					properties: {
-						content: {
-							type: Type.STRING,
-						},
-						quickOptions: {
-							type: Type.ARRAY,
-							items: {
-								type: Type.OBJECT,
-								required: ["title"],
-								properties: {
-									title: {
-										type: Type.STRING,
-									},
-								},
-							},
-						},
-						multiSelectOptions: {
-							type: Type.OBJECT,
-							required: ["title", "options"],
-							properties: {
-								title: {
-									type: Type.STRING,
-								},
-								options: {
-									type: Type.ARRAY,
-									items: {
-										type: Type.OBJECT,
-										required: ["title"],
-										properties: {
-											title: {
-												type: Type.STRING,
-											},
-										},
-									},
-								},
-							},
-						},
-						recipePreview: {
-							type: Type.OBJECT,
-							required: ["title", "servings", "ingredients", "instructions"],
-							properties: {
-								title: {
-									type: Type.STRING,
-								},
-								servings: {
-									type: Type.NUMBER,
-								},
-								ingredients: {
-									type: Type.ARRAY,
-									items: {
-										type: Type.STRING,
-									},
-								},
-								instructions: {
-									type: Type.STRING,
-								},
-							},
-						},
-					},
-				},
+				responseJsonSchema: zodToJsonSchema(chatResponseSchema),
 			},
 		});
 

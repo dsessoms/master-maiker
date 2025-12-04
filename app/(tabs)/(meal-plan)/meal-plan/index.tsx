@@ -9,9 +9,10 @@ import { MealPlanContext } from "@/context/meal-plan-context";
 import { NotesModal } from "@/components/meal-plan/notes-modal";
 import { ProfileDropdown } from "@/components//user-dropdown";
 import { SafeAreaView } from "@/components//safe-area-view";
+import { Text } from "@/components/ui/text";
 import { View } from "react-native";
+import { WandSparkles } from "@/lib/icons";
 import { WeekSelector } from "@/components//week-selector";
-import { useToggle } from "@/hooks/useToggle";
 
 export default function MealPlanScreen() {
 	const router = useRouter();
@@ -104,6 +105,15 @@ export default function MealPlanScreen() {
 					mealType={notesModalState.mealType}
 				/>
 			)}
+			<View className="absolute bottom-6 right-6">
+				<Button
+					variant="default"
+					size="icon"
+					className="w-12 h-12 rounded-full shadow-sm"
+				>
+					<WandSparkles className="text-primary-foreground" size={24} />
+				</Button>
+			</View>
 		</SafeAreaView>
 	);
 }

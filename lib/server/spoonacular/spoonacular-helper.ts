@@ -1,4 +1,4 @@
-import { Ingredient, Recipe } from "../../schemas/recipe-schema";
+import { Ingredient, Recipe } from "../../schemas/recipes/recipe-schema";
 
 import { SpoonacularAnalyzeRecipe } from "@/lib/schemas";
 import axios from "axios";
