@@ -7,6 +7,7 @@ import { NotesModal } from "./notes-modal";
 import { PencilIcon } from "@/lib/icons";
 import { Text } from "@/components/ui/text";
 import { View } from "react-native";
+import { cn } from "@/lib/utils";
 
 interface Note {
 	id: string;
@@ -68,11 +69,10 @@ export const NotesList = ({ date, mealType }: NotesListProps) => {
 							className="mt-1"
 						/>
 						<Text
-							className={
-								note.is_checked
-									? "text-muted-foreground line-through flex-1"
-									: "flex-1"
-							}
+							className={cn({
+								"flex-1": true,
+								"text-muted-foreground line-through": note.is_checked,
+							})}
 						>
 							{note.value}
 						</Text>

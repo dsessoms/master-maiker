@@ -1,6 +1,9 @@
-import { EntityInput, EntityInputState } from "@/components/forms/entity-input";
 import { Modal, ScrollView, View } from "react-native";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useReducer } from "react";
+import {
+	StatefulInput,
+	StatefulInputState,
+} from "@/components/forms/stateful-input/stateful-input";
 import {
 	useCreateNote,
 	useDeleteNote,
@@ -12,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Text } from "@/components/ui/text";
 import { X } from "@/lib/icons";
+import { cn } from "@/lib/utils";
 
 interface Note {
 	id: string;
@@ -21,8 +25,8 @@ interface Note {
 	display_order: number;
 }
 
-interface NoteEntityValue {
-	state: EntityInputState;
+interface NoteStatefulValue {
+	state: StatefulInputState;
 	raw: string;
 	parsed?: Note;
 	id?: string;
@@ -35,13 +39,136 @@ interface NotesModalProps {
 	mealType: "Breakfast" | "Lunch" | "Dinner" | "Snack";
 }
 
+type NoteAction =
+	| {
+			type: "UPDATE";
+			index: number;
+			updates: Partial<NoteStatefulValue>;
+	  }
+	| {
+			type: "DELETE";
+			index: number;
+	  }
+	| {
+			type: "INITIALIZE";
+			notes: Note[];
+	  }
+	| {
+			type: "CLEAR_FOCUS";
+	  };
+
+interface NoteState {
+	notes: NoteStatefulValue[];
+	focusedIndex: number | null;
+}
+
+function notesReducer(state: NoteState, action: NoteAction): NoteState {
+	switch (action.type) {
+		case "UPDATE": {
+			const newNotes = [...state.notes];
+			const wasNew = state.notes[action.index].state === StatefulInputState.New;
+
+			Object.assign(newNotes[action.index], action.updates);
+
+			// Auto-add new note at end if this was a New note becoming Edit/View
+			if (wasNew && action.updates.state !== StatefulInputState.New) {
+				newNotes.push({
+					state: StatefulInputState.New,
+					raw: "",
+					parsed: undefined,
+					id: undefined,
+				});
+			}
+
+			// Auto-focus when entering edit state
+			const shouldFocus = action.updates.state === StatefulInputState.Edit;
+
+			// After saving (View state), focus next new note
+			let focusedIndex = state.focusedIndex;
+			if (action.updates.state === StatefulInputState.View) {
+				const nextNewIndex = newNotes.findIndex(
+					(note, idx) =>
+						idx > action.index && note.state === StatefulInputState.New,
+				);
+				focusedIndex = nextNewIndex !== -1 ? nextNewIndex : null;
+			} else if (shouldFocus) {
+				focusedIndex = action.index;
+			}
+
+			return {
+				notes: newNotes,
+				focusedIndex,
+			};
+		}
+
+		case "DELETE": {
+			const newNotes = [...state.notes];
+			newNotes.splice(action.index, 1);
+			return {
+				notes: newNotes,
+				focusedIndex: state.focusedIndex,
+			};
+		}
+
+		case "INITIALIZE": {
+			const notes: NoteStatefulValue[] = action.notes.map((note) => ({
+				state: StatefulInputState.View,
+				raw: note.value,
+				parsed: note,
+				id: note.id,
+			}));
+
+			// Always add a new empty note at the end
+			notes.push({
+				state: StatefulInputState.New,
+				raw: "",
+				parsed: undefined,
+				id: undefined,
+			});
+
+			return {
+				notes,
+				focusedIndex: null,
+			};
+		}
+
+		case "CLEAR_FOCUS": {
+			return {
+				...state,
+				focusedIndex: null,
+			};
+		}
+
+		default:
+			return state;
+	}
+}
+
+function getInitialState(): NoteState {
+	return {
+		notes: [
+			{
+				state: StatefulInputState.New,
+				raw: "",
+				parsed: undefined,
+				id: undefined,
+			},
+		],
+		focusedIndex: null,
+	};
+}
+
 export const NotesModal = ({
 	isVisible,
 	toggleIsVisible,
 	date,
 	mealType,
 }: NotesModalProps) => {
-	const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
+	const [{ notes: noteEntities, focusedIndex }, dispatch] = useReducer(
+		notesReducer,
+		undefined,
+		getInitialState,
+	);
 	const { notes = [] } = useNotes({
 		noteType: "day_meal",
 		date,
@@ -51,45 +178,15 @@ export const NotesModal = ({
 	const updateNote = useUpdateNote();
 	const deleteNote = useDeleteNote();
 
-	const [noteEntities, setNoteEntities] = useState<NoteEntityValue[]>([]);
-
 	// Sync notes from the API to local state
 	useEffect(() => {
-		const entities: NoteEntityValue[] = notes.map((note: Note) => ({
-			state: EntityInputState.Parsed,
-			raw: note.value,
-			parsed: note,
-			id: note.id,
-		}));
-		setNoteEntities(entities);
+		dispatch({ type: "INITIALIZE", notes });
 	}, [notes]);
-
-	const handleAddNote = () => {
-		const newNote: NoteEntityValue = {
-			state: EntityInputState.New,
-			raw: "",
-			parsed: undefined,
-			id: undefined,
-		};
-		setNoteEntities((prev) => [...prev, newNote]);
-		setFocusedIndex(noteEntities.length);
-	};
 
 	const handleCheckboxToggle = (noteId: string, currentChecked: boolean) => {
 		updateNote.mutate({
 			noteId,
 			isChecked: !currentChecked,
-		});
-	};
-
-	const updateNoteEntity = (
-		index: number,
-		updates: Partial<NoteEntityValue>,
-	) => {
-		setNoteEntities((prev) => {
-			const newEntities = [...prev];
-			newEntities[index] = { ...newEntities[index], ...updates };
-			return newEntities;
 		});
 	};
 
@@ -119,44 +216,9 @@ export const NotesModal = ({
 
 				{/* Content */}
 				<ScrollView className="flex-1 p-4">
-					{noteEntities.map((noteEntity, index) => {
-						const note = noteEntity.parsed;
+					{noteEntities.map((noteStateful, index) => {
+						const note = noteStateful.parsed;
 
-						if (noteEntity.state === EntityInputState.Parsed && note) {
-							return (
-								<View key={note.id} className="flex-row items-start mb-3 gap-2">
-									<Checkbox
-										checked={note.is_checked}
-										onCheckedChange={() =>
-											handleCheckboxToggle(note.id, note.is_checked)
-										}
-										className="mt-1"
-									/>
-									<Button
-										variant="ghost"
-										onPress={() => {
-											updateNoteEntity(index, {
-												state: EntityInputState.Editing,
-											});
-											setFocusedIndex(index);
-										}}
-										className="flex-1 justify-start px-2 min-h-[40px]"
-									>
-										<Text
-											className={
-												note.is_checked
-													? "text-muted-foreground line-through"
-													: ""
-											}
-										>
-											{note.value}
-										</Text>
-									</Button>
-								</View>
-							);
-						}
-
-						// Editing mode
 						return (
 							<View
 								key={note?.id || index}
@@ -164,34 +226,60 @@ export const NotesModal = ({
 							>
 								<Checkbox
 									checked={note?.is_checked || false}
-									onCheckedChange={() => {}}
-									disabled
+									onCheckedChange={() => {
+										note?.id &&
+											handleCheckboxToggle(note?.id, note?.is_checked);
+									}}
+									disabled={!note?.id}
 									className="mt-1"
 								/>
 								<View className="flex-1">
-									<EntityInput<Note>
-										value={noteEntity}
+									<StatefulInput<Note>
+										value={noteStateful}
 										placeholder="Add a note..."
+										renderParsed={(parsed) => {
+											return (
+												<Text
+													className={cn({
+														"text-muted-foreground line-through":
+															note?.is_checked,
+													})}
+												>
+													{parsed.value}
+												</Text>
+											);
+										}}
 										onChange={(rawValue) => {
-											updateNoteEntity(index, {
-												raw: rawValue,
+											dispatch({
+												type: "UPDATE",
+												index,
+												updates: {
+													raw: rawValue,
+													state: StatefulInputState.Edit,
+												},
 											});
 										}}
 										onSave={() => {
-											const trimmedValue = noteEntity.raw.trim();
+											const trimmedValue = noteStateful.raw.trim();
 
-											if (!trimmedValue && note?.id) {
-												// Delete if empty and exists in DB
-												deleteNote.mutate(note.id);
-												setNoteEntities((prev) =>
-													prev.filter((_, i) => i !== index),
-												);
-											} else if (!trimmedValue && !note?.id) {
-												// Remove in-memory note if empty and not saved
-												setNoteEntities((prev) =>
-													prev.filter((_, i) => i !== index),
-												);
-											} else if (trimmedValue && !note?.id) {
+											// Handle empty notes
+											if (
+												!trimmedValue &&
+												noteStateful.state === StatefulInputState.New
+											) {
+												return;
+											}
+
+											if (!trimmedValue) {
+												// Delete empty note
+												if (note?.id) {
+													deleteNote.mutate(note.id);
+												}
+												dispatch({ type: "DELETE", index });
+												return;
+											}
+
+											if (!note?.id) {
 												// Create new note in DB
 												createNote.mutate(
 													{
@@ -202,16 +290,13 @@ export const NotesModal = ({
 														mealType,
 													},
 													{
-														onSuccess: (data) => {
+														onSuccess: () => {
 															// Note will be added via the notes query refetch
-															// Remove the in-memory note
-															setNoteEntities((prev) =>
-																prev.filter((_, i) => i !== index),
-															);
+															// The INITIALIZE action will handle updating the state
 														},
 													},
 												);
-											} else if (trimmedValue && note?.id) {
+											} else {
 												// Update existing note
 												updateNote.mutate(
 													{
@@ -220,10 +305,14 @@ export const NotesModal = ({
 													},
 													{
 														onSuccess: () => {
-															updateNoteEntity(index, {
-																state: EntityInputState.Parsed,
-																raw: trimmedValue,
-																parsed: { ...note, value: trimmedValue },
+															dispatch({
+																type: "UPDATE",
+																index,
+																updates: {
+																	state: StatefulInputState.View,
+																	raw: trimmedValue,
+																	parsed: { ...note, value: trimmedValue },
+																},
 															});
 														},
 													},
@@ -231,8 +320,12 @@ export const NotesModal = ({
 											}
 										}}
 										onEdit={() => {
-											updateNoteEntity(index, {
-												state: EntityInputState.Editing,
+											dispatch({
+												type: "UPDATE",
+												index,
+												updates: {
+													state: StatefulInputState.Edit,
+												},
 											});
 										}}
 										onClear={() => {
@@ -241,22 +334,15 @@ export const NotesModal = ({
 												deleteNote.mutate(note.id);
 											}
 											// Remove from local state
-											setNoteEntities((prev) =>
-												prev.filter((_, i) => i !== index),
-											);
+											dispatch({ type: "DELETE", index });
 										}}
 										shouldFocus={focusedIndex === index}
-										onFocus={() => setFocusedIndex(null)}
+										onFocus={() => dispatch({ type: "CLEAR_FOCUS" })}
 									/>
 								</View>
 							</View>
 						);
 					})}
-
-					{/* Add Note Button */}
-					<Button variant="outline" onPress={handleAddNote} className="mt-2">
-						<Text>Add Note</Text>
-					</Button>
 				</ScrollView>
 			</View>
 		</Modal>

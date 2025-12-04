@@ -104,10 +104,7 @@ export function StatefulInput<ParsedType>({
 	if (value.state === StatefulInputState.View && value.parsed) {
 		if (renderParsed) {
 			return (
-				<Pressable
-					onPress={onEdit}
-					className="min-h-[40px] rounded mb-2 w-full flex-row items-center px-2"
-				>
+				<Pressable onPress={onEdit} className="w-full">
 					{renderParsed(value.parsed)}
 				</Pressable>
 			);
