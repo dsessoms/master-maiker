@@ -1,4 +1,3 @@
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import {
 	Dialog,
 	DialogContent,
@@ -16,19 +15,22 @@ import { MoreHorizontalIcon, PencilIcon, Trash2Icon } from "@/lib/icons";
 import { Pressable, TextInput, View } from "react-native";
 import { useContext, useRef, useState } from "react";
 
-import Animated from "react-native-reanimated";
 import { Button } from "../ui/button";
 import { DraggableItem } from "../ui/dnd/draggable-item";
+import { FoodEntry as FoodEntryType } from "@/app/api/food-entries/index+api";
 import { Icon } from "../ui/icon";
 import { Image } from "../image";
+import { MacroDisplay } from "./macro-display";
 import { MealPlanContext } from "@/context/meal-plan-context";
+import { ProfileServingBadge } from "./profile-serving-badge";
 import { Text } from "../ui/text";
+import { calculateFoodEntryNutritionForSelectedProfiles } from "@/lib/utils/nutrition-calculator";
 import { useDeleteFoodEntry } from "@/hooks/recipes/use-delete-food-entry";
 import { useRecipeImage } from "@/hooks/recipes/use-recipe-image";
 import { useRouter } from "expo-router";
 import { useUpdateFoodEntry } from "@/hooks/recipes/use-update-food-entry";
 
-export const FoodEntry = ({ entry }: { entry: any }) => {
+export const FoodEntry = ({ entry }: { entry: FoodEntryType }) => {
 	const [isEditing, setIsEditing] = useState(false);
 	const [editingServings, setEditingServings] = useState<
 		Record<string, string>
@@ -44,20 +46,23 @@ export const FoodEntry = ({ entry }: { entry: any }) => {
 
 	// Get the food name from recipe or food entry
 	const foodName =
-		entry.recipe?.name ||
-		(entry.food?.food_name
-			? `${entry.food.food_name}${entry.food.brand_name ? ` (${entry.food.brand_name})` : ""}`
-			: "Unknown Food");
+		entry.recipe?.name || entry.food?.food_name || "Unknown Food";
 
 	// Get recipe image if available
 	const imageUrl = useRecipeImage(entry.recipe?.image_id);
 
 	// Create a map of profile ID to profile for quick lookup
-	const profileMap = new Map(selectableProfiles.map((p: any) => [p.id, p]));
+	const profileMap = new Map(selectableProfiles.map((p) => [p.id, p]));
 
 	// Create a map of selected profile IDs
 	const selectedProfileIds = new Set(
-		selectableProfiles.filter((p: any) => p.isSelected).map((p: any) => p.id),
+		selectableProfiles.filter((p) => p.isSelected).map((p) => p.id),
+	);
+
+	// Calculate nutrition for selected profiles
+	const nutrition = calculateFoodEntryNutritionForSelectedProfiles(
+		entry,
+		selectedProfileIds,
 	);
 
 	const handleDelete = () => {
@@ -72,7 +77,7 @@ export const FoodEntry = ({ entry }: { entry: any }) => {
 	const handleEdit = () => {
 		// Initialize editing servings with current values
 		const servingsMap: Record<string, string> = {};
-		entry.profile_food_entry.forEach((pfe: any) => {
+		entry.profile_food_entry.forEach((pfe) => {
 			servingsMap[pfe.profile_id] = pfe.number_of_servings.toString();
 		});
 		setEditingServings(servingsMap);
@@ -162,44 +167,22 @@ export const FoodEntry = ({ entry }: { entry: any }) => {
 								<View className="mt-1 gap-1 flex-row flex-wrap">
 									{entry.profile_food_entry
 										.filter(
-											(pfe: any) =>
+											(pfe) =>
 												pfe.number_of_servings > 0 &&
 												selectedProfileIds.has(pfe.profile_id),
 										)
-										.map((pfe: any) => {
-											const profile = profileMap.get(pfe.profile_id);
-											const initials = profile?.name
-												? profile.name.slice(0, 1).toUpperCase()
-												: "?";
-
+										.map((pfe) => {
 											return (
-												<View
+												<ProfileServingBadge
 													key={pfe.id}
-													className="flex-row items-center gap-0.5 pl-0.5 pr-2 py-0.5 bg-gray-200 rounded-full"
-												>
-													<Avatar
-														alt={`${profile?.name}'s Avatar`}
-														className="h-5 w-5"
-													>
-														{profile?.avatar_url ? (
-															<AvatarImage
-																source={{ uri: profile.avatar_url }}
-															/>
-														) : null}
-														<AvatarFallback>
-															<Text className="text-xs font-semibold">
-																{initials}
-															</Text>
-														</AvatarFallback>
-													</Avatar>
-													<Text className="text-sm font-medium text-gray-700">
-														{pfe.number_of_servings}
-													</Text>
-												</View>
+													profileId={pfe.profile_id}
+													servings={pfe.number_of_servings}
+												/>
 											);
 										})}
 								</View>
 							)}
+						<MacroDisplay nutrition={nutrition} size="sm" className="mt-2" />
 					</View>
 
 					{/* Edit Servings Dialog */}
@@ -213,8 +196,8 @@ export const FoodEntry = ({ entry }: { entry: any }) => {
 							</DialogHeader>
 							<View className="gap-4">
 								{entry.profile_food_entry
-									.filter((pfe: any) => selectedProfileIds.has(pfe.profile_id))
-									.map((pfe: any) => {
+									.filter((pfe) => selectedProfileIds.has(pfe.profile_id))
+									.map((pfe) => {
 										const profile = profileMap.get(pfe.profile_id);
 										return (
 											<View key={pfe.profile_id} className="gap-2">

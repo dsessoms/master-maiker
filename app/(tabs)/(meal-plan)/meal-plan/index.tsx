@@ -5,6 +5,7 @@ import { useContext, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { DaySection } from "@/components//meal-plan/day-section";
 import { DnDScrollView } from "@/components/ui/dnd/dnd-scroll-view";
+import { GenerateMealPlanModal } from "@/components/meal-plan/generate-meal-plan-modal";
 import { MealPlanContext } from "@/context/meal-plan-context";
 import { NotesModal } from "@/components/meal-plan/notes-modal";
 import { ProfileDropdown } from "@/components//user-dropdown";
@@ -27,6 +28,8 @@ export default function MealPlanScreen() {
 		foodEntriesByDay,
 		notesModalState,
 		closeNotesModal,
+		generateMealPlanModalOpen,
+		openGenerateMealPlanModal,
 	} = useContext(MealPlanContext);
 
 	const weekDates = useMemo(
@@ -37,19 +40,6 @@ export default function MealPlanScreen() {
 			}),
 		[startDate, endDate],
 	);
-
-	useEffect(() => {
-		console.log(
-			"weekDates:",
-			weekDates.map((d) => format(d, "yyyy-MM-dd")),
-		);
-		console.log(
-			"startDate:",
-			format(startDate, "yyyy-MM-dd"),
-			"endDate:",
-			format(endDate, "yyyy-MM-dd"),
-		);
-	}, [weekDates, startDate, endDate]);
 
 	return (
 		<SafeAreaView
@@ -105,11 +95,18 @@ export default function MealPlanScreen() {
 					mealType={notesModalState.mealType}
 				/>
 			)}
+			{generateMealPlanModalOpen && (
+				<GenerateMealPlanModal
+					defaultStartDate={startDate}
+					defaultEndDate={endDate}
+				/>
+			)}
 			<View className="absolute bottom-6 right-6">
 				<Button
 					variant="default"
 					size="icon"
 					className="w-12 h-12 rounded-full shadow-sm"
+					onPress={openGenerateMealPlanModal}
 				>
 					<WandSparkles className="text-primary-foreground" size={24} />
 				</Button>

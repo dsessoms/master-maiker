@@ -63,7 +63,13 @@ export async function GET(req: Request) {
 					id,
 					name,
 					image_id,
-					number_of_servings
+					number_of_servings,
+					macros:recipe_macros (
+						calories,
+						protein,
+						carbohydrate,
+						fat
+					)
 				),
 				food:food_id (
 					id,
@@ -424,6 +430,12 @@ export interface FoodEntry {
 		name: string;
 		image_id: string | null;
 		number_of_servings: number;
+		macros: {
+			calories: number | null;
+			protein: number | null;
+			carbohydrate: number | null;
+			fat: number | null;
+		}[];
 	} | null;
 	food: {
 		id: string;

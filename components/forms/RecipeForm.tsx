@@ -1,6 +1,10 @@
 import { ActivityIndicator, ScrollView, View } from "react-native";
 import { Form, FormField, FormInput, FormTextarea } from "../ui/form";
-import { Ingredient, Recipe, RecipeSchema } from "../../lib/schemas";
+import {
+	Ingredient,
+	MealPlanChatRecipe,
+	RecipeSchema,
+} from "../../lib/schemas";
 
 import { Button } from "../ui/button";
 import { ImageUploader } from "./ImageUploader";
@@ -26,8 +30,8 @@ interface Header {
 type IngredientOrHeader = Ingredient | Header;
 
 export interface RecipeFormProps {
-	initialValues?: Recipe;
-	onSubmit: (data: Partial<Recipe>) => Promise<void>;
+	initialValues?: MealPlanChatRecipe;
+	onSubmit: (data: Partial<MealPlanChatRecipe>) => Promise<void>;
 	isEdit?: boolean;
 }
 
@@ -38,7 +42,7 @@ export function RecipeForm({
 }: RecipeFormProps) {
 	const existingImageUrl = useRecipeImage(initialValues?.image_id);
 
-	const form = useForm<Recipe>({
+	const form = useForm<MealPlanChatRecipe>({
 		resolver: zodResolver(RecipeSchema),
 		defaultValues: initialValues ?? {
 			name: "",
@@ -65,7 +69,7 @@ export function RecipeForm({
 	const [isUploadingImage, setIsUploadingImage] = useState(false);
 
 	// Override the submit handler to include parsed ingredients and handle image upload
-	const handleSubmit = async (data: Partial<Recipe>) => {
+	const handleSubmit = async (data: Partial<MealPlanChatRecipe>) => {
 		let image_id: string | undefined;
 
 		// Handle image upload if there's a new file

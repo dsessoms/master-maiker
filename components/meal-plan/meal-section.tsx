@@ -12,16 +12,18 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
-import { useCallback, useContext, useState } from "react";
+import { useCallback, useContext, useMemo, useState } from "react";
 
 import { Button } from "../ui/button";
 import { DroppableArea } from "../ui/dnd/droppable-area";
 import { FoodEntry } from "./food-entry";
+import { MacroDisplay } from "./macro-display";
 import { MealPlanContext } from "@/context/meal-plan-context";
 import { MealType } from "@/types";
 import { NotesList } from "./notes-list";
 import { Text } from "../ui/text";
 import { View } from "react-native";
+import { calculateFoodEntriesNutrition } from "@/lib/utils/nutrition-calculator";
 import { cn } from "../../lib/utils";
 import { useUpdateFoodEntry } from "@/hooks/recipes/use-update-food-entry";
 
@@ -72,6 +74,16 @@ export const MealSection = ({
 		),
 	);
 
+	// Calculate total nutrition for this meal type
+	const mealNutrition = useMemo(
+		() =>
+			calculateFoodEntriesNutrition(
+				filteredFoodEntries || [],
+				selectedProfileIds,
+			),
+		[filteredFoodEntries, selectedProfileIds],
+	);
+
 	const handleDrop = useCallback(
 		(draggedData: any) => {
 			const entry = draggedData?.entry;
@@ -118,14 +130,17 @@ export const MealSection = ({
 				<View className="flex min-w-0 flex-1 flex-col pb-4">
 					<View className="mb-3 flex flex-col">
 						<View className="flex flex-row items-start justify-between">
-							<Text
-								className={cn(
-									"mr-2 w-24 text-lg font-semibold",
-									isDropActive && "text-primary",
-								)}
-							>
-								{mealType}
-							</Text>
+							<View className="flex flex-col gap-1">
+								<Text
+									className={cn(
+										"mr-2 text-lg font-semibold",
+										isDropActive && "text-primary",
+									)}
+								>
+									{mealType}
+								</Text>
+								<MacroDisplay nutrition={mealNutrition} size="sm" />
+							</View>
 							<DropdownMenu>
 								<DropdownMenuTrigger asChild>
 									<Button

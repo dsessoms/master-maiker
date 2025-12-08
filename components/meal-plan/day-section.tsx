@@ -1,12 +1,13 @@
 import { useContext, useMemo } from "react";
 
+import { FoodEntry } from "@/app/api/food-entries/index+api";
+import { MacroDisplay } from "./macro-display";
 import { MealPlanContext } from "@/context/meal-plan-context";
 import { MealSection } from "./meal-section";
 import { Text } from "../ui/text";
 import { View } from "react-native";
+import { calculateFoodEntriesNutrition } from "@/lib/utils/nutrition-calculator";
 import { format } from "date-fns";
-
-type FoodEntry = any; // TODO: replace with real type
 
 export const DaySection = ({
 	date,
@@ -18,6 +19,7 @@ export const DaySection = ({
 	onAdd: (mealType: string) => void;
 }) => {
 	const { selectableProfiles } = useContext(MealPlanContext);
+
 	const recipeEntriesByMealType = useMemo(() => {
 		const finalMap: { [key: string]: FoodEntry[] } = {};
 		recipeEntries?.forEach((entry) => {
@@ -30,12 +32,33 @@ export const DaySection = ({
 
 		return finalMap;
 	}, [recipeEntries]);
+
+	// Calculate total nutrition for the entire day
+	const selectedProfileIds = useMemo(
+		() =>
+			new Set(
+				selectableProfiles
+					.filter((p: any) => p.isSelected)
+					.map((p: any) => p.id),
+			),
+		[selectableProfiles],
+	);
+
+	const dayNutrition = useMemo(
+		() =>
+			calculateFoodEntriesNutrition(recipeEntries || [], selectedProfileIds),
+		[recipeEntries, selectedProfileIds],
+	);
+
 	const dateString = format(date, "yyyy-MM-dd");
 
 	return (
 		<View className="min-w-96">
 			<View className="mb-4 mt-8">
-				<Text className="text-2xl mr-2">{format(date, "EEEE")}</Text>
+				<View className="flex flex-row items-center justify-between">
+					<Text className="text-2xl mr-2">{format(date, "EEEE")}</Text>
+					<MacroDisplay nutrition={dayNutrition} size="md" />
+				</View>
 			</View>
 			<View>
 				<MealSection

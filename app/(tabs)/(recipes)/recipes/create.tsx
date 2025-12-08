@@ -1,6 +1,6 @@
 import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 
-import { Recipe } from "@/lib/schemas";
+import { MealPlanChatRecipe } from "@/lib/schemas";
 import { RecipeForm } from "@/components/forms/RecipeForm";
 import { SafeAreaView } from "@/components/safe-area-view";
 import { useAuth } from "@/context/supabase-provider";
@@ -12,10 +12,10 @@ export default function CreateRecipePage() {
 	const { session } = useAuth();
 	const { createRecipe } = useCreateRecipeMutation();
 
-	const handleCreate = async (data: Partial<Recipe>) => {
+	const handleCreate = async (data: Partial<MealPlanChatRecipe>) => {
 		if (!session) return;
 		try {
-			await createRecipe(data as Recipe);
+			await createRecipe(data as MealPlanChatRecipe);
 			router.back();
 		} catch (e) {
 			console.error("Error creating recipe:", e);

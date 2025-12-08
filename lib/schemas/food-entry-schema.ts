@@ -3,7 +3,7 @@ import { NoteSchema } from "./note-schema";
 import { z } from "zod";
 
 export const UserServingSchema = z.object({
-	user_id: z.string(),
+	profile_id: z.string(),
 	number_of_servings: z.number(),
 });
 export type UserServing = z.infer<typeof UserServingSchema>;
@@ -14,7 +14,7 @@ export type MealType = z.infer<typeof MealTypeSchema>;
 const BaseEntrySchema = z.object({
 	id: z.string(),
 	user_id: z.string(),
-	user_servings: z.array(UserServingSchema),
+	profile_servings: z.array(UserServingSchema),
 	meal_type: MealTypeSchema,
 	note: NoteSchema.optional(),
 	date: z.coerce.date(),

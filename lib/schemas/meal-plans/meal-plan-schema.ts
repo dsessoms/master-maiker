@@ -1,7 +1,7 @@
-import { FoodItemEntrySchema, RecipeEntrySchema } from "./food-entry-schema";
+import { FoodItemEntrySchema, RecipeEntrySchema } from "../food-entry-schema";
 
-import { NoteEntrySchema } from "./note-schema";
-import { RecipeSchema } from "./recipes/recipe-schema";
+import { NoteEntrySchema } from "../note-schema";
+import { RecipeSchema } from "../recipes/recipe-schema";
 import { z } from "zod";
 
 export const GeneratorOutputSchema = z.object({

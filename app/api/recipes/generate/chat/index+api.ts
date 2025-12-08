@@ -13,7 +13,6 @@ export interface ChatMessage {
 
 export interface ChatRequest {
 	messages: ChatMessage[];
-	stream?: boolean;
 }
 
 export type PostChatResponse = Awaited<ReturnType<typeof POST>>;

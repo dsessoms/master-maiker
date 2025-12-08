@@ -222,7 +222,6 @@ export const ChatTab = ({ onGenerate, isGenerating }: ChatTabProps) => {
 				ref={scrollViewRef}
 				className="flex-1"
 				contentContainerStyle={{
-					padding: 16,
 					paddingBottom: 8,
 					flexGrow: 1,
 				}}
