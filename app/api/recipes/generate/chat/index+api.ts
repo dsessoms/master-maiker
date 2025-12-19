@@ -6,13 +6,37 @@ import { zodToJsonSchema } from "zod-to-json-schema";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY as string;
 
-export interface ChatMessage {
+export interface RecipeChatMessage {
 	role: "assistant" | "user";
 	content: string;
 }
 
-export interface ChatRequest {
-	messages: ChatMessage[];
+export interface RecipeChatQuickOption {
+	title: string;
+}
+
+export interface RecipeChatMultiSelectOptions {
+	title: string;
+	options: RecipeChatQuickOption[];
+}
+
+export interface RecipePreview {
+	title: string;
+	servings: number;
+	ingredients: string[];
+	instructions: string;
+}
+
+export interface RecipeChatRequest {
+	messages: RecipeChatMessage[];
+}
+
+export interface RecipeChatResponse {
+	text: string;
+	content?: string;
+	quickOptions?: RecipeChatQuickOption[];
+	multiSelectOptions?: RecipeChatMultiSelectOptions;
+	recipePreview?: RecipePreview;
 }
 
 export type PostChatResponse = Awaited<ReturnType<typeof POST>>;
@@ -27,7 +51,7 @@ export async function POST(req: Request) {
 
 	try {
 		// Parse the request body
-		const body: ChatRequest = await req.json();
+		const body: RecipeChatRequest = await req.json();
 		const { messages } = body;
 
 		// Validate required fields
@@ -153,16 +177,20 @@ WRONG - Including "Generate Recipe" in quickOptions:
 		if (text) {
 			try {
 				const parsedResponse = JSON.parse(text);
-				return jsonResponse({
+				const chatResponse: RecipeChatResponse = {
 					text,
 					content: parsedResponse.content,
 					quickOptions: parsedResponse.quickOptions,
 					multiSelectOptions: parsedResponse.multiSelectOptions,
 					recipePreview: parsedResponse.recipePreview,
-				});
+				};
+
+				return jsonResponse(chatResponse);
 			} catch {
-				// Fallback to returning just the text if parsing fails
-				return jsonResponse({ text });
+				return jsonResponse(
+					{ error: `Failed to parse response: ${text}` },
+					{ status: 500 },
+				);
 			}
 		}
 

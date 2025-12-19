@@ -1,5 +1,11 @@
+import { Platform, ScrollView, TextInput, View } from "react-native";
 import React, { useEffect, useRef, useState } from "react";
-import { ScrollView, View, TextInput, Platform } from "react-native";
+import {
+	RecipeChatMessage,
+	RecipeChatMultiSelectOptions,
+	RecipeChatQuickOption,
+	RecipePreview,
+} from "@/app/api/recipes/generate/chat/index+api";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -7,20 +13,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { KeyboardHint } from "@/components/ui/keyboard-hint";
 import { Text } from "@/components/ui/text";
-import {
-	useGenerateRecipeChat,
-	type QuickOption,
-	type MultiSelectOptions,
-	type RecipePreview,
-	type ChatMessage,
-} from "@/hooks/recipes/use-generate-recipe-chat";
+import { useGenerateRecipeChat } from "@/hooks/recipes/use-generate-recipe-chat";
 
 export interface ChatDisplayMessage {
 	id: string;
 	role: "assistant" | "user";
 	content: string;
-	quickOptions?: QuickOption[];
-	multiSelectOptions?: MultiSelectOptions;
+	quickOptions?: RecipeChatQuickOption[];
+	multiSelectOptions?: RecipeChatMultiSelectOptions;
 	recipePreview?: RecipePreview;
 }
 
@@ -84,7 +84,7 @@ export const ChatTab = ({ onGenerate, isGenerating }: ChatTabProps) => {
 
 			try {
 				// Convert to API format
-				const apiMessages: ChatMessage[] = updatedMessages.map((msg) => ({
+				const apiMessages: RecipeChatMessage[] = updatedMessages.map((msg) => ({
 					role: msg.role,
 					content: msg.content,
 				}));
@@ -161,7 +161,7 @@ export const ChatTab = ({ onGenerate, isGenerating }: ChatTabProps) => {
 		await sendMessageWithOption(updatedMessages);
 	};
 
-	const handleQuickOptionSelect = async (option: QuickOption) => {
+	const handleQuickOptionSelect = async (option: RecipeChatQuickOption) => {
 		if (!isPending) {
 			// Normal quick option handling
 			const userMessage: ChatDisplayMessage = {
@@ -183,7 +183,7 @@ export const ChatTab = ({ onGenerate, isGenerating }: ChatTabProps) => {
 	) => {
 		try {
 			// Convert to API format
-			const apiMessages: ChatMessage[] = existingMessages.map((msg) => ({
+			const apiMessages: RecipeChatMessage[] = existingMessages.map((msg) => ({
 				role: msg.role,
 				content: msg.content,
 			}));

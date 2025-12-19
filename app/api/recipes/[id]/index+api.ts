@@ -1,4 +1,4 @@
-import { MealPlanChatRecipe } from "@/lib/schemas";
+import { Recipe } from "@/lib/schemas";
 import { extractParamsFromRequest } from "@/lib/url-params";
 import { jsonResponse } from "@/lib/server/json-response";
 import { supabase } from "@/config/supabase-server";
@@ -69,7 +69,7 @@ export async function PUT(req: Request) {
 	};
 
 	// get body
-	const recipe = (await req.json()) as MealPlanChatRecipe;
+	const recipe = (await req.json()) as Recipe;
 
 	if (!recipe.ingredients) {
 		return jsonResponse(

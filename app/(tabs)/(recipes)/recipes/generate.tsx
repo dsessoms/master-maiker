@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { ChatTab } from "@/components/recipe/chat-tab";
 import { FormTab } from "@/components/recipe/form-tab";
-import { RecipePreview } from "@/hooks/recipes/use-generate-recipe-chat";
+import { RecipePreview } from "@/app/api/recipes/generate/chat/index+api";
 import { Text } from "@/components/ui/text";
 import { router } from "expo-router";
 import { useCreateRecipeMutation } from "@/hooks/recipes/use-create-recipe-mutation";

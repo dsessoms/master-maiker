@@ -1,4 +1,4 @@
-import { MealPlanChatRecipe } from "@/lib/schemas";
+import { Recipe } from "@/lib/schemas";
 import { jsonResponse } from "@/lib/server/json-response";
 import { supabase } from "@/config/supabase-server";
 import { validateSession } from "@/lib/server/validate-session";
@@ -16,7 +16,7 @@ export async function POST(req: Request) {
 	}
 
 	// get body
-	const recipe = (await req.json()) as MealPlanChatRecipe;
+	const recipe = (await req.json()) as Recipe;
 
 	if (!recipe.ingredients) {
 		return jsonResponse({ id: undefined }, { status: 401 });

@@ -1,44 +1,15 @@
+import {
+	RecipeChatRequest,
+	RecipeChatResponse,
+} from "@/app/api/recipes/generate/chat/index+api";
+
 import axiosWithAuth from "@/lib/axiosWithAuth";
 import { useMutation } from "@tanstack/react-query";
 
-export interface ChatMessage {
-	role: "assistant" | "user";
-	content: string;
-}
-
-export interface QuickOption {
-	title: string;
-}
-
-export interface MultiSelectOptions {
-	title: string;
-	options: QuickOption[];
-}
-
-export interface RecipePreview {
-	title: string;
-	servings: number;
-	ingredients: string[];
-	instructions: string;
-}
-
-export interface ChatRequest {
-	messages: ChatMessage[];
-	stream?: boolean;
-}
-
-export interface ChatResponse {
-	text: string;
-	content?: string;
-	quickOptions?: QuickOption[];
-	multiSelectOptions?: MultiSelectOptions;
-	recipePreview?: RecipePreview;
-}
-
 export const useGenerateRecipeChat = () => {
-	const mutation = useMutation<ChatResponse, unknown, ChatRequest>({
-		mutationFn: async (request: ChatRequest) => {
-			const response = await axiosWithAuth.post<ChatResponse>(
+	const mutation = useMutation<RecipeChatResponse, unknown, RecipeChatRequest>({
+		mutationFn: async (request: RecipeChatRequest) => {
+			const response = await axiosWithAuth.post<RecipeChatResponse>(
 				"/api/recipes/generate/chat",
 				{ ...request, stream: false },
 			);
