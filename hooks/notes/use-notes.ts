@@ -1,17 +1,9 @@
-import { FetchNotesResponse } from "@/app/api/notes/index+api";
+import { FetchNotesResponse, GetNotesRequest } from "@/lib/schemas/note-schema";
+
 import axiosWithAuth from "@/lib/axiosWithAuth";
 import { useQuery } from "@tanstack/react-query";
 
-export interface UseNotesParams {
-	noteType?: "day_meal" | "food_entry";
-	date?: string; // Format: YYYY-MM-DD
-	mealType?: "Breakfast" | "Lunch" | "Dinner" | "Snack";
-	foodEntryId?: string;
-	startDate?: string; // Format: YYYY-MM-DD
-	endDate?: string; // Format: YYYY-MM-DD
-}
-
-export const useNotes = (params?: UseNotesParams) => {
+export const useNotes = (params?: GetNotesRequest) => {
 	const { data, ...rest } = useQuery({
 		queryKey: ["notes", params],
 		queryFn: async () => {

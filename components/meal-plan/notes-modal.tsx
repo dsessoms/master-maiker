@@ -185,7 +185,7 @@ export const NotesModal = ({
 
 	const handleCheckboxToggle = (noteId: string, currentChecked: boolean) => {
 		updateNote.mutate({
-			noteId,
+			id: noteId,
 			isChecked: !currentChecked,
 		});
 	};
@@ -300,7 +300,7 @@ export const NotesModal = ({
 												// Update existing note
 												updateNote.mutate(
 													{
-														noteId: note.id,
+														id: note.id,
 														value: trimmedValue,
 													},
 													{

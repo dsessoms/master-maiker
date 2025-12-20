@@ -1,21 +1,16 @@
+import {
+	UpdateNoteRequest,
+	UpdateNoteResponse,
+} from "@/lib/schemas/note-schema";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { UpdateNoteResponse } from "@/app/api/notes/index+api";
 import axiosWithAuth from "@/lib/axiosWithAuth";
-
-export interface UpdateNotePayload {
-	noteId: string;
-	value?: string;
-	isCheckbox?: boolean;
-	isChecked?: boolean;
-	displayOrder?: number;
-}
 
 export const useUpdateNote = () => {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: async (payload: UpdateNotePayload) => {
+		mutationFn: async (payload: UpdateNoteRequest) => {
 			const response = await axiosWithAuth.patch<UpdateNoteResponse>(
 				"/api/notes",
 				payload,

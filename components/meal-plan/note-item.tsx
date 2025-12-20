@@ -4,7 +4,7 @@ import { Pressable, View } from "react-native";
 import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
 import { Input } from "../ui/input";
-import { Note } from "@/app/api/notes/index+api";
+import { Note } from "@/lib/schemas/note-schema";
 import { Text } from "../ui/text";
 import { cn } from "@/lib/utils";
 import { useState } from "react";

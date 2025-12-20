@@ -1,18 +1,18 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { DeleteNoteResponse } from "@/app/api/notes/index+api";
+import { DeleteNoteResponse } from "@/lib/schemas/note-schema";
 import axiosWithAuth from "@/lib/axiosWithAuth";
 
 export const useDeleteNote = () => {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: async (noteId: string) => {
+		mutationFn: async (id: string) => {
 			const response = await axiosWithAuth.delete<DeleteNoteResponse>(
 				"/api/notes",
 				{
 					data: {
-						noteId,
+						id,
 					},
 				},
 			);

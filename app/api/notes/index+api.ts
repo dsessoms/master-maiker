@@ -1,3 +1,9 @@
+import {
+	CreateNoteRequestSchema,
+	DeleteNoteRequestSchema,
+	UpdateNoteRequestSchema,
+} from "@/lib/schemas/note-schema";
+
 import { jsonResponse } from "@/lib/server/json-response";
 import { supabase } from "@/config/supabase-server";
 import { validateSession } from "@/lib/server/validate-session";
@@ -101,61 +107,30 @@ export async function POST(req: Request) {
 	}
 
 	try {
-		// Parse request body
+		// Parse and validate request body
 		const body = await req.json();
+		const validation = CreateNoteRequestSchema.safeParse(body);
+
+		if (!validation.success) {
+			return jsonResponse(
+				{
+					success: false,
+					error: validation.error.errors[0]?.message || "Invalid request body",
+				},
+				{ status: 400 },
+			);
+		}
+
 		const {
 			noteType,
 			value,
-			isCheckbox = false,
-			isChecked = false,
-			displayOrder = 0,
+			isCheckbox,
+			isChecked,
+			displayOrder,
 			date,
 			mealType,
 			foodEntryId,
-		} = body;
-
-		// Validate required fields
-		if (!noteType || !value) {
-			return jsonResponse(
-				{
-					success: false,
-					error: "Missing required fields: noteType and value",
-				},
-				{ status: 400 },
-			);
-		}
-
-		// Validate note type specific fields
-		if (noteType === "day_meal") {
-			if (!date || !mealType) {
-				return jsonResponse(
-					{
-						success: false,
-						error:
-							"Missing required fields for day_meal note: date and mealType",
-					},
-					{ status: 400 },
-				);
-			}
-		} else if (noteType === "food_entry") {
-			if (!foodEntryId) {
-				return jsonResponse(
-					{
-						success: false,
-						error: "Missing required field for food_entry note: foodEntryId",
-					},
-					{ status: 400 },
-				);
-			}
-		} else {
-			return jsonResponse(
-				{
-					success: false,
-					error: "Invalid noteType. Must be 'day_meal' or 'food_entry'",
-				},
-				{ status: 400 },
-			);
-		}
+		} = validation.data;
 
 		// Prepare insert data
 		const insertData: any = {
@@ -217,26 +192,27 @@ export async function PATCH(req: Request) {
 	}
 
 	try {
-		// Parse request body
+		// Parse and validate request body
 		const body = await req.json();
-		const { noteId, value, isCheckbox, isChecked, displayOrder } = body;
+		const validation = UpdateNoteRequestSchema.safeParse(body);
 
-		// Validate required fields
-		if (!noteId) {
+		if (!validation.success) {
 			return jsonResponse(
 				{
 					success: false,
-					error: "Missing required field: noteId",
+					error: validation.error.errors[0]?.message || "Invalid request body",
 				},
 				{ status: 400 },
 			);
 		}
 
+		const { id, value, isCheckbox, isChecked, displayOrder } = validation.data;
+
 		// Verify the note belongs to the user
 		const { data: note, error: fetchError } = await supabase
 			.from("note")
 			.select("user_id")
-			.eq("id", noteId)
+			.eq("id", id)
 			.single();
 
 		if (fetchError || !note) {
@@ -281,7 +257,7 @@ export async function PATCH(req: Request) {
 		const { data: updatedNote, error: updateError } = await supabase
 			.from("note")
 			.update(updateData)
-			.eq("id", noteId)
+			.eq("id", id)
 			.select()
 			.single();
 
@@ -321,26 +297,27 @@ export async function DELETE(req: Request) {
 	}
 
 	try {
-		// Parse request body
+		// Parse and validate request body
 		const body = await req.json();
-		const { noteId } = body;
+		const validation = DeleteNoteRequestSchema.safeParse(body);
 
-		// Validate required fields
-		if (!noteId) {
+		if (!validation.success) {
 			return jsonResponse(
 				{
 					success: false,
-					error: "Missing required field: noteId",
+					error: validation.error.errors[0]?.message || "Invalid request body",
 				},
 				{ status: 400 },
 			);
 		}
 
+		const { id } = validation.data;
+
 		// Verify the note belongs to the user
 		const { data: note, error: fetchError } = await supabase
 			.from("note")
 			.select("user_id")
-			.eq("id", noteId)
+			.eq("id", id)
 			.single();
 
 		if (fetchError || !note) {
@@ -368,7 +345,7 @@ export async function DELETE(req: Request) {
 		const { error: deleteError } = await supabase
 			.from("note")
 			.delete()
-			.eq("id", noteId);
+			.eq("id", id);
 
 		if (deleteError) {
 			console.error("Error deleting note:", deleteError);
@@ -392,79 +369,4 @@ export async function DELETE(req: Request) {
 			{ status: 500 },
 		);
 	}
-}
-
-// TypeScript interfaces
-export interface Note {
-	id: string;
-	user_id: string;
-	note_type: "day_meal" | "food_entry";
-	date: string | null;
-	meal_type: "Breakfast" | "Lunch" | "Dinner" | "Snack" | null;
-	food_entry_id: string | null;
-	value: string;
-	is_checkbox: boolean;
-	is_checked: boolean;
-	display_order: number;
-	created_at: string;
-}
-
-export interface GetNotesRequest {
-	noteType?: "day_meal" | "food_entry";
-	date?: string; // Format: YYYY-MM-DD
-	mealType?: "Breakfast" | "Lunch" | "Dinner" | "Snack";
-	foodEntryId?: string;
-	startDate?: string; // Format: YYYY-MM-DD
-	endDate?: string; // Format: YYYY-MM-DD
-}
-
-export interface FetchNotesResponse {
-	success: boolean;
-	error?: string;
-	notes: Note[];
-}
-
-export interface CreateNoteRequest {
-	noteType: "day_meal" | "food_entry";
-	value: string;
-	isCheckbox?: boolean;
-	isChecked?: boolean;
-	displayOrder?: number;
-	// For day_meal notes
-	date?: string; // Format: YYYY-MM-DD
-	mealType?: "Breakfast" | "Lunch" | "Dinner" | "Snack";
-	// For food_entry notes
-	foodEntryId?: string;
-}
-
-export interface CreateNoteResponse {
-	success: boolean;
-	error?: string;
-	note?: Note;
-	message?: string;
-}
-
-export interface UpdateNoteRequest {
-	noteId: string;
-	value?: string;
-	isCheckbox?: boolean;
-	isChecked?: boolean;
-	displayOrder?: number;
-}
-
-export interface UpdateNoteResponse {
-	success: boolean;
-	error?: string;
-	note?: Note;
-	message?: string;
-}
-
-export interface DeleteNoteRequest {
-	noteId: string;
-}
-
-export interface DeleteNoteResponse {
-	success: boolean;
-	error?: string;
-	message?: string;
 }

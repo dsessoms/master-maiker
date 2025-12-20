@@ -33,7 +33,7 @@ export const NotesList = ({ date, mealType }: NotesListProps) => {
 
 	const handleCheckboxToggle = (noteId: string, currentChecked: boolean) => {
 		updateNote.mutate({
-			noteId,
+			id: noteId,
 			isChecked: !currentChecked,
 		});
 	};
