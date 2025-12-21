@@ -1,4 +1,4 @@
-import type { GeneratedMealPlan } from "@/lib/schemas/meal-plans/generate/chat-response";
+import type { GeneratedMealPlan } from "@/lib/schemas/meal-plans/generate/chat-schema";
 import type { PostSaveResponse } from "@/app/api/meal-plans/generate/save/index+api";
 import axiosWithAuth from "@/lib/axiosWithAuth";
 import { useMutation } from "@tanstack/react-query";

@@ -5,7 +5,7 @@ import {
 	RecipeChatMultiSelectOptions,
 	RecipeChatQuickOption,
 	RecipePreview,
-} from "@/app/api/recipes/generate/chat/index+api";
+} from "@/lib/schemas/recipes/generate/chat-schema";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";

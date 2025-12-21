@@ -1,4 +1,9 @@
-import { ActivityIndicator, ScrollView, View } from "react-native";
+import {
+	ActivityIndicator,
+	ScrollView,
+	View,
+	TouchableOpacity,
+} from "react-native";
 import { Redirect, Stack, useLocalSearchParams, useRouter } from "expo-router";
 
 import { Button } from "@/components/ui/button";
@@ -7,7 +12,6 @@ import { RecipeCard } from "@/components/recipe/recipe-card";
 import { RecipeServingSelectorModal } from "@/components/meal-plan/recipe-serving-selector-modal";
 import { SafeAreaView } from "@/components/safe-area-view";
 import { Text } from "@/components/ui/text";
-import { TouchableOpacity } from "react-native";
 import { useAddFoodEntry } from "@/hooks/recipes/use-add-food-entry";
 import { useProfiles } from "@/hooks/profiles/useProfiles";
 import { useRecipes } from "@/hooks/recipes/use-recipes";

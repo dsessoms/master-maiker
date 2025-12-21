@@ -1,19 +1,16 @@
+import {
+	MealPlanChatChatResponse,
+	MealPlanChatRequest,
+	MealPlanChatRequestSchema,
+	MealPlanChatResponseSchema,
+} from "@/lib/schemas/meal-plans/generate/chat-schema";
+
 import { GoogleGenAI } from "@google/genai";
-import { MealPlanChatResponseSchema } from "@/lib/schemas/meal-plans/generate/chat-response";
 import { jsonResponse } from "@/lib/server/json-response";
 import { validateSession } from "@/lib/server/validate-session";
 import { zodToJsonSchema } from "zod-to-json-schema";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY as string;
-
-export interface ChatMessage {
-	role: "assistant" | "user";
-	content: string;
-}
-
-export interface ChatRequest {
-	messages: ChatMessage[];
-}
 
 export type PostChatResponse = Awaited<ReturnType<typeof POST>>;
 
@@ -27,16 +24,22 @@ export async function POST(req: Request) {
 
 	try {
 		// Parse the request body
-		const body: ChatRequest = await req.json();
-		const { messages } = body;
+		const body = await req.json();
 
-		// Validate required fields
-		if (!Array.isArray(messages) || messages.length === 0) {
+		// Validate using Zod schema
+		const validationResult = MealPlanChatRequestSchema.safeParse(body);
+
+		if (!validationResult.success) {
 			return jsonResponse(
-				{ error: "Invalid request body. Required: messages array" },
+				{
+					error: "Invalid request body",
+					details: validationResult.error.errors,
+				},
 				{ status: 400 },
 			);
 		}
+
+		const { messages }: MealPlanChatRequest = validationResult.data;
 
 		const ai = new GoogleGenAI({
 			apiKey: GEMINI_API_KEY,
@@ -196,11 +199,12 @@ SHARED RECIPE PATTERN - CRITICAL:
 		if (text) {
 			try {
 				const parsedResponse = JSON.parse(text);
-				return jsonResponse({
+				const response: MealPlanChatChatResponse = {
 					text,
 					content: parsedResponse.content,
 					mealPlan: parsedResponse.mealPlan,
-				});
+				};
+				return jsonResponse(response);
 			} catch {
 				console.error("failed to parse ai response, falling back to text");
 				// Fallback to returning just the text if parsing fails

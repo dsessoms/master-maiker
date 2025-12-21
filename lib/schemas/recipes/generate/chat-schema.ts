@@ -1,5 +1,16 @@
 import { z } from "zod";
 
+// Request schemas
+export const RecipeChatMessageSchema = z.object({
+	role: z.enum(["assistant", "user"]),
+	content: z.string(),
+});
+
+export const RecipeChatRequestSchema = z.object({
+	messages: z.array(RecipeChatMessageSchema).min(1),
+});
+
+// Response schemas
 export const quickOptionSchema = z.object({
 	title: z
 		.string()
@@ -52,7 +63,19 @@ export const chatResponseSchema = z.object({
 		),
 });
 
+export const RecipeChatResponseSchema = chatResponseSchema.extend({
+	text: z.string(),
+});
+
+// Request types
+export type RecipeChatMessage = z.infer<typeof RecipeChatMessageSchema>;
+export type RecipeChatRequest = z.infer<typeof RecipeChatRequestSchema>;
+
+// Response types
 export type ChatResponse = z.infer<typeof chatResponseSchema>;
+export type RecipeChatResponse = z.infer<typeof RecipeChatResponseSchema>;
 export type QuickOption = z.infer<typeof quickOptionSchema>;
+export type RecipeChatQuickOption = QuickOption;
 export type MultiSelectOptions = z.infer<typeof multiSelectOptionsSchema>;
+export type RecipeChatMultiSelectOptions = MultiSelectOptions;
 export type RecipePreview = z.infer<typeof recipePreviewSchema>;

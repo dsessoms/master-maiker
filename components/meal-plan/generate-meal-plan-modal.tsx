@@ -4,6 +4,7 @@ import DateTimePicker, {
 	DateType,
 	useDefaultClassNames,
 } from "react-native-ui-datepicker";
+import { GeneratedMealPlan, MealPlanChatMessage } from "@/lib/schemas";
 import { Modal, ScrollView, TouchableOpacity, View } from "react-native";
 import React, {
 	useContext,
@@ -13,30 +14,26 @@ import React, {
 	useRef,
 	useState,
 } from "react";
+import {
+	cacheMealPlan,
+	clearMealPlanCache,
+	generateMealPlanCacheKey,
+	getCachedMealPlan,
+} from "@/lib/meal-plan-cache";
 import { differenceInDays, format } from "date-fns";
 
 import { Button } from "@/components/ui/button";
 import { CircleCheck } from "@/lib/icons/circle-check";
 import { MealPlanContext } from "@/context/meal-plan-context";
+import { MealPlanPreview } from "@/components/meal-plan/meal-plan-preview";
 import { Profile } from "@/types";
 import { RecipeCard } from "@/components/recipe/recipe-card";
 import { Text } from "@/components/ui/text";
 import { Textarea } from "@/components/ui/textarea";
 import { X } from "@/lib/icons";
+import { useGenerateMealPlanChat } from "@/hooks/meal-plans/use-generate-meal-plan-chat";
 import { useRecipes } from "@/hooks/recipes/use-recipes";
-import {
-	useGenerateMealPlanChat,
-	type ChatMessage,
-} from "@/hooks/meal-plans/use-generate-meal-plan-chat";
 import { useSaveMealPlan } from "@/hooks/meal-plans/use-save-meal-plan";
-import { MealPlanPreview } from "@/components/meal-plan/meal-plan-preview";
-import {
-	generateMealPlanCacheKey,
-	getCachedMealPlan,
-	cacheMealPlan,
-	clearMealPlanCache,
-} from "@/lib/meal-plan-cache";
-import { GeneratedMealPlan } from "@/lib/schemas";
 
 // Helper function to build the initial meal plan user message
 const buildMealPlanUserMessage = (
@@ -493,7 +490,7 @@ export const GenerateMealPlanModal = ({
 			// If no cache or force refresh, call API
 			// Prepare messages for API (include hidden messages)
 			const updatedMessages = [...messages, ...newMessages];
-			const apiMessages: ChatMessage[] = updatedMessages
+			const apiMessages: MealPlanChatMessage[] = updatedMessages
 				.filter((msg) => !msg.introStep || msg.isHidden) // Only send non-intro or hidden messages
 				.map((msg) => ({
 					role: msg.role,

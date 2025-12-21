@@ -45,7 +45,7 @@ type IngredientsAction =
 	| {
 			type: "MULTIPLE_UPDATE";
 			startIndex: number;
-			updates: Array<Partial<IngredientInputValue>>;
+			updates: Partial<IngredientInputValue>[];
 			addNewAtEnd?: boolean;
 	  }
 	| {

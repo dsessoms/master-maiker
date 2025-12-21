@@ -1,7 +1,7 @@
 import {
 	RecipeChatRequest,
 	RecipeChatResponse,
-} from "@/app/api/recipes/generate/chat/index+api";
+} from "@/lib/schemas/recipes/generate/chat-schema";
 
 import axiosWithAuth from "@/lib/axiosWithAuth";
 import { useMutation } from "@tanstack/react-query";

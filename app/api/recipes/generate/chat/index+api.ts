@@ -1,43 +1,16 @@
+import {
+	RecipeChatRequest,
+	RecipeChatRequestSchema,
+	RecipeChatResponse,
+	chatResponseSchema,
+} from "@/lib/schemas/recipes/generate/chat-schema";
+
 import { GoogleGenAI } from "@google/genai";
-import { chatResponseSchema } from "@/lib/schemas/recipes/generate/chat-response";
 import { jsonResponse } from "@/lib/server/json-response";
 import { validateSession } from "@/lib/server/validate-session";
 import { zodToJsonSchema } from "zod-to-json-schema";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY as string;
-
-export interface RecipeChatMessage {
-	role: "assistant" | "user";
-	content: string;
-}
-
-export interface RecipeChatQuickOption {
-	title: string;
-}
-
-export interface RecipeChatMultiSelectOptions {
-	title: string;
-	options: RecipeChatQuickOption[];
-}
-
-export interface RecipePreview {
-	title: string;
-	servings: number;
-	ingredients: string[];
-	instructions: string;
-}
-
-export interface RecipeChatRequest {
-	messages: RecipeChatMessage[];
-}
-
-export interface RecipeChatResponse {
-	text: string;
-	content?: string;
-	quickOptions?: RecipeChatQuickOption[];
-	multiSelectOptions?: RecipeChatMultiSelectOptions;
-	recipePreview?: RecipePreview;
-}
 
 export type PostChatResponse = Awaited<ReturnType<typeof POST>>;
 
@@ -51,16 +24,22 @@ export async function POST(req: Request) {
 
 	try {
 		// Parse the request body
-		const body: RecipeChatRequest = await req.json();
-		const { messages } = body;
+		const body = await req.json();
 
-		// Validate required fields
-		if (!Array.isArray(messages) || messages.length === 0) {
+		// Validate using Zod schema
+		const validationResult = RecipeChatRequestSchema.safeParse(body);
+
+		if (!validationResult.success) {
 			return jsonResponse(
-				{ error: "Invalid request body. Required: messages array" },
+				{
+					error: "Invalid request body",
+					details: validationResult.error.errors,
+				},
 				{ status: 400 },
 			);
 		}
+
+		const { messages }: RecipeChatRequest = validationResult.data;
 
 		const ai = new GoogleGenAI({
 			apiKey: GEMINI_API_KEY,

@@ -1,4 +1,8 @@
 import {
+	RecipePromptOptions,
+	RecipePromptOptionsSchema,
+} from "@/lib/schemas/recipes/generate/form-input-schema";
+import {
 	Spoonacular,
 	convertSpoonacularRecipeToRecipe,
 } from "@/lib/server/spoonacular/spoonacular-helper";
@@ -9,13 +13,6 @@ import { SpoonacularAnalyzeRecipeSchema } from "@/lib/schemas";
 import { generateRecipePrompt } from "@/prompts/generate-recipe-prompt";
 import { jsonResponse } from "@/lib/server/json-response";
 import { validateSession } from "@/lib/server/validate-session";
-
-export interface RecipePromptOptions {
-	ingredientsToInclude: string[];
-	ingredientsToExclude: string[];
-	complexity: "simple" | "moderate" | "complex";
-	additionalRequirements?: string;
-}
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY as string;
 
@@ -81,23 +78,22 @@ export async function POST(req: Request) {
 	try {
 		// Parse the request body
 		const body = await req.json();
-		const options: RecipePromptOptions = body;
 
-		// Validate required fields
-		if (
-			!options.complexity ||
-			!Array.isArray(options.ingredientsToInclude) ||
-			!Array.isArray(options.ingredientsToExclude)
-		) {
+		// Validate using Zod schema
+		const validationResult = RecipePromptOptionsSchema.safeParse(body);
+
+		if (!validationResult.success) {
 			return jsonResponse(
 				{
 					recipe: undefined,
-					error:
-						"Invalid request body. Required: complexity, ingredientsToInclude, ingredientsToExclude",
+					error: "Invalid request body",
+					details: validationResult.error.errors,
 				},
 				{ status: 400 },
 			);
 		}
+
+		const options: RecipePromptOptions = validationResult.data;
 
 		// Step 1: Generate recipe with Google AI
 		const aiRecipe = await generateRecipeWithGoogleAI(options);
