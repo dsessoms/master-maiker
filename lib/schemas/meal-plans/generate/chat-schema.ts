@@ -3,6 +3,18 @@
 
 import { z } from "zod";
 
+// Request schemas
+export const MealPlanChatMessageSchema = z.object({
+	role: z.enum(["assistant", "user"]),
+	content: z.string(),
+});
+
+export const MealPlanChatRequestSchema = z.object({
+	messages: z.array(MealPlanChatMessageSchema).min(1),
+});
+
+// Response schemas
+
 // Single recipe schema - use isExisting to differentiate
 const MealPlanChatRecipeSchema = z.object({
 	isExisting: z.boolean(),
@@ -41,7 +53,11 @@ export const MealPlanChatResponseSchema = z.object({
 	text: z.string().optional(),
 });
 
-// Export types inferred from Zod schemas
+// Request types
+export type MealPlanChatMessage = z.infer<typeof MealPlanChatMessageSchema>;
+export type MealPlanChatRequest = z.infer<typeof MealPlanChatRequestSchema>;
+
+// Response types
 export type MealPlanChatRecipe = z.infer<typeof MealPlanChatRecipeSchema>;
 export type MealPlanChatFoodEntry = z.infer<typeof MealPlanChatFoodEntrySchema>;
 export type MealPlanChatNoteEntry = z.infer<typeof MealPlanChatNoteEntrySchema>;

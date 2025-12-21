@@ -1,7 +1,7 @@
 import {
 	GeneratedMealPlan,
 	GeneratedMealPlanSchema,
-} from "@/lib/schemas/meal-plans/generate/chat-response";
+} from "@/lib/schemas/meal-plans/generate/chat-schema";
 import {
 	Spoonacular,
 	convertSpoonacularRecipeToRecipe,

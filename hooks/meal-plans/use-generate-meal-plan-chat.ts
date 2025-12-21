@@ -1,4 +1,4 @@
-import type { MealPlanChatChatResponse } from "@/lib/schemas/meal-plans/generate/chat-response";
+import type { MealPlanChatChatResponse } from "@/lib/schemas/meal-plans/generate/chat-schema";
 import axiosWithAuth from "@/lib/axiosWithAuth";
 import { useMutation } from "@tanstack/react-query";
 
