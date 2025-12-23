@@ -600,6 +600,23 @@ export class Spoonacular {
 		});
 	}
 
+	static getRecipeInformation(params: {
+		id: string;
+	}): Promise<SpoonacularRecipeResponse> {
+		return this.makeApiCall(`recipes/${params.id}/information`, {
+			includeNutrition: true,
+		});
+	}
+
+	static getRecipeInformationBulk(params: {
+		ids: string[];
+	}): Promise<SpoonacularRecipeResponse[]> {
+		return this.makeApiCall("recipes/informationBulk", {
+			ids: params.ids.join(","),
+			includeNutrition: true,
+		});
+	}
+
 	static parseRecipeFromWebsite(params: {
 		url: string;
 	}): Promise<SpoonacularRecipeResponse> {
@@ -641,7 +658,3 @@ export class Spoonacular {
 		);
 	}
 }
-
-// Example usage:
-// const spoonacularRecipe = await Spoonacular.parseRecipeFromWebsite({ url: "https://example.com/recipe" });
-// const recipe = convertSpoonacularRecipeToRecipe(spoonacularRecipe);

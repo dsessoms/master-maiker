@@ -124,47 +124,6 @@ Always respond with valid JSON only (no markdown blocks or backticks)
 Required field: "content" (your message to the user)
 Required field: "mealPlan" (the generated meal plan following the schema)
 
-MEAL PLAN SCHEMA:
-{
-  "content": "string - Your message to the user about the meal plan",
-  "mealPlan": {
-    "recipes": [
-      // For NEW recipes:
-      {
-        "isExisting": false,
-        "id": "unique-id-for-this-recipe",
-        "name": "Recipe Name",
-        "servings": number,
-        "ingredients": ["ingredient with quantity"],
-        "instructions": ["step-by-step instruction"]
-      },
-      // For EXISTING recipes:
-      {
-        "isExisting": true,
-        "id": "recipe-id-from-input"
-      }
-    ],
-    "foodEntries": [
-      {
-        "profile_servings": {"profile-id-1": number_of_servings, "profile-id-2": number_of_servings},
-        "recipe_id": "recipe-id (matches id from recipes array)",
-        "date": "YYYY-MM-DD",
-        "meal_type": "breakfast" | "lunch" | "dinner" | "snack",
-        "number_of_servings": number
-      }
-    ],
-    "notes": [
-      {
-        "date": "YYYY-MM-DD",
-        "note": "Efficiency or reminder tip (e.g., 'Cook 4 servings and use leftovers for tomorrow' or 'Remember to thaw chicken')"
-      }
-    ]
-  }
-}
-
-EXAMPLE RESPONSE:
-{"content": "I've created a 3-day meal plan for you! It includes balanced meals that meet your calorie goals and uses shared recipes for efficiency.", "mealPlan": {"recipes": [{"isExisting": false, "id": "new-recipe-1", "name": "Greek Yogurt Parfait", "servings": 1, "ingredients": ["1 cup Greek yogurt", "1/2 cup mixed berries", "2 tbsp granola", "1 tsp honey"], "instructions": ["Layer yogurt in a bowl", "Add berries and granola on top", "Drizzle with honey"]}, {"isExisting": false, "id": "new-recipe-2", "name": "Chicken Stir Fry", "servings": 4, "ingredients": ["1 lb chicken breast", "2 cups mixed vegetables", "2 tbsp soy sauce"], "instructions": ["Cut chicken into cubes", "Stir fry chicken until golden", "Add vegetables and sauce"]}, {"isExisting": true, "id": "existing-recipe-id-123"}], "foodEntries": [{"profile_servings": {"prof-1": 1, "prof-2": 1}, "recipe_id": "new-recipe-1", "date": "2025-12-09", "meal_type": "breakfast", "number_of_servings": 2}, {"profile_servings": {"prof-1": 1, "prof-2": 1}, "recipe_id": "new-recipe-2", "date": "2025-12-09", "meal_type": "dinner", "number_of_servings": 2}, {"profile_servings": {"prof-1": 1, "prof-2": 1}, "recipe_id": "new-recipe-2", "date": "2025-12-10", "meal_type": "lunch", "number_of_servings": 2}], "notes": [{"date": "2025-12-09", "note": "Cook 4 servings of Chicken Stir Fry for dinner and use the leftovers for tomorrow's lunch"}, {"date": "2025-12-10", "note": "Use leftover Chicken Stir Fry from yesterday for an easy lunch"}]}}
-
 Generate the complete meal plan immediately when you have all the necessary information (date range, profiles, and preferences). Include ALL meal types (breakfast, lunch, dinner, snacks) for EACH day in the date range. 
 
 SHARED RECIPE PATTERN - CRITICAL:
