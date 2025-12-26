@@ -54,7 +54,7 @@ export async function POST(req: Request) {
 		}));
 
 		// Add a system prompt to make the assistant helpful for meal plan generation
-		const systemPrompt = {
+		const systemInstruction = {
 			role: "user",
 			parts: [
 				{
@@ -136,13 +136,12 @@ SHARED RECIPE PATTERN - CRITICAL:
 			],
 		};
 
-		const allContents = [systemPrompt, ...contents];
-
 		// Return non-streaming response
 		const response = await ai.models.generateContent({
 			model,
-			contents: allContents,
+			contents,
 			config: {
+				systemInstruction,
 				responseMimeType: "application/json",
 				responseJsonSchema: zodToJsonSchema(MealPlanChatResponseSchema),
 				maxOutputTokens: 12000, // Gemini 2.5 Flash Lite is efficient - 12k is plenty
