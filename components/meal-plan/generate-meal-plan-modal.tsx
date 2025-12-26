@@ -35,94 +35,40 @@ import { useGenerateMealPlanChat } from "@/hooks/meal-plans/use-generate-meal-pl
 import { useRecipes } from "@/hooks/recipes/use-recipes";
 import { useSaveMealPlan } from "@/hooks/meal-plans/use-save-meal-plan";
 
-// Helper function to build the initial meal plan user message
-const buildMealPlanUserMessage = (
+// Helper function to build basic information for the meal plan request
+const buildBasicInformation = (
 	startDate: Date,
 	endDate: Date,
 	profiles: Profile[],
 	recipes: any[],
 	additionalContext: string,
-): string => {
-	const dateRange = endDate
-		? `${format(startDate, "MMMM dd, yyyy")} to ${format(endDate, "MMMM dd, yyyy")}`
-		: format(startDate, "MMMM dd, yyyy");
-
-	// Build profile info object
-	const profileInfoObj = profiles.reduce(
-		(acc, p) => {
-			acc[p.id] = {
-				name: p.name,
-				dailyCalorieGoal: p.daily_calorie_goal,
-				dailyProteinGrams: p.protein_grams,
-				dailyCarbsGrams: p.carbs_grams,
-				dailyFatGrams: p.fat_grams,
-				dislikedFood: p.disliked_food,
-				likedFood: p.liked_food,
-			};
-			return acc;
-		},
-		{} as Record<
-			string,
-			{
-				name: string;
-				dailyCalorieGoal: number | null;
-				dailyProteinGrams: number | null;
-				dailyCarbsGrams: number | null;
-				dailyFatGrams: number | null;
-				dislikedFood: string[] | null;
-				likedFood: string[] | null;
-			}
-		>,
-	);
-
-	// Build recipe info object
-	const recipeInfoObj = recipes.reduce(
-		(acc, r) => {
-			// Get the first macro entry (should only be one per recipe)
+) => {
+	return {
+		startDate: format(startDate, "yyyy-MM-dd"),
+		endDate: format(endDate, "yyyy-MM-dd"),
+		userProfiles: profiles.map((profile) => ({
+			id: profile.id,
+			name: profile.name,
+			dailyCalorieGoal: profile.daily_calorie_goal || undefined,
+			dailyProteinGoal: profile.protein_grams || undefined,
+			dailyCarbsGoal: profile.carbs_grams || undefined,
+			dailyFatGoal: profile.fat_grams || undefined,
+			likedFood: profile.liked_food || undefined,
+			dislikedFood: profile.disliked_food || undefined,
+		})),
+		recipesToInclude: recipes.map((r) => {
 			const macros = r.macros?.[0];
-			acc[r.id] = {
+			return {
+				id: r.id,
 				name: r.name,
-				macrosPerServing: macros
-					? {
-							calories: macros.calories,
-							protein: macros.protein,
-							carbohydrate: macros.carbohydrate,
-							fat: macros.fat,
-							fiber: macros.fiber,
-							sugar: macros.sugar,
-						}
-					: null,
+				calories: macros?.calories || undefined,
+				carbohydrate: macros?.carbohydrate || undefined,
+				protein: macros?.protein || undefined,
+				fat: macros?.fat || undefined,
 			};
-			return acc;
-		},
-		{} as Record<
-			string,
-			{
-				name: string;
-				macrosPerServing: {
-					calories: number | null;
-					protein: number | null;
-					carbohydrate: number | null;
-					fat: number | null;
-					fiber: number | null;
-					sugar: number | null;
-				} | null;
-			}
-		>,
-	);
-
-	const recipeInfo =
-		recipes.length > 0
-			? `\n\nExisting recipes to try and incorporate:\n${JSON.stringify(recipeInfoObj, null, 2)}`
-			: "";
-
-	const contextInfo = additionalContext
-		? `\n\nAdditional preferences: ${additionalContext}`
-		: "";
-
-	const message = `Create a meal plan for ${dateRange}\n\nProfile Information:\n${JSON.stringify(profileInfoObj, null, 2)}${recipeInfo}${contextInfo}`;
-
-	return message;
+		}),
+		additionalContext: additionalContext || undefined,
+	};
 };
 
 export interface ChatDisplayMessage {
@@ -428,7 +374,8 @@ export const GenerateMealPlanModal = ({
 		const selectedRecipes =
 			recipes?.filter((r) => introStepsState.selectedRecipeIds.has(r.id)) || [];
 
-		const generatedMessage = buildMealPlanUserMessage(
+		// Build basic information object
+		const basicInformation = buildBasicInformation(
 			introStepsState.startDate as Date,
 			introStepsState.endDate as Date,
 			selectedProfiles,
@@ -452,12 +399,6 @@ export const GenerateMealPlanModal = ({
 				role: "user",
 				content: trimmedInput || "No additional preferences",
 				introStep: IntroStep.ADDITIONAL_CONTEXT,
-			},
-			{
-				id: Crypto.randomUUID(),
-				role: "user",
-				content: generatedMessage,
-				isHidden: true, // Hidden from UI, but sent to API
 			},
 			{
 				id: Crypto.randomUUID(),
@@ -488,16 +429,19 @@ export const GenerateMealPlanModal = ({
 			}
 
 			// If no cache or force refresh, call API
-			// Prepare messages for API (include hidden messages)
-			const updatedMessages = [...messages, ...newMessages];
-			const apiMessages: MealPlanChatMessage[] = updatedMessages
-				.filter((msg) => !msg.introStep || msg.isHidden) // Only send non-intro or hidden messages
-				.map((msg) => ({
-					role: msg.role,
-					content: msg.content,
-				}));
+			// Prepare messages for API - use the initial request message
+			const initialMessage = trimmedInput || "Create a meal plan for me";
+			const apiMessages: MealPlanChatMessage[] = [
+				{
+					role: "user",
+					content: initialMessage,
+				},
+			];
 
-			const response = await sendMessage({ messages: apiMessages });
+			const response = await sendMessage({
+				basicInformation,
+				messages: apiMessages,
+			});
 
 			// Cache the result
 			if (response.mealPlan) {
@@ -508,7 +452,7 @@ export const GenerateMealPlanModal = ({
 			const assistantMessage: ChatDisplayMessage = {
 				id: Crypto.randomUUID(),
 				role: "assistant",
-				content: response.content || response.text || "",
+				content: response.content || "",
 				mealPlan: response.mealPlan,
 			};
 

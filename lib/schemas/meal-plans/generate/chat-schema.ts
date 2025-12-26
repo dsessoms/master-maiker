@@ -77,16 +77,18 @@ export const MealPlanChatRequestSchema = z.object({
 	basicInformation: z.object({
 		startDate: z.string(),
 		endDate: z.string(),
-		userProfiles: z.object({
-			id: z.string(),
-			name: z.string(),
-			dailyCalorieGoal: z.number().optional(),
-			dailyProteinGoal: z.number().optional(),
-			dailyCarbsGoal: z.number().optional(),
-			dailyFatGoal: z.number().optional(),
-			likedFood: z.array(z.string()).optional(),
-			dislikedFood: z.array(z.string()).optional(),
-		}),
+		userProfiles: z.array(
+			z.object({
+				id: z.string(),
+				name: z.string(),
+				dailyCalorieGoal: z.number().optional(),
+				dailyProteinGoal: z.number().optional(),
+				dailyCarbsGoal: z.number().optional(),
+				dailyFatGoal: z.number().optional(),
+				likedFood: z.array(z.string()).optional(),
+				dislikedFood: z.array(z.string()).optional(),
+			}),
+		),
 		recipesToInclude: z.array(
 			z.object({
 				id: z.string(),
