@@ -14,12 +14,6 @@ import React, {
 	useRef,
 	useState,
 } from "react";
-import {
-	cacheMealPlan,
-	clearMealPlanCache,
-	generateMealPlanCacheKey,
-	getCachedMealPlan,
-} from "@/lib/meal-plan-cache";
 import { differenceInDays, format } from "date-fns";
 
 import { Button } from "@/components/ui/button";
@@ -243,8 +237,6 @@ export const GenerateMealPlanModal = ({
 	const defaultClassNames = useDefaultClassNames();
 	const { sendMessage, isPending } = useGenerateMealPlanChat();
 	const { saveMealPlan, isPending: isSaving } = useSaveMealPlan();
-	const [cacheKey, setCacheKey] = useState<string>("");
-	const [forceRefresh, setForceRefresh] = useState(false);
 
 	// State for the collected data using reducer
 	const [introStepsState, dispatch] = useReducer(
@@ -383,16 +375,6 @@ export const GenerateMealPlanModal = ({
 			trimmedInput,
 		);
 
-		// Generate cache key
-		const key = generateMealPlanCacheKey(
-			introStepsState.startDate as Date,
-			introStepsState.endDate as Date,
-			Array.from(introStepsState.selectedProfileIds),
-			Array.from(introStepsState.selectedRecipeIds),
-			trimmedInput,
-		);
-		setCacheKey(key);
-
 		const newMessages: ChatDisplayMessage[] = [
 			{
 				id: Crypto.randomUUID(),
@@ -411,24 +393,6 @@ export const GenerateMealPlanModal = ({
 		addMessages(newMessages);
 
 		try {
-			// Check cache first (unless forceRefresh is true)
-			if (!forceRefresh) {
-				const cachedMealPlan = await getCachedMealPlan(key);
-				if (cachedMealPlan) {
-					const assistantMessage: ChatDisplayMessage = {
-						id: Crypto.randomUUID(),
-						role: "assistant",
-						content:
-							"I found a cached meal plan that matches your request! Showing the last generated plan.",
-						mealPlan: cachedMealPlan,
-					};
-					addMessages([assistantMessage]);
-					setForceRefresh(false);
-					return;
-				}
-			}
-
-			// If no cache or force refresh, call API
 			// Prepare messages for API - use the initial request message
 			const initialMessage = trimmedInput || "Create a meal plan for me";
 			const apiMessages: MealPlanChatMessage[] = [
@@ -442,11 +406,6 @@ export const GenerateMealPlanModal = ({
 				basicInformation,
 				messages: apiMessages,
 			});
-
-			// Cache the result
-			if (response.mealPlan) {
-				await cacheMealPlan(key, response.mealPlan);
-			}
 
 			// Create assistant response message
 			const assistantMessage: ChatDisplayMessage = {
@@ -462,7 +421,6 @@ export const GenerateMealPlanModal = ({
 			if (response.mealPlan) {
 				console.log("Generated Meal Plan:", response.mealPlan);
 			}
-			setForceRefresh(false);
 		} catch (error) {
 			console.error("Error generating meal plan:", error);
 			addMessages([
@@ -473,7 +431,6 @@ export const GenerateMealPlanModal = ({
 						"Sorry, I encountered an error generating your meal plan. Please try again.",
 				},
 			]);
-			setForceRefresh(false);
 		}
 	};
 
@@ -486,11 +443,6 @@ export const GenerateMealPlanModal = ({
 			});
 
 			console.log("Meal plan saved successfully:", result);
-
-			// Clear cache after successful save
-			if (cacheKey) {
-				await clearMealPlanCache(cacheKey);
-			}
 
 			// Add success message - check if result has success property
 			if ("success" in result && result.success) {
@@ -598,10 +550,7 @@ export const GenerateMealPlanModal = ({
 								<Button
 									variant="outline"
 									size="sm"
-									onPress={() => {
-										setForceRefresh(true);
-										saveOpenEnded();
-									}}
+									onPress={saveOpenEnded}
 									disabled={isPending || isSaving}
 									className="flex-1"
 								>
