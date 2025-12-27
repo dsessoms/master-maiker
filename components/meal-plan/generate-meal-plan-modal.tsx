@@ -499,11 +499,6 @@ export const GenerateMealPlanModal = ({
 					}}
 					showsVerticalScrollIndicator={true}
 					scrollEventThrottle={16}
-					// onContentSizeChange={() => {
-					// 	if (scrollViewRef.current?.scrollToEnd) {
-					// 		scrollViewRef.current.scrollToEnd({ animated: true });
-					// 	}
-					// }}
 					onLayout={() => {
 						if (scrollViewRef.current?.scrollToEnd) {
 							scrollViewRef.current.scrollToEnd({ animated: true });
@@ -545,6 +540,7 @@ export const GenerateMealPlanModal = ({
 								startDate={introStepsState.startDate as string}
 								endDate={introStepsState.endDate as string}
 								mealPlan={currentMessage.mealPlan}
+								profiles={selectableProfiles}
 							/>
 							<View className="flex-row gap-2 mt-4">
 								<Button

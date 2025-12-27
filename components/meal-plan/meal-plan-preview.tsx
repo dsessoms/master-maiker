@@ -1,65 +1,30 @@
 import { eachDayOfInterval, format } from "date-fns";
 
-import { ExpandableFoodEntry } from "./expandable-food-entry";
 import { GeneratedMealPlan } from "@/lib/schemas";
+import { Profile } from "@/types";
+import { ProfileAvatar } from "@/components/profile-avatar";
 import { Text } from "@/components/ui/text";
 import { View } from "react-native";
+import { cn } from "@/lib/utils";
 import { useMemo } from "react";
 import { useRecipes } from "@/hooks/recipes/use-recipes";
+
+type ProfileWithAvatar = Profile & {
+	avatar_url?: string;
+};
 
 export const MealPlanPreview = ({
 	startDate,
 	endDate,
 	mealPlan,
+	profiles,
 }: {
 	startDate: string;
 	endDate: string;
 	mealPlan: GeneratedMealPlan;
+	profiles?: ProfileWithAvatar[];
 }) => {
 	const { recipes } = useRecipes();
-
-	const foodEntriesByDayAndMealType = useMemo(() => {
-		const finalMap: {
-			[date: string]: { [mealType: string]: typeof mealPlan.foodEntries };
-		} = {};
-		mealPlan.foodEntries?.forEach((entry) => {
-			const dateString =
-				typeof entry.date === "string"
-					? entry.date
-					: format(new Date(entry.date), "yyyy-MM-dd");
-
-			if (!finalMap[dateString]) {
-				finalMap[dateString] = {};
-			}
-
-			if (finalMap[dateString][entry.meal_type]) {
-				finalMap[dateString][entry.meal_type].push(entry);
-			} else {
-				finalMap[dateString][entry.meal_type] = [entry];
-			}
-		});
-		return finalMap;
-	}, [mealPlan]);
-
-	const notesByDayAndMealType = useMemo(() => {
-		const finalMap: {
-			[date: string]: { [mealType: string]: typeof mealPlan.notes };
-		} = {};
-		mealPlan.notes?.forEach((note) => {
-			if (!finalMap[note.date]) {
-				finalMap[note.date] = {};
-			}
-
-			if (finalMap[note.date][note.meal_type]) {
-				finalMap[note.date][note.meal_type].push(note);
-			} else {
-				finalMap[note.date][note.meal_type] = [note];
-			}
-		});
-		return finalMap;
-	}, [mealPlan]);
-
-	console.log(startDate, endDate, foodEntriesByDayAndMealType);
 
 	const weekDates = useMemo(
 		() =>
@@ -70,81 +35,136 @@ export const MealPlanPreview = ({
 		[startDate, endDate],
 	);
 
+	// Create a map of recipe IDs to the dates they appear on with profile info
+	const recipeSchedule = useMemo(() => {
+		const schedule: {
+			[recipeId: string]: {
+				[dateString: string]: string[]; // array of profile IDs
+			};
+		} = {};
+
+		mealPlan.foodEntries?.forEach((entry) => {
+			const dateString =
+				typeof entry.date === "string"
+					? entry.date
+					: format(new Date(entry.date), "yyyy-MM-dd");
+
+			if (!schedule[entry.recipe_id]) {
+				schedule[entry.recipe_id] = {};
+			}
+
+			// Get profile IDs from profile_servings
+			const profileIds = Object.keys(entry.profile_servings || {});
+			schedule[entry.recipe_id][dateString] = profileIds;
+		});
+
+		return schedule;
+	}, [mealPlan.foodEntries]);
+
+	// Get unique recipes from the meal plan
+	const uniqueRecipes = useMemo(() => {
+		const recipeMap = new Map();
+
+		mealPlan.foodEntries?.forEach((entry) => {
+			if (!recipeMap.has(entry.recipe_id)) {
+				const recipe = mealPlan.recipes.find((r) => r.id === entry.recipe_id);
+				const recipeName =
+					recipe?.name ||
+					recipes?.find((savedRecipe) => savedRecipe.id === entry.recipe_id)
+						?.name;
+
+				if (recipeName) {
+					recipeMap.set(entry.recipe_id, {
+						id: entry.recipe_id,
+						name: recipeName,
+					});
+				}
+			}
+		});
+
+		return Array.from(recipeMap.values());
+	}, [mealPlan, recipes]);
+
 	return (
 		<View>
-			{weekDates.map((date) => {
-				const dateString = format(date, "yyyy-MM-dd");
-				const mealTypes = ["breakfast", "lunch", "dinner", "snack"] as const;
+			{/* Header Row */}
+			<View className="flex-row">
+				<View className="flex-1">
+					{/* Empty space for recipe column header */}
+				</View>
+				<View className="flex-row">
+					{weekDates.map((date, idx) => (
+						<View
+							key={date.toISOString()}
+							className={cn(
+								"w-12 items-center py-2 border-b border-gray-200",
+								idx % 2 === 0 ? "bg-slate-100" : "bg-white",
+							)}
+						>
+							<Text className="text-xs font-semibold text-gray-500">
+								{format(date, "EEE").charAt(0)}
+							</Text>
+						</View>
+					))}
+				</View>
+			</View>
+
+			{/* Recipe Rows */}
+			{uniqueRecipes.map((recipe) => {
+				const scheduledDates = recipeSchedule[recipe.id];
 
 				return (
-					<View key={dateString} className="mb-6">
-						<Text className="text-lg font-bold mb-3">
-							{format(date, "EEEE, MMM d")}
-						</Text>
+					<View key={recipe.id} className="flex-row">
+						{/* Recipe Info */}
+						<View className="flex-1 flex-row items-center gap-2 py-3 pr-2">
+							<Text className="text-sm flex-1" numberOfLines={2}>
+								{recipe.name}
+							</Text>
+						</View>
 
-						{mealTypes.map((mealType) => {
-							const foodEntries =
-								foodEntriesByDayAndMealType[dateString]?.[mealType];
-							const notes = notesByDayAndMealType[dateString]?.[mealType];
+						{/* Day Indicators */}
+						<View className="flex-row">
+							{weekDates.map((date, idx) => {
+								const dateString = format(date, "yyyy-MM-dd");
+								const profileIds = scheduledDates?.[dateString] || [];
+								const scheduledProfiles =
+									profiles?.filter((p) => profileIds.includes(p.id)) || [];
 
-							if (!foodEntries?.length && !notes?.length) {
-								return null;
-							}
-
-							return (
-								<View key={mealType} className="mb-4 ml-2">
-									<Text className="text-base font-semibold capitalize mb-2">
-										{mealType}
-									</Text>
-
-									{/* Notes */}
-									{notes?.length > 0 && (
-										<View className="mb-2">
-											{notes.map((note, idx) => (
-												<Text
-													key={idx}
-													className="text-sm text-gray-600 italic mb-1"
-												>
-													📝 {note.note}
-												</Text>
-											))}
-										</View>
-									)}
-
-									{/* Food Entries */}
-									{foodEntries?.length > 0 && (
-										<View className="gap-2">
-											{foodEntries.map((entry) => {
-												const recipe = mealPlan.recipes.find(
-													(recipe) => recipe.id === entry.recipe_id,
-												);
-
-												// If recipe not found in mealPlan or doesn't have a name,
-												// try to get it from saved recipes
-												const recipeName =
-													recipe?.name ||
-													recipes?.find(
-														(savedRecipe) => savedRecipe.id === entry.recipe_id,
-													)?.name;
-
-												if (!recipeName) {
-													return null;
-												}
-
-												return (
-													<ExpandableFoodEntry
-														key={entry.recipe_id}
-														entry={entry}
-														recipe={recipe}
-														recipeName={recipeName}
+								return (
+									<View
+										key={dateString}
+										className={cn(
+											"w-12 items-center justify-center py-3 self-stretch",
+											idx % 2 === 0 ? "bg-slate-100" : "bg-white",
+										)}
+									>
+										{scheduledProfiles.length > 0 && (
+											<View className="flex flex-row">
+												{scheduledProfiles.slice(0, 2).map((profile, pIdx) => (
+													<ProfileAvatar
+														key={profile.id}
+														name={profile.name}
+														avatarUrl={profile.avatar_url}
+														alt={`${profile.name}'s Avatar`}
+														className={cn(
+															"h-5 w-5 border border-white",
+															pIdx !== 0 && "-ml-2",
+														)}
 													/>
-												);
-											})}
-										</View>
-									)}
-								</View>
-							);
-						})}
+												))}
+												{scheduledProfiles.length > 2 && (
+													<ProfileAvatar
+														name={`+${scheduledProfiles.length - 2}`}
+														alt="plus more profiles"
+														className="h-5 w-5 border border-white -ml-2"
+													/>
+												)}
+											</View>
+										)}
+									</View>
+								);
+							})}
+						</View>
 					</View>
 				);
 			})}
