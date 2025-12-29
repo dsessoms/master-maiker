@@ -53,8 +53,10 @@ export const MealPlanPreview = ({
 				schedule[entry.recipe_id] = {};
 			}
 
-			// Get profile IDs from profile_servings
-			const profileIds = Object.keys(entry.profile_servings || {});
+			// Get profile IDs from profile_servings (array of [profileId, servings] pairs)
+			const profileIds = Array.isArray(entry.profile_servings)
+				? entry.profile_servings.map((pair) => pair[0] as string)
+				: [];
 			schedule[entry.recipe_id][dateString] = profileIds;
 		});
 

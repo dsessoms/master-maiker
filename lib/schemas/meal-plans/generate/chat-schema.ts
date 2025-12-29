@@ -23,9 +23,9 @@ const MealPlanChatRecipeSchema = z.object({
 
 const MealPlanChatFoodEntrySchema = z.object({
 	profile_servings: z
-		.record(z.string(), z.number())
+		.array(z.array(z.union([z.string(), z.number()])))
 		.describe(
-			"Map of profile IDs to serving quantities - specifies how many servings each profile/person consumes for this meal entry",
+			"Array of [profileId, servings] pairs - each inner array has a profile ID (string) at index 0 and serving quantity (number) at index 1. Example: [['profile-1', 2], ['profile-2', 1.5]]",
 		),
 	recipe_id: z
 		.string()

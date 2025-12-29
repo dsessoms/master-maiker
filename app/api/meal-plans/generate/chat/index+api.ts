@@ -1,8 +1,9 @@
 import {
+	GeneratedMealPlan,
+	GeneratedMealPlanSchema,
 	MealPlanChatChatResponse,
 	MealPlanChatRequest,
 	MealPlanChatRequestSchema,
-	MealPlanChatResponseSchema,
 } from "@/lib/schemas/meal-plans/generate/chat-schema";
 
 import { GoogleGenAI } from "@google/genai";
@@ -46,7 +47,9 @@ export async function POST(req: Request) {
 			apiKey: GEMINI_API_KEY,
 		});
 
-		const model = "gemini-flash-lite-latest"; //"gemini-2.5-flash-lite"
+		// Use gemini-2.0-flash-exp which has better function calling support
+		// gemini-flash-lite-latest has issues with function calling
+		const model = "gemini-2.0-flash-exp";
 
 		// Build context message from basicInformation
 		const profilesInfo = basicInformation.userProfiles
@@ -107,12 +110,6 @@ You will receive:
 
 Use the profile ID and recipe IDs when referencing them in your generated meal plan.
 
-CRITICAL FORMAT RULES:
-- RESPOND WITH RAW JSON ONLY - NO MARKDOWN FORMATTING
-- DO NOT wrap your response in \`\`\`json blocks or any other markdown
-- DO NOT include any text before or after the JSON
-- Your entire response must be valid JSON that can be parsed directly
-
 MEAL PLAN GENERATION RULES:
 1. Create meals that align with each profile's calorie and macro goals
 2. Respect food preferences (avoid dislikedFood, favor likedFood when possible)
@@ -168,10 +165,10 @@ NOTES GUIDELINES:
 - Keep notes practical and actionable
 - Use concise language to minimize response size
 
-RESPONSE FORMAT:
-Always respond with valid JSON only (no markdown blocks or backticks)
-Required field: "content" (your message to the user)
-Required field: "mealPlan" (the generated meal plan following the schema)
+WHEN TO USE THE FUNCTION:
+- When you have all the necessary information to generate a complete meal plan
+- When the user requests a meal plan generation or modification
+- Always call the function when creating or updating a meal plan
 
 Generate the complete meal plan immediately when you have all the necessary information (date range, profiles, and preferences). Include ALL meal types (breakfast, lunch, dinner, snacks) for EACH day in the date range. 
 
@@ -179,7 +176,7 @@ SHARED RECIPE PATTERN - CRITICAL:
 - Use ONE food entry per recipe per date/meal_type combination with all profiles listed in profile_servings
 - ALWAYS use the shared recipe pattern: one recipe with varying serving sizes per profile
 - NEVER create separate recipes for different profiles, calorie levels, or "versions" of the same dish
-- For example: If Profile A needs 3 servings and Profile B needs 4 servings of the same recipe, create ONE recipe entry with profile_servings: {"profile-a": 3, "profile-b": 4}
+- profile_servings is an array of arrays where each inner array contains [profileId, servings]. For example: If Profile A (id: "profile-a") needs 3 servings and Profile B (id: "profile-b") needs 4 servings, use: profile_servings: [["profile-a", 3], ["profile-b", 4]]
 - The serving count varies per profile in profile_servings, not by creating duplicate recipes
 
 LEFTOVER AND MEAL PREP PATTERN - CRITICAL:
@@ -201,20 +198,96 @@ LEFTOVER AND MEAL PREP PATTERN - CRITICAL:
 			],
 		};
 
-		// Return non-streaming response
+		// Define the function declaration for generating meal plans
+		// Convert Zod schema to JSON Schema and clean up for Gemini compatibility
+		const jsonSchema = zodToJsonSchema(GeneratedMealPlanSchema, {
+			target: "openApi3",
+			$refStrategy: "none",
+		});
+
+		// Remove problematic fields that Gemini doesn't like
+		const cleanSchema = JSON.parse(JSON.stringify(jsonSchema));
+		delete cleanSchema.$schema;
+
+		// Recursively remove additionalProperties: false which Gemini doesn't like
+		function removeAdditionalProperties(obj: any): any {
+			if (typeof obj !== "object" || obj === null) return obj;
+
+			if (Array.isArray(obj)) {
+				return obj.map(removeAdditionalProperties);
+			}
+
+			const result: any = {};
+			for (const [key, value] of Object.entries(obj)) {
+				if (key === "additionalProperties") continue;
+				result[key] = removeAdditionalProperties(value);
+			}
+			return result;
+		}
+
+		const geminiSchema = removeAdditionalProperties(cleanSchema);
+
+		const generateMealPlanFunction = {
+			name: "generate_meal_plan",
+			description:
+				"Generates a complete meal plan with recipes, food entries, and optional notes based on user requirements",
+			parameters: geminiSchema,
+		};
+
+		// Return non-streaming response with function calling
 		const response = await ai.models.generateContent({
 			model,
 			contents,
 			config: {
 				systemInstruction,
-				responseMimeType: "application/json",
-				responseJsonSchema: zodToJsonSchema(MealPlanChatResponseSchema),
-				maxOutputTokens: 12000, // Gemini 2.5 Flash Lite is efficient - 12k is plenty
+				tools: [{ functionDeclarations: [generateMealPlanFunction] }],
+				maxOutputTokens: 60_000,
 				temperature: 0.7,
 			},
 		});
 
-		console.log("response usageMetadata", response.usageMetadata);
+		// Check for malformed function call
+		if (response.candidates?.[0]?.finishReason === "MALFORMED_FUNCTION_CALL") {
+			console.error("=== MALFORMED FUNCTION CALL ===");
+			console.error(
+				"Full candidate:",
+				JSON.stringify(response.candidates[0], null, 2),
+			);
+			console.error(
+				"Content parts:",
+				JSON.stringify(response.candidates[0].content?.parts, null, 2),
+			);
+			return jsonResponse(
+				{
+					error:
+						"The AI generated a malformed function call. This may be due to schema complexity or API limitations.",
+					details: response.candidates[0],
+				},
+				{ status: 500 },
+			);
+		}
+
+		// Check for function calls first (before text)
+		const functionCall = response.functionCalls?.[0];
+
+		if (functionCall) {
+			try {
+				const mealPlan = functionCall.args as GeneratedMealPlan;
+
+				const result: MealPlanChatChatResponse = {
+					content:
+						"I've generated a complete meal plan for you based on your requirements.",
+					mealPlan,
+				};
+				return jsonResponse(result);
+			} catch (funcError) {
+				console.error("Failed to process function call:", funcError);
+				return jsonResponse(
+					{ error: "Failed to process meal plan generation" },
+					{ status: 500 },
+				);
+			}
+		}
 
 		const text = response.text;
 
@@ -227,14 +300,14 @@ LEFTOVER AND MEAL PREP PATTERN - CRITICAL:
 					mealPlan: parsedResponse.mealPlan,
 				};
 				return jsonResponse(response);
-			} catch {
-				console.error("failed to parse ai response, falling back to text");
+			} catch (parseError) {
+				console.error("Failed to parse AI response:", parseError);
 				// Fallback to returning just the text if parsing fails
 				return jsonResponse({ content: text });
 			}
 		}
 
-		return jsonResponse({ text: "" });
+		return jsonResponse({ content: "" });
 	} catch (error) {
 		console.error("Chat error:", error);
 
