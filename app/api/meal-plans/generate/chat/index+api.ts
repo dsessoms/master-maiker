@@ -1,9 +1,8 @@
 import {
-	GeneratedMealPlan,
-	GeneratedMealPlanSchema,
 	MealPlanChatChatResponse,
 	MealPlanChatRequest,
 	MealPlanChatRequestSchema,
+	MealPlanChatResponseSchema,
 } from "@/lib/schemas/meal-plans/generate/chat-schema";
 
 import { GoogleGenAI } from "@google/genai";
@@ -40,7 +39,7 @@ export async function POST(req: Request) {
 			);
 		}
 
-		const { basicInformation, messages }: MealPlanChatRequest =
+		const { basicInformation, messages, latestMealPlan }: MealPlanChatRequest =
 			validationResult.data;
 
 		const ai = new GoogleGenAI({
@@ -65,6 +64,20 @@ Profile: ${profile.name} (ID: ${profile.id})
 			)
 			.join("\n");
 
+		// Build current meal plan context if provided
+		const currentMealPlanContext = latestMealPlan
+			? `
+
+Current Meal Plan:
+${JSON.stringify(latestMealPlan, null, 2)}
+
+The user is requesting modifications to this existing meal plan. When making changes:
+- Preserve recipes and food entries that aren't being modified
+- Maintain recipe IDs for unchanged recipes
+- Only modify what the user specifically requests
+- Keep the same structure and format`
+			: "";
+
 		const contextMessage = `Create a meal plan for ${basicInformation.startDate} to ${basicInformation.endDate}
 
 Profile Information:
@@ -77,7 +90,7 @@ ${basicInformation.recipesToInclude.map((r) => `- ${r.name} (ID: ${r.id})${r.cal
 		: ""
 }
 
-${basicInformation.additionalContext ? `Additional Context: ${basicInformation.additionalContext}` : ""}`;
+${basicInformation.additionalContext ? `Additional Context: ${basicInformation.additionalContext}` : ""}${currentMealPlanContext}`;
 
 		// Convert our messages to Google AI format
 		// Prepend the context message as a user message
@@ -106,9 +119,21 @@ You will receive:
    - Profile information: name, daily calorie/macro goals (protein, carbs, fat), liked/disliked foods
    - Recipes to incorporate: existing recipes with their IDs and nutritional information
    - Additional context: user preferences or dietary restrictions
+   - Current Meal Plan (if modifying an existing plan): The complete JSON structure of the meal plan being modified
 2. Conversation messages from the user requesting meal plan generation or modifications
 
 Use the profile ID and recipe IDs when referencing them in your generated meal plan.
+
+MEAL PLAN MODIFICATION MODE:
+When a "Current Meal Plan" is provided in the context:
+- You are modifying an EXISTING meal plan, not creating from scratch
+- Preserve ALL unchanged recipes and food entries
+- Keep the same recipe IDs for recipes that aren't being modified
+- Only change what the user specifically requests
+- When replacing a recipe, create a new recipe with a new ID
+- When removing a meal, remove its corresponding food entry (and recipe if not used elsewhere)
+- When adding a meal, create new recipe and food entry
+- Maintain consistency across the entire meal plan
 
 MEAL PLAN GENERATION RULES:
 1. Create meals that align with each profile's calorie and macro goals
@@ -198,18 +223,17 @@ LEFTOVER AND MEAL PREP PATTERN - CRITICAL:
 			],
 		};
 
-		// Define the function declaration for generating meal plans
-		// Convert Zod schema to JSON Schema and clean up for Gemini compatibility
-		const jsonSchema = zodToJsonSchema(GeneratedMealPlanSchema, {
+		// Convert Zod schema to JSON Schema for Gemini
+		const jsonSchema = zodToJsonSchema(MealPlanChatResponseSchema, {
 			target: "openApi3",
 			$refStrategy: "none",
 		});
 
-		// Remove problematic fields that Gemini doesn't like
+		// Remove problematic fields that Gemini doesn't support
 		const cleanSchema = JSON.parse(JSON.stringify(jsonSchema));
 		delete cleanSchema.$schema;
 
-		// Recursively remove additionalProperties: false which Gemini doesn't like
+		// Recursively remove additionalProperties which Gemini doesn't like
 		function removeAdditionalProperties(obj: any): any {
 			if (typeof obj !== "object" || obj === null) return obj;
 
@@ -225,89 +249,51 @@ LEFTOVER AND MEAL PREP PATTERN - CRITICAL:
 			return result;
 		}
 
-		const geminiSchema = removeAdditionalProperties(cleanSchema);
+		const responseSchema = removeAdditionalProperties(cleanSchema);
 
-		const generateMealPlanFunction = {
-			name: "generate_meal_plan",
-			description:
-				"Generates a complete meal plan with recipes, food entries, and optional notes based on user requirements",
-			parameters: geminiSchema,
-		};
-
-		// Return non-streaming response with function calling
+		// Use JSON mode for structured output with schema validation
 		const response = await ai.models.generateContent({
 			model,
 			contents,
 			config: {
 				systemInstruction,
-				tools: [{ functionDeclarations: [generateMealPlanFunction] }],
+				responseMimeType: "application/json",
+				responseSchema,
 				maxOutputTokens: 60_000,
 				temperature: 0.7,
 			},
 		});
 
-		// Check for malformed function call
-		if (response.candidates?.[0]?.finishReason === "MALFORMED_FUNCTION_CALL") {
-			console.error("=== MALFORMED FUNCTION CALL ===");
-			console.error(
-				"Full candidate:",
-				JSON.stringify(response.candidates[0], null, 2),
-			);
-			console.error(
-				"Content parts:",
-				JSON.stringify(response.candidates[0].content?.parts, null, 2),
-			);
-			return jsonResponse(
-				{
-					error:
-						"The AI generated a malformed function call. This may be due to schema complexity or API limitations.",
-					details: response.candidates[0],
-				},
-				{ status: 500 },
-			);
+		// Get the text response (should be JSON)
+		const text = response.text;
+
+		if (!text) {
+			console.error("No text response from AI");
+			return jsonResponse({ content: "" });
 		}
 
-		// Check for function calls first (before text)
-		const functionCall = response.functionCalls?.[0];
+		// Parse the JSON response
+		try {
+			const parsedResponse = JSON.parse(text) as MealPlanChatChatResponse;
 
-		if (functionCall) {
-			try {
-				const mealPlan = functionCall.args as GeneratedMealPlan;
-
-				const result: MealPlanChatChatResponse = {
-					content:
-						"I've generated a complete meal plan for you based on your requirements.",
-					mealPlan,
-				};
-				return jsonResponse(result);
-			} catch (funcError) {
-				console.error("Failed to process function call:", funcError);
+			// Validate that we have at least a content field
+			if (!parsedResponse.content && !parsedResponse.mealPlan) {
+				console.error("Invalid response structure:", parsedResponse);
 				return jsonResponse(
-					{ error: "Failed to process meal plan generation" },
+					{ error: "AI returned invalid response structure" },
 					{ status: 500 },
 				);
 			}
+
+			return jsonResponse(parsedResponse);
+		} catch (parseError) {
+			console.error("Failed to parse AI JSON response:", parseError);
+			console.error("Raw response:", text);
+			return jsonResponse(
+				{ error: "Failed to parse AI response as JSON" },
+				{ status: 500 },
+			);
 		}
-
-		const text = response.text;
-
-		// Parse the JSON response to extract structured data
-		if (text) {
-			try {
-				const parsedResponse = JSON.parse(text);
-				const response: MealPlanChatChatResponse = {
-					content: parsedResponse.content,
-					mealPlan: parsedResponse.mealPlan,
-				};
-				return jsonResponse(response);
-			} catch (parseError) {
-				console.error("Failed to parse AI response:", parseError);
-				// Fallback to returning just the text if parsing fails
-				return jsonResponse({ content: text });
-			}
-		}
-
-		return jsonResponse({ content: "" });
 	} catch (error) {
 		console.error("Chat error:", error);
 

@@ -18,6 +18,7 @@ import { differenceInDays, format } from "date-fns";
 
 import { Button } from "@/components/ui/button";
 import { CircleCheck } from "@/lib/icons/circle-check";
+import { Input } from "@/components/ui/input";
 import { MealPlanContext } from "@/context/meal-plan-context";
 import { MealPlanPreview } from "@/components/meal-plan/meal-plan-preview";
 import { Profile } from "@/types";
@@ -257,6 +258,9 @@ export const GenerateMealPlanModal = ({
 
 	const currentMessage = messages[messages.length - 1];
 
+	// Chat input for critiquing meal plan
+	const [chatInput, setChatInput] = useState("");
+
 	// Auto-scroll to bottom when messages change
 	useEffect(() => {
 		setTimeout(() => {
@@ -472,6 +476,84 @@ export const GenerateMealPlanModal = ({
 		}
 	};
 
+	const handleSendChatMessage = async () => {
+		const trimmedInput = chatInput.trim();
+		if (!trimmedInput || isPending) return;
+
+		const selectedProfiles = selectableProfiles.filter((p) =>
+			introStepsState.selectedProfileIds.has(p.id),
+		);
+
+		const selectedRecipes =
+			recipes?.filter((r) => introStepsState.selectedRecipeIds.has(r.id)) || [];
+
+		// Build basic information object
+		const basicInformation = buildBasicInformation(
+			introStepsState.startDate as Date,
+			introStepsState.endDate as Date,
+			selectedProfiles,
+			selectedRecipes,
+			introStepsState.additionalContext,
+		);
+
+		// Add user message to chat
+		const userMessage: ChatDisplayMessage = {
+			id: Crypto.randomUUID(),
+			role: "user",
+			content: trimmedInput,
+		};
+
+		addMessages([userMessage]);
+		setChatInput("");
+
+		try {
+			// Build conversation history for API - only include non-intro messages
+			const conversationHistory: MealPlanChatMessage[] = messages
+				.filter((msg) => !msg.introStep)
+				.map((msg) => ({
+					role: msg.role,
+					content: msg.content,
+				}));
+
+			// Add the new user message to history
+			conversationHistory.push({
+				role: "user",
+				content: trimmedInput,
+			});
+
+			// Find the latest meal plan from messages
+			const latestMealPlan = [...messages]
+				.reverse()
+				.find((msg) => msg.mealPlan)?.mealPlan;
+
+			const response = await sendMessage({
+				basicInformation,
+				messages: conversationHistory,
+				latestMealPlan,
+			});
+
+			// Create assistant response message
+			const assistantMessage: ChatDisplayMessage = {
+				id: Crypto.randomUUID(),
+				role: "assistant",
+				content: response.content || "",
+				mealPlan: response.mealPlan,
+			};
+
+			addMessages([assistantMessage]);
+		} catch (error) {
+			console.error("Error sending chat message:", error);
+			addMessages([
+				{
+					id: Crypto.randomUUID(),
+					role: "assistant",
+					content:
+						"Sorry, I encountered an error processing your request. Please try again.",
+				},
+			]);
+		}
+	};
+
 	return (
 		<Modal animationType="slide" visible={isVisible} onRequestClose={onClose}>
 			<View className="flex-1 bg-background mt-safe mb-safe">
@@ -543,15 +625,6 @@ export const GenerateMealPlanModal = ({
 								profiles={selectableProfiles}
 							/>
 							<View className="flex-row gap-2 mt-4">
-								<Button
-									variant="outline"
-									size="sm"
-									onPress={saveOpenEnded}
-									disabled={isPending || isSaving}
-									className="flex-1"
-								>
-									<Text>Refresh Meal Plan</Text>
-								</Button>
 								<Button
 									size="sm"
 									onPress={handleSaveMealPlan}
@@ -700,6 +773,32 @@ export const GenerateMealPlanModal = ({
 							</Button>
 						</View>
 					)}
+
+				{/* Chat input for critiquing meal plan - only show after initial meal plan generation */}
+				{!currentMessage.introStep && currentMessage.role === "assistant" && (
+					<View className="border-t border-border bg-background p-4">
+						<View className="flex-row items-end gap-2">
+							<View className="flex-1">
+								<Input
+									placeholder="Ask for changes to the meal plan..."
+									value={chatInput}
+									onChangeText={setChatInput}
+									multiline
+									maxLength={500}
+									editable={!isPending && !isSaving}
+									placeholderTextColor="#888"
+								/>
+							</View>
+							<Button
+								size="icon"
+								onPress={handleSendChatMessage}
+								disabled={!chatInput.trim() || isPending || isSaving}
+							>
+								<Text className="text-lg">➤</Text>
+							</Button>
+						</View>
+					</View>
+				)}
 			</View>
 		</Modal>
 	);
