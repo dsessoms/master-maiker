@@ -149,13 +149,14 @@ export async function POST(req: Request) {
 			const recipeId =
 				newRecipeMap.get(foodEntry.recipe_id) || foodEntry.recipe_id;
 
-			// Transform profile_servings object to array of { profile_id, servings } for the RPC
-			const profileServingsArray = Object.entries(
-				foodEntry.profile_servings,
-			).map(([profileId, servings]) => ({
-				profile_id: profileId,
-				servings: servings,
-			}));
+			// Transform profile_servings array of arrays to array of { profile_id, servings } for the RPC
+			// profile_servings format: [['profile-id', 2], ['profile-id-2', 1.5]]
+			const profileServingsArray = foodEntry.profile_servings.map(
+				([profileId, servings]) => ({
+					profile_id: profileId as string,
+					servings: servings as number,
+				}),
+			);
 
 			// Capitalize meal_type for database enum
 			const capitalizedMealType =
