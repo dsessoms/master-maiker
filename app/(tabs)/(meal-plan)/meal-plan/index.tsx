@@ -13,11 +13,18 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontalIcon, Trash2Icon, WandSparkles } from "@/lib/icons";
+import {
+	MoreHorizontalIcon,
+	ShoppingCart,
+	Trash2Icon,
+	WandSparkles,
+} from "@/lib/icons";
 import { Stack, useRouter } from "expo-router";
 import { eachDayOfInterval, format } from "date-fns";
 import { useContext, useEffect, useMemo, useState } from "react";
 
+import { AddShoppingItemsData } from "@/components/shopping/add-shopping-items-modal/types";
+import { AddShoppingItemsModal } from "@/components/shopping/add-shopping-items-modal";
 import { Button } from "@/components/ui/button";
 import { DaySection } from "@/components//meal-plan/day-section";
 import { DnDScrollView } from "@/components/ui/dnd/dnd-scroll-view";
@@ -52,6 +59,8 @@ export default function MealPlanScreen() {
 		useClearMealPlan();
 
 	const [showClearDialog, setShowClearDialog] = useState(false);
+	const [showAddToShoppingListModal, setShowAddToShoppingListModal] =
+		useState(false);
 
 	const weekDates = useMemo(
 		() =>
@@ -61,6 +70,24 @@ export default function MealPlanScreen() {
 			}),
 		[startDate, endDate],
 	);
+
+	// Prepare data for shopping list modal - extract all recipe entries
+	const shoppingItemsData: AddShoppingItemsData = useMemo(() => {
+		const recipes: { recipeId: string; numberOfServings: number }[] = [];
+
+		Object.values(foodEntriesByDay).forEach((entries) => {
+			entries?.forEach((entry: any) => {
+				if (entry.type?.toLowerCase() === "recipe" && entry.recipe_id) {
+					recipes.push({
+						recipeId: entry.recipe_id,
+						numberOfServings: entry.number_of_servings || 1,
+					});
+				}
+			});
+		});
+
+		return { recipes };
+	}, [foodEntriesByDay]);
 
 	const handleClearMealPlan = async () => {
 		try {
@@ -102,6 +129,12 @@ export default function MealPlanScreen() {
 							</Button>
 						</DropdownMenuTrigger>
 						<DropdownMenuContent align="end" className="w-48">
+							<DropdownMenuItem
+								onPress={() => setShowAddToShoppingListModal(true)}
+							>
+								<ShoppingCart size={16} className="mr-2" />
+								<Text>Add to Shopping List</Text>
+							</DropdownMenuItem>
 							<DropdownMenuItem onPress={() => setShowClearDialog(true)}>
 								<Trash2Icon size={16} className="mr-2 text-destructive" />
 								<Text className="text-destructive">Clear Meal Plan</Text>
@@ -144,6 +177,11 @@ export default function MealPlanScreen() {
 					defaultEndDate={endDate}
 				/>
 			)}
+			<AddShoppingItemsModal
+				isOpen={showAddToShoppingListModal}
+				onClose={() => setShowAddToShoppingListModal(false)}
+				itemsToAdd={shoppingItemsData}
+			/>
 			<Dialog open={showClearDialog} onOpenChange={setShowClearDialog}>
 				<DialogContent>
 					<DialogHeader>
