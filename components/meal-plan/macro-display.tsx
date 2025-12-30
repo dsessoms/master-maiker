@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 
 interface MacroDisplayProps {
 	nutrition: NutritionTotals;
+	show?: boolean;
 	showLabel?: boolean;
 	size?: "sm" | "md" | "lg";
 	className?: string;
@@ -12,10 +13,15 @@ interface MacroDisplayProps {
 
 export const MacroDisplay = ({
 	nutrition,
+	show = true,
 	showLabel = false,
 	size = "md",
 	className,
 }: MacroDisplayProps) => {
+	if (!show) {
+		return null;
+	}
+
 	const sizeClasses = {
 		sm: "text-xs",
 		md: "text-sm",

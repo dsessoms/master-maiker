@@ -37,7 +37,8 @@ export const FoodEntry = ({ entry }: { entry: FoodEntryType }) => {
 	>({});
 	const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 	const isDraggingRef = useRef(false); // Track if currently dragging
-	const { selectableProfiles } = useContext(MealPlanContext);
+	const { selectableProfiles, selectedProfileIds } =
+		useContext(MealPlanContext);
 	const { mutate: deleteFoodEntry, isPending: isDeleting } =
 		useDeleteFoodEntry();
 	const { mutate: updateFoodEntry, isPending: isUpdating } =
@@ -53,11 +54,6 @@ export const FoodEntry = ({ entry }: { entry: FoodEntryType }) => {
 
 	// Create a map of profile ID to profile for quick lookup
 	const profileMap = new Map(selectableProfiles.map((p) => [p.id, p]));
-
-	// Create a map of selected profile IDs
-	const selectedProfileIds = new Set(
-		selectableProfiles.filter((p) => p.isSelected).map((p) => p.id),
-	);
 
 	// Calculate nutrition for selected profiles
 	const nutrition = calculateFoodEntryNutritionForSelectedProfiles(
@@ -118,6 +114,8 @@ export const FoodEntry = ({ entry }: { entry: FoodEntryType }) => {
 	const handleDragStateChange = (dragging: boolean) => {
 		isDraggingRef.current = dragging;
 	};
+
+	const isSingleProfile = selectedProfileIds.size === 1;
 
 	return (
 		<DraggableItem
@@ -182,7 +180,12 @@ export const FoodEntry = ({ entry }: { entry: FoodEntryType }) => {
 										})}
 								</View>
 							)}
-						<MacroDisplay nutrition={nutrition} size="sm" className="mt-2" />
+						<MacroDisplay
+							show={isSingleProfile}
+							nutrition={nutrition}
+							size="sm"
+							className="mt-2"
+						/>
 					</View>
 
 					{/* Edit Servings Dialog */}

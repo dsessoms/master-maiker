@@ -57,14 +57,9 @@ export const MealSection = ({
 	foodEntries?: any[];
 	onAdd: () => void;
 }) => {
-	const { selectableProfiles, openNotesModal } = useContext(MealPlanContext);
+	const { selectedProfileIds, openNotesModal } = useContext(MealPlanContext);
 	const [isDropActive, setIsDropActive] = useState(false);
 	const { mutate: updateFoodEntry } = useUpdateFoodEntry();
-
-	// Create a set of selected profile IDs
-	const selectedProfileIds = new Set(
-		selectableProfiles.filter((p: any) => p.isSelected).map((p: any) => p.id),
-	);
 
 	// Filter food entries to only show those with selected profiles
 	const filteredFoodEntries = foodEntries?.filter((entry: any) =>
@@ -108,6 +103,8 @@ export const MealSection = ({
 		[mealType, date, updateFoodEntry],
 	);
 
+	const isSingleProfile = selectedProfileIds.size === 1;
+
 	return (
 		<DroppableArea
 			dropId={`meal-${date}-${mealType}`}
@@ -139,7 +136,11 @@ export const MealSection = ({
 								>
 									{mealType}
 								</Text>
-								<MacroDisplay nutrition={mealNutrition} size="sm" />
+								<MacroDisplay
+									show={isSingleProfile}
+									nutrition={mealNutrition}
+									size="sm"
+								/>
 							</View>
 							<DropdownMenu>
 								<DropdownMenuTrigger asChild>

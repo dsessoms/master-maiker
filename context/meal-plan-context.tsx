@@ -26,6 +26,7 @@ interface MealPlanContextInterface {
 	selectableProfiles: SelectableProfile[];
 	onProfileToggle: (profileId: string) => void;
 	setSelectableProfiles: (profiles: SelectableProfile[]) => void;
+	selectedProfileIds: Set<string>;
 	isLoadingProfiles: boolean;
 	// Food entries
 	foodEntries: any[];
@@ -56,6 +57,7 @@ const INITIAL_MEAL_PLAN_CONTEXT: MealPlanContextInterface = {
 	viewThisWeek: () => null,
 	viewNextWeek: () => null,
 	selectableProfiles: [],
+	selectedProfileIds: new Set(),
 	onProfileToggle: () => null,
 	setSelectableProfiles: () => null,
 	isLoadingProfiles: false,
@@ -119,6 +121,16 @@ export const MealPlanContextProvider = ({ children }: { children: any }) => {
 		);
 	}, [profiles]);
 
+	const selectedProfileIds = useMemo(
+		() =>
+			new Set(
+				selectableProfiles
+					.filter((p: any) => p.isSelected)
+					.map((p: any) => p.id),
+			),
+		[selectableProfiles],
+	);
+
 	const viewNext = () => {
 		setStartDate(add(startDate, { weeks: 1 }));
 	};
@@ -178,6 +190,7 @@ export const MealPlanContextProvider = ({ children }: { children: any }) => {
 				viewThisWeek,
 				viewNextWeek,
 				selectableProfiles,
+				selectedProfileIds,
 				onProfileToggle,
 				setSelectableProfiles,
 				isLoadingProfiles,

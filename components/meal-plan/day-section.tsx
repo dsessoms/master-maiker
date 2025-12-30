@@ -18,7 +18,7 @@ export const DaySection = ({
 	recipeEntries: FoodEntry[];
 	onAdd: (mealType: string) => void;
 }) => {
-	const { selectableProfiles } = useContext(MealPlanContext);
+	const { selectedProfileIds } = useContext(MealPlanContext);
 
 	const recipeEntriesByMealType = useMemo(() => {
 		const finalMap: { [key: string]: FoodEntry[] } = {};
@@ -33,17 +33,6 @@ export const DaySection = ({
 		return finalMap;
 	}, [recipeEntries]);
 
-	// Calculate total nutrition for the entire day
-	const selectedProfileIds = useMemo(
-		() =>
-			new Set(
-				selectableProfiles
-					.filter((p: any) => p.isSelected)
-					.map((p: any) => p.id),
-			),
-		[selectableProfiles],
-	);
-
 	const dayNutrition = useMemo(
 		() =>
 			calculateFoodEntriesNutrition(recipeEntries || [], selectedProfileIds),
@@ -52,12 +41,18 @@ export const DaySection = ({
 
 	const dateString = format(date, "yyyy-MM-dd");
 
+	const isSingleProfile = selectedProfileIds.size === 1;
+
 	return (
 		<View className="min-w-96">
 			<View className="mb-4 mt-8">
 				<View className="flex flex-row items-center justify-between">
 					<Text className="text-2xl mr-2">{format(date, "EEEE")}</Text>
-					<MacroDisplay nutrition={dayNutrition} size="md" />
+					<MacroDisplay
+						show={isSingleProfile}
+						nutrition={dayNutrition}
+						size="md"
+					/>
 				</View>
 			</View>
 			<View>
