@@ -1,6 +1,6 @@
 import * as React from "react";
 
-import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { Avatar, AvatarFallback } from "./ui/avatar";
 import { ChevronDown, Users } from "../lib/icons";
 import {
 	DropdownMenu,
@@ -15,6 +15,7 @@ import {
 
 import { Button } from "./ui/button";
 import { Profile } from "@/types";
+import { ProfileAvatar } from "./profile-avatar";
 import { Text } from "./ui/text";
 import { View } from "react-native";
 import { cn } from "../lib/utils";
@@ -28,31 +29,6 @@ type DropdownProfile = Profile & {
 interface ProfileDropdownProps {
 	profiles: DropdownProfile[];
 	onProfileToggle?: (profileId: string) => void;
-}
-
-// ProfileAvatar component for consistent avatar rendering with fallback
-interface ProfileAvatarProps {
-	name?: string;
-	avatarUrl?: string;
-	alt?: string;
-	className?: string;
-}
-
-function ProfileAvatar({
-	name = "?",
-	avatarUrl,
-	alt,
-	className,
-}: ProfileAvatarProps) {
-	const initials = name ? name.slice(0, 1).toUpperCase() : "?";
-	return (
-		<Avatar alt={alt || `${name}'s Avatar`} className={className}>
-			{avatarUrl ? <AvatarImage source={{ uri: avatarUrl }} /> : null}
-			<AvatarFallback>
-				<Text>{initials}</Text>
-			</AvatarFallback>
-		</Avatar>
-	);
 }
 
 export function ProfileDropdown({

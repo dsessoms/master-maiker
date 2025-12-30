@@ -4,6 +4,7 @@ import DateTimePicker, {
 	DateType,
 	useDefaultClassNames,
 } from "react-native-ui-datepicker";
+import { GeneratedMealPlan, MealPlanChatMessage } from "@/lib/schemas";
 import { Modal, ScrollView, TouchableOpacity, View } from "react-native";
 import React, {
 	useContext,
@@ -17,115 +18,52 @@ import { differenceInDays, format } from "date-fns";
 
 import { Button } from "@/components/ui/button";
 import { CircleCheck } from "@/lib/icons/circle-check";
+import { Input } from "@/components/ui/input";
 import { MealPlanContext } from "@/context/meal-plan-context";
+import { MealPlanPreview } from "@/components/meal-plan/meal-plan-preview";
 import { Profile } from "@/types";
 import { RecipeCard } from "@/components/recipe/recipe-card";
 import { Text } from "@/components/ui/text";
 import { Textarea } from "@/components/ui/textarea";
 import { X } from "@/lib/icons";
+import { useGenerateMealPlanChat } from "@/hooks/meal-plans/use-generate-meal-plan-chat";
 import { useRecipes } from "@/hooks/recipes/use-recipes";
-import {
-	useGenerateMealPlanChat,
-	type ChatMessage,
-} from "@/hooks/meal-plans/use-generate-meal-plan-chat";
 import { useSaveMealPlan } from "@/hooks/meal-plans/use-save-meal-plan";
-import { MealPlanPreview } from "@/components/meal-plan/meal-plan-preview";
-import {
-	generateMealPlanCacheKey,
-	getCachedMealPlan,
-	cacheMealPlan,
-	clearMealPlanCache,
-} from "@/lib/meal-plan-cache";
-import { GeneratedMealPlan } from "@/lib/schemas";
 
-// Helper function to build the initial meal plan user message
-const buildMealPlanUserMessage = (
+// Helper function to build basic information for the meal plan request
+const buildBasicInformation = (
 	startDate: Date,
 	endDate: Date,
 	profiles: Profile[],
 	recipes: any[],
 	additionalContext: string,
-): string => {
-	const dateRange = endDate
-		? `${format(startDate, "MMMM dd, yyyy")} to ${format(endDate, "MMMM dd, yyyy")}`
-		: format(startDate, "MMMM dd, yyyy");
-
-	// Build profile info object
-	const profileInfoObj = profiles.reduce(
-		(acc, p) => {
-			acc[p.id] = {
-				name: p.name,
-				dailyCalorieGoal: p.daily_calorie_goal,
-				dailyProteinGrams: p.protein_grams,
-				dailyCarbsGrams: p.carbs_grams,
-				dailyFatGrams: p.fat_grams,
-				dislikedFood: p.disliked_food,
-				likedFood: p.liked_food,
-			};
-			return acc;
-		},
-		{} as Record<
-			string,
-			{
-				name: string;
-				dailyCalorieGoal: number | null;
-				dailyProteinGrams: number | null;
-				dailyCarbsGrams: number | null;
-				dailyFatGrams: number | null;
-				dislikedFood: string[] | null;
-				likedFood: string[] | null;
-			}
-		>,
-	);
-
-	// Build recipe info object
-	const recipeInfoObj = recipes.reduce(
-		(acc, r) => {
-			// Get the first macro entry (should only be one per recipe)
+) => {
+	return {
+		startDate: format(startDate, "yyyy-MM-dd"),
+		endDate: format(endDate, "yyyy-MM-dd"),
+		userProfiles: profiles.map((profile) => ({
+			id: profile.id,
+			name: profile.name,
+			dailyCalorieGoal: profile.daily_calorie_goal || undefined,
+			dailyProteinGoal: profile.protein_grams || undefined,
+			dailyCarbsGoal: profile.carbs_grams || undefined,
+			dailyFatGoal: profile.fat_grams || undefined,
+			likedFood: profile.liked_food || undefined,
+			dislikedFood: profile.disliked_food || undefined,
+		})),
+		recipesToInclude: recipes.map((r) => {
 			const macros = r.macros?.[0];
-			acc[r.id] = {
+			return {
+				id: r.id,
 				name: r.name,
-				macrosPerServing: macros
-					? {
-							calories: macros.calories,
-							protein: macros.protein,
-							carbohydrate: macros.carbohydrate,
-							fat: macros.fat,
-							fiber: macros.fiber,
-							sugar: macros.sugar,
-						}
-					: null,
+				calories: macros?.calories || undefined,
+				carbohydrate: macros?.carbohydrate || undefined,
+				protein: macros?.protein || undefined,
+				fat: macros?.fat || undefined,
 			};
-			return acc;
-		},
-		{} as Record<
-			string,
-			{
-				name: string;
-				macrosPerServing: {
-					calories: number | null;
-					protein: number | null;
-					carbohydrate: number | null;
-					fat: number | null;
-					fiber: number | null;
-					sugar: number | null;
-				} | null;
-			}
-		>,
-	);
-
-	const recipeInfo =
-		recipes.length > 0
-			? `\n\nExisting recipes to try and incorporate:\n${JSON.stringify(recipeInfoObj, null, 2)}`
-			: "";
-
-	const contextInfo = additionalContext
-		? `\n\nAdditional preferences: ${additionalContext}`
-		: "";
-
-	const message = `Create a meal plan for ${dateRange}\n\nProfile Information:\n${JSON.stringify(profileInfoObj, null, 2)}${recipeInfo}${contextInfo}`;
-
-	return message;
+		}),
+		additionalContext: additionalContext || undefined,
+	};
 };
 
 export interface ChatDisplayMessage {
@@ -300,8 +238,6 @@ export const GenerateMealPlanModal = ({
 	const defaultClassNames = useDefaultClassNames();
 	const { sendMessage, isPending } = useGenerateMealPlanChat();
 	const { saveMealPlan, isPending: isSaving } = useSaveMealPlan();
-	const [cacheKey, setCacheKey] = useState<string>("");
-	const [forceRefresh, setForceRefresh] = useState(false);
 
 	// State for the collected data using reducer
 	const [introStepsState, dispatch] = useReducer(
@@ -321,6 +257,9 @@ export const GenerateMealPlanModal = ({
 	]);
 
 	const currentMessage = messages[messages.length - 1];
+
+	// Chat input for critiquing meal plan
+	const [chatInput, setChatInput] = useState("");
 
 	// Auto-scroll to bottom when messages change
 	useEffect(() => {
@@ -431,7 +370,8 @@ export const GenerateMealPlanModal = ({
 		const selectedRecipes =
 			recipes?.filter((r) => introStepsState.selectedRecipeIds.has(r.id)) || [];
 
-		const generatedMessage = buildMealPlanUserMessage(
+		// Build basic information object
+		const basicInformation = buildBasicInformation(
 			introStepsState.startDate as Date,
 			introStepsState.endDate as Date,
 			selectedProfiles,
@@ -439,28 +379,12 @@ export const GenerateMealPlanModal = ({
 			trimmedInput,
 		);
 
-		// Generate cache key
-		const key = generateMealPlanCacheKey(
-			introStepsState.startDate as Date,
-			introStepsState.endDate as Date,
-			Array.from(introStepsState.selectedProfileIds),
-			Array.from(introStepsState.selectedRecipeIds),
-			trimmedInput,
-		);
-		setCacheKey(key);
-
 		const newMessages: ChatDisplayMessage[] = [
 			{
 				id: Crypto.randomUUID(),
 				role: "user",
 				content: trimmedInput || "No additional preferences",
 				introStep: IntroStep.ADDITIONAL_CONTEXT,
-			},
-			{
-				id: Crypto.randomUUID(),
-				role: "user",
-				content: generatedMessage,
-				isHidden: true, // Hidden from UI, but sent to API
 			},
 			{
 				id: Crypto.randomUUID(),
@@ -473,45 +397,25 @@ export const GenerateMealPlanModal = ({
 		addMessages(newMessages);
 
 		try {
-			// Check cache first (unless forceRefresh is true)
-			if (!forceRefresh) {
-				const cachedMealPlan = await getCachedMealPlan(key);
-				if (cachedMealPlan) {
-					const assistantMessage: ChatDisplayMessage = {
-						id: Crypto.randomUUID(),
-						role: "assistant",
-						content:
-							"I found a cached meal plan that matches your request! Showing the last generated plan.",
-						mealPlan: cachedMealPlan,
-					};
-					addMessages([assistantMessage]);
-					setForceRefresh(false);
-					return;
-				}
-			}
+			// Prepare messages for API - use the initial request message
+			const initialMessage = trimmedInput || "Create a meal plan for me";
+			const apiMessages: MealPlanChatMessage[] = [
+				{
+					role: "user",
+					content: initialMessage,
+				},
+			];
 
-			// If no cache or force refresh, call API
-			// Prepare messages for API (include hidden messages)
-			const updatedMessages = [...messages, ...newMessages];
-			const apiMessages: ChatMessage[] = updatedMessages
-				.filter((msg) => !msg.introStep || msg.isHidden) // Only send non-intro or hidden messages
-				.map((msg) => ({
-					role: msg.role,
-					content: msg.content,
-				}));
-
-			const response = await sendMessage({ messages: apiMessages });
-
-			// Cache the result
-			if (response.mealPlan) {
-				await cacheMealPlan(key, response.mealPlan);
-			}
+			const response = await sendMessage({
+				basicInformation,
+				messages: apiMessages,
+			});
 
 			// Create assistant response message
 			const assistantMessage: ChatDisplayMessage = {
 				id: Crypto.randomUUID(),
 				role: "assistant",
-				content: response.content || response.text || "",
+				content: response.content || "",
 				mealPlan: response.mealPlan,
 			};
 
@@ -521,7 +425,6 @@ export const GenerateMealPlanModal = ({
 			if (response.mealPlan) {
 				console.log("Generated Meal Plan:", response.mealPlan);
 			}
-			setForceRefresh(false);
 		} catch (error) {
 			console.error("Error generating meal plan:", error);
 			addMessages([
@@ -532,7 +435,6 @@ export const GenerateMealPlanModal = ({
 						"Sorry, I encountered an error generating your meal plan. Please try again.",
 				},
 			]);
-			setForceRefresh(false);
 		}
 	};
 
@@ -545,11 +447,6 @@ export const GenerateMealPlanModal = ({
 			});
 
 			console.log("Meal plan saved successfully:", result);
-
-			// Clear cache after successful save
-			if (cacheKey) {
-				await clearMealPlanCache(cacheKey);
-			}
 
 			// Add success message - check if result has success property
 			if ("success" in result && result.success) {
@@ -574,6 +471,84 @@ export const GenerateMealPlanModal = ({
 					role: "assistant",
 					content:
 						"Sorry, I encountered an error saving your meal plan. Please try again.",
+				},
+			]);
+		}
+	};
+
+	const handleSendChatMessage = async () => {
+		const trimmedInput = chatInput.trim();
+		if (!trimmedInput || isPending) return;
+
+		const selectedProfiles = selectableProfiles.filter((p) =>
+			introStepsState.selectedProfileIds.has(p.id),
+		);
+
+		const selectedRecipes =
+			recipes?.filter((r) => introStepsState.selectedRecipeIds.has(r.id)) || [];
+
+		// Build basic information object
+		const basicInformation = buildBasicInformation(
+			introStepsState.startDate as Date,
+			introStepsState.endDate as Date,
+			selectedProfiles,
+			selectedRecipes,
+			introStepsState.additionalContext,
+		);
+
+		// Add user message to chat
+		const userMessage: ChatDisplayMessage = {
+			id: Crypto.randomUUID(),
+			role: "user",
+			content: trimmedInput,
+		};
+
+		addMessages([userMessage]);
+		setChatInput("");
+
+		try {
+			// Build conversation history for API - only include non-intro messages
+			const conversationHistory: MealPlanChatMessage[] = messages
+				.filter((msg) => !msg.introStep)
+				.map((msg) => ({
+					role: msg.role,
+					content: msg.content,
+				}));
+
+			// Add the new user message to history
+			conversationHistory.push({
+				role: "user",
+				content: trimmedInput,
+			});
+
+			// Find the latest meal plan from messages
+			const latestMealPlan = [...messages]
+				.reverse()
+				.find((msg) => msg.mealPlan)?.mealPlan;
+
+			const response = await sendMessage({
+				basicInformation,
+				messages: conversationHistory,
+				latestMealPlan,
+			});
+
+			// Create assistant response message
+			const assistantMessage: ChatDisplayMessage = {
+				id: Crypto.randomUUID(),
+				role: "assistant",
+				content: response.content || "",
+				mealPlan: response.mealPlan,
+			};
+
+			addMessages([assistantMessage]);
+		} catch (error) {
+			console.error("Error sending chat message:", error);
+			addMessages([
+				{
+					id: Crypto.randomUUID(),
+					role: "assistant",
+					content:
+						"Sorry, I encountered an error processing your request. Please try again.",
 				},
 			]);
 		}
@@ -606,11 +581,6 @@ export const GenerateMealPlanModal = ({
 					}}
 					showsVerticalScrollIndicator={true}
 					scrollEventThrottle={16}
-					// onContentSizeChange={() => {
-					// 	if (scrollViewRef.current?.scrollToEnd) {
-					// 		scrollViewRef.current.scrollToEnd({ animated: true });
-					// 	}
-					// }}
 					onLayout={() => {
 						if (scrollViewRef.current?.scrollToEnd) {
 							scrollViewRef.current.scrollToEnd({ animated: true });
@@ -652,20 +622,9 @@ export const GenerateMealPlanModal = ({
 								startDate={introStepsState.startDate as string}
 								endDate={introStepsState.endDate as string}
 								mealPlan={currentMessage.mealPlan}
+								profiles={selectableProfiles}
 							/>
 							<View className="flex-row gap-2 mt-4">
-								<Button
-									variant="outline"
-									size="sm"
-									onPress={() => {
-										setForceRefresh(true);
-										saveOpenEnded();
-									}}
-									disabled={isPending || isSaving}
-									className="flex-1"
-								>
-									<Text>Refresh Meal Plan</Text>
-								</Button>
 								<Button
 									size="sm"
 									onPress={handleSaveMealPlan}
@@ -814,6 +773,32 @@ export const GenerateMealPlanModal = ({
 							</Button>
 						</View>
 					)}
+
+				{/* Chat input for critiquing meal plan - only show after initial meal plan generation */}
+				{!currentMessage.introStep && currentMessage.role === "assistant" && (
+					<View className="border-t border-border bg-background p-4">
+						<View className="flex-row items-end gap-2">
+							<View className="flex-1">
+								<Input
+									placeholder="Ask for changes to the meal plan..."
+									value={chatInput}
+									onChangeText={setChatInput}
+									multiline
+									maxLength={500}
+									editable={!isPending && !isSaving}
+									placeholderTextColor="#888"
+								/>
+							</View>
+							<Button
+								size="icon"
+								onPress={handleSendChatMessage}
+								disabled={!chatInput.trim() || isPending || isSaving}
+							>
+								<Text className="text-lg">➤</Text>
+							</Button>
+						</View>
+					</View>
+				)}
 			</View>
 		</Modal>
 	);
