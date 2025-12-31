@@ -30,6 +30,7 @@ import { DaySection } from "@/components//meal-plan/day-section";
 import { DnDScrollView } from "@/components/ui/dnd/dnd-scroll-view";
 import { GenerateMealPlanModal } from "@/components/meal-plan/generate-meal-plan-modal";
 import { MealPlanContext } from "@/context/meal-plan-context";
+import { MustrdButton } from "@/components/mustrd-button";
 import { NotesModal } from "@/components/meal-plan/notes-modal";
 import { ProfileDropdown } from "@/components//user-dropdown";
 import { SafeAreaView } from "@/components//safe-area-view";
@@ -208,14 +209,7 @@ export default function MealPlanScreen() {
 				</DialogContent>
 			</Dialog>
 			<View className="absolute bottom-6 right-6">
-				<Button
-					variant="default"
-					size="icon"
-					className="w-12 h-12 rounded-full shadow-sm"
-					onPress={openGenerateMealPlanModal}
-				>
-					<WandSparkles className="text-primary-foreground" size={24} />
-				</Button>
+				<MustrdButton onPress={openGenerateMealPlanModal} />
 			</View>
 		</SafeAreaView>
 	);

@@ -21,6 +21,7 @@ import { Stack, router } from "expo-router";
 import { Button } from "@/components/ui/button";
 import { DeleteRecipeDialog } from "@/components/recipe/delete-recipe-dialog";
 import { Input } from "@/components/ui/input";
+import { MustrdButton } from "@/components/mustrd-button";
 import { RecipeCard } from "@/components/recipe/recipe-card";
 import { RecipeCardSkeleton } from "@/components/recipe/recipe-card-skeleton";
 import { SafeAreaView } from "@/components/safe-area-view";
@@ -213,13 +214,7 @@ export default function Recipes() {
 			<View className="absolute bottom-6 right-6">
 				<DropdownMenu>
 					<DropdownMenuTrigger asChild>
-						<Button
-							variant="default"
-							size="icon"
-							className="w-12 h-12 rounded-full shadow-sm"
-						>
-							<Plus className="text-primary-foreground" size={24} />
-						</Button>
+						<MustrdButton />
 					</DropdownMenuTrigger>
 					<DropdownMenuContent side="top" align="end" className="w-64 mb-2">
 						<DropdownMenuItem onPress={handleCreateRecipe}>

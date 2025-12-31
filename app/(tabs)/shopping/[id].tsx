@@ -25,6 +25,8 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CreateShoppingListModal } from "./create-shopping-list-modal";
 import { GetShoppingListItemsResponse } from "@/app/api/shopping-lists/[id]/items/index+api";
+import { Image } from "@/components/image";
+import { MustrdButton } from "@/components/mustrd-button";
 import { SafeAreaView } from "@/components/safe-area-view";
 import { Text } from "@/components/ui/text";
 import { UpdateItemModal } from "./update-item-modal";
@@ -310,13 +312,7 @@ export default function ShoppingListDetail() {
 			</ScrollView>
 
 			<View className="absolute bottom-6 right-6">
-				<Button
-					size="icon"
-					className="h-12 w-12 rounded-full shadow-sm"
-					onPress={toggleAddModal}
-				>
-					<Plus className="h-6 w-6" />
-				</Button>
+				<MustrdButton onPress={toggleAddModal} />
 			</View>
 
 			<AddItemModal
