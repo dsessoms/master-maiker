@@ -57,7 +57,7 @@ export const CreateShoppingListModal = ({
 
 	return (
 		<Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-			<DialogContent>
+			<DialogContent className="w-[90vw]">
 				<DialogHeader>
 					<DialogTitle>Create New List</DialogTitle>
 				</DialogHeader>
@@ -86,11 +86,11 @@ export const CreateShoppingListModal = ({
 
 				<DialogFooter>
 					<Button variant="outline" onPress={handleClose}>
-						Cancel
+						<Text>Cancel</Text>
 					</Button>
 					<Button onPress={handleCreate} disabled={isPending || !name.trim()}>
 						<Plus className="mr-2 h-4 w-4" />
-						Create
+						<Text>Create</Text>
 					</Button>
 				</DialogFooter>
 			</DialogContent>

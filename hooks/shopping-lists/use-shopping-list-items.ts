@@ -1,11 +1,10 @@
 import {
-	GetShoppingListItemsResponse,
-	PostItem,
-	PostShoppingListItemsResponse,
-} from "@/app/api/shopping-lists/[id]/items/index+api";
+	PatchShoppingListItem,
+	PatchShoppingListItemResponse,
+} from "@/app/api/shopping-lists/[id]/items/[itemId]/index+api";
 import { useMutation, useQuery } from "@tanstack/react-query";
 
-import { PatchShoppingListItem } from "@/app/api/shopping-lists/[id]/items/[itemId]/index+api";
+import { GetShoppingListItemsResponse } from "@/app/api/shopping-lists/[id]/items/index+api";
 import axiosWithAuth from "@/lib/axiosWithAuth";
 import { queryClient } from "@/app/_layout";
 
@@ -22,15 +21,14 @@ export const useShoppingListItems = (listId: string) => {
 	});
 
 	const updateMutation = useMutation<
-		unknown,
-		unknown,
+		Awaited<PatchShoppingListItemResponse>,
+		Error,
 		{ id: string } & PatchShoppingListItem
 	>({
 		mutationFn: async ({ id, ...updates }) => {
-			const response = await axiosWithAuth.patch(
-				`/api/shopping-lists/${listId}/items/${id}`,
-				updates,
-			);
+			const response = await axiosWithAuth.patch<
+				Awaited<PatchShoppingListItemResponse>
+			>(`/api/shopping-lists/${listId}/items/${id}`, updates);
 			return response.data;
 		},
 		onSuccess: () => {

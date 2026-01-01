@@ -13,15 +13,10 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-	MoreHorizontalIcon,
-	ShoppingCart,
-	Trash2Icon,
-	WandSparkles,
-} from "@/lib/icons";
+import { ShoppingCart, Trash2Icon, WandSparkles } from "@/lib/icons";
 import { Stack, useRouter } from "expo-router";
 import { eachDayOfInterval, format } from "date-fns";
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useContext, useMemo, useState } from "react";
 
 import { AddShoppingItemsData } from "@/components/shopping/add-shopping-items-modal/types";
 import { AddShoppingItemsModal } from "@/components/shopping/add-shopping-items-modal";
@@ -74,18 +69,33 @@ export default function MealPlanScreen() {
 
 	// Prepare data for shopping list modal - extract all recipe entries
 	const shoppingItemsData: AddShoppingItemsData = useMemo(() => {
-		const recipes: { recipeId: string; numberOfServings: number }[] = [];
+		const recipeServingsMap = new Map<string, number>();
 
 		Object.values(foodEntriesByDay).forEach((entries) => {
 			entries?.forEach((entry: any) => {
 				if (entry.type?.toLowerCase() === "recipe" && entry.recipe_id) {
-					recipes.push({
-						recipeId: entry.recipe_id,
-						numberOfServings: entry.number_of_servings || 1,
-					});
+					// Sum up servings from all profile_food_entry records
+					const totalServings =
+						entry.profile_food_entry?.reduce(
+							(sum: number, pfe: any) => sum + (pfe.number_of_servings || 0),
+							0,
+						) || 0;
+
+					const currentServings = recipeServingsMap.get(entry.recipe_id) || 0;
+					recipeServingsMap.set(
+						entry.recipe_id,
+						currentServings + totalServings,
+					);
 				}
 			});
 		});
+
+		const recipes = Array.from(recipeServingsMap.entries()).map(
+			([recipeId, numberOfServings]) => ({
+				recipeId,
+				numberOfServings,
+			}),
+		);
 
 		return { recipes };
 	}, [foodEntriesByDay]);
@@ -123,25 +133,7 @@ export default function MealPlanScreen() {
 						onNextClick={viewNext}
 						onThisWeek={viewThisWeek}
 					/>
-					<DropdownMenu>
-						<DropdownMenuTrigger asChild>
-							<Button variant="ghost" size="icon">
-								<MoreHorizontalIcon />
-							</Button>
-						</DropdownMenuTrigger>
-						<DropdownMenuContent align="end" className="w-48">
-							<DropdownMenuItem
-								onPress={() => setShowAddToShoppingListModal(true)}
-							>
-								<ShoppingCart size={16} className="mr-2" />
-								<Text>Add to Shopping List</Text>
-							</DropdownMenuItem>
-							<DropdownMenuItem onPress={() => setShowClearDialog(true)}>
-								<Trash2Icon size={16} className="mr-2 text-destructive" />
-								<Text className="text-destructive">Clear Meal Plan</Text>
-							</DropdownMenuItem>
-						</DropdownMenuContent>
-					</DropdownMenu>
+					<View className="w-10" />
 				</View>
 				<DnDScrollView
 					contentContainerStyle={{ padding: 16, flexGrow: 1 }}
@@ -209,7 +201,27 @@ export default function MealPlanScreen() {
 				</DialogContent>
 			</Dialog>
 			<View className="absolute bottom-6 right-6">
-				<MustrdButton onPress={openGenerateMealPlanModal} />
+				<DropdownMenu>
+					<DropdownMenuTrigger asChild>
+						<MustrdButton />
+					</DropdownMenuTrigger>
+					<DropdownMenuContent side="top" align="end" className="w-64 mb-2">
+						<DropdownMenuItem onPress={openGenerateMealPlanModal}>
+							<WandSparkles className="text-foreground mr-2" size={16} />
+							<Text>Generate meal plan</Text>
+						</DropdownMenuItem>
+						<DropdownMenuItem
+							onPress={() => setShowAddToShoppingListModal(true)}
+						>
+							<ShoppingCart className="text-foreground mr-2" size={16} />
+							<Text>Add to list</Text>
+						</DropdownMenuItem>
+						<DropdownMenuItem onPress={() => setShowClearDialog(true)}>
+							<Trash2Icon className="text-destructive mr-2" size={16} />
+							<Text className="text-destructive">Clear meal plan</Text>
+						</DropdownMenuItem>
+					</DropdownMenuContent>
+				</DropdownMenu>
 			</View>
 		</SafeAreaView>
 	);

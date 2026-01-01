@@ -2,15 +2,7 @@
 
 import * as React from "react";
 
-import { ActivityIndicator, Pressable, ScrollView, View } from "react-native";
-import {
-	ChevronDown,
-	MoreVertical,
-	Plus,
-	Star,
-	Trash2Icon,
-	X,
-} from "@/lib/icons";
+import { ChevronDown, Plus, Star, Trash2Icon, X } from "@/lib/icons";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -18,16 +10,20 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Pressable, ScrollView, View } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 
 import { AddItemModal } from "./add-item-modal";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ClearShoppingListDialog } from "./clear-shopping-list-dialog";
 import { CreateShoppingListModal } from "./create-shopping-list-modal";
+import { DeleteShoppingListDialog } from "./delete-shopping-list-dialog";
 import { GetShoppingListItemsResponse } from "@/app/api/shopping-lists/[id]/items/index+api";
 import { Image } from "@/components/image";
 import { MustrdButton } from "@/components/mustrd-button";
 import { SafeAreaView } from "@/components/safe-area-view";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import { UpdateItemModal } from "./update-item-modal";
 import { useClearShoppingListMutation } from "@/hooks/shopping-lists/use-clear-shopping-list-mutation";
@@ -115,64 +111,6 @@ const ListItem = ({
 	);
 };
 
-const ShoppingListOptions = ({
-	listId,
-	isDefaultList,
-}: {
-	listId: string;
-	isDefaultList: boolean;
-}) => {
-	const { lists } = useShoppingLists();
-	const { updateShoppingList } = useUpdateShoppingListMutation(listId);
-	const { deleteShoppingList } = useDeleteShoppingListMutation(listId);
-	const { clearShoppingList } = useClearShoppingListMutation(listId);
-
-	const deleteAndNavigate = async () => {
-		const defaultList = lists?.find(
-			(list) => list.is_default && list.id !== listId,
-		);
-		if (!defaultList) {
-			return;
-		}
-		await deleteShoppingList();
-		router.replace(`/(tabs)/shopping/${defaultList.id}` as any);
-	};
-
-	return (
-		<DropdownMenu>
-			<DropdownMenuTrigger asChild>
-				<Button variant="ghost" size="icon">
-					<MoreVertical className="h-5 w-5" />
-				</Button>
-			</DropdownMenuTrigger>
-			<DropdownMenuContent align="end">
-				{!isDefaultList && (
-					<DropdownMenuItem
-						onPress={() => updateShoppingList({ is_default: true })}
-					>
-						<Star className="mr-2 h-4 w-4" />
-						<Text>Set As Default</Text>
-					</DropdownMenuItem>
-				)}
-				<DropdownMenuItem
-					onPress={() =>
-						clearShoppingList({ action: "clear", itemsToClear: "all" })
-					}
-				>
-					<X className="mr-2 h-4 w-4" />
-					<Text>Clear All</Text>
-				</DropdownMenuItem>
-				{!isDefaultList && (
-					<DropdownMenuItem onPress={deleteAndNavigate}>
-						<Trash2Icon className="mr-2 h-4 w-4" />
-						<Text>Delete</Text>
-					</DropdownMenuItem>
-				)}
-			</DropdownMenuContent>
-		</DropdownMenu>
-	);
-};
-
 const ShoppingListSelector = ({
 	currentListId,
 	lists,
@@ -230,9 +168,15 @@ export default function ShoppingListDetail() {
 	const { id } = useLocalSearchParams<{ id: string }>();
 	const { lists } = useShoppingLists();
 	const { items, isLoading } = useShoppingListItems(id!);
-	const { clearShoppingList } = useClearShoppingListMutation(id!);
+	const { clearShoppingList, isPending: isClearingList } =
+		useClearShoppingListMutation(id!);
+	const { updateShoppingList } = useUpdateShoppingListMutation(id!);
+	const { deleteShoppingList, isPending: isDeletingList } =
+		useDeleteShoppingListMutation(id!);
 	const [isAddModalOpen, toggleAddModal] = useToggle();
 	const [isCreateListModalOpen, toggleCreateListModal] = useToggle();
+	const [showClearDialog, setShowClearDialog] = React.useState(false);
+	const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
 	const [itemToUpdate, setItemToUpdate] = React.useState<ItemType>();
 
 	const selectedList = lists?.find((list) => list.id === id);
@@ -240,10 +184,35 @@ export default function ShoppingListDetail() {
 	const checkedItems = items?.filter((item) => item.is_checked);
 	const hasCheckedItems = checkedItems && checkedItems.length > 0;
 
+	const deleteAndNavigate = async () => {
+		const defaultList = lists?.find(
+			(list) => list.is_default && list.id !== id,
+		);
+		if (!defaultList) {
+			return;
+		}
+		await deleteShoppingList();
+		router.replace(`/(tabs)/shopping/${defaultList.id}` as any);
+	};
+
+	const handleClearList = async () => {
+		await clearShoppingList({ action: "clear", itemsToClear: "all" });
+	};
+
 	if (isLoading) {
 		return (
-			<SafeAreaView className="flex flex-1 items-center justify-center bg-background">
-				<ActivityIndicator size="large" />
+			<SafeAreaView className="flex flex-1 bg-background">
+				<View className="p-4">
+					<Skeleton className="h-10 w-48 mb-2" />
+				</View>
+				<View className="flex-1 p-4 bg-muted-background gap-2">
+					<Skeleton className="h-10 w-full" />
+					<Skeleton className="h-10 w-full" />
+					<Skeleton className="h-10 w-full" />
+					<Skeleton className="h-10 w-full" />
+					<Skeleton className="h-10 w-full" />
+					<Skeleton className="h-10 w-full" />
+				</View>
 			</SafeAreaView>
 		);
 	}
@@ -260,12 +229,6 @@ export default function ShoppingListDetail() {
 					lists={lists}
 					onCreateNew={toggleCreateListModal}
 				/>
-				{selectedList && (
-					<ShoppingListOptions
-						listId={selectedList.id}
-						isDefaultList={!!selectedList.is_default}
-					/>
-				)}
 			</View>
 
 			<ScrollView className="flex-1 p-4 bg-muted-background">
@@ -311,8 +274,44 @@ export default function ShoppingListDetail() {
 				)}
 			</ScrollView>
 
-			<View className="absolute bottom-6 right-6">
-				<MustrdButton onPress={toggleAddModal} />
+			<View className="flex flex-col justify-center items-center gap-2 absolute bottom-6 right-6">
+				<Button
+					onPress={toggleAddModal}
+					variant="outline"
+					size="icon"
+					className="h-10 w-10 rounded-full shadow-sm"
+				>
+					<Plus />
+				</Button>
+				<DropdownMenu>
+					<DropdownMenuTrigger asChild>
+						<MustrdButton />
+					</DropdownMenuTrigger>
+					<DropdownMenuContent side="top" align="end" className="w-64 mb-2">
+						<DropdownMenuItem onPress={toggleAddModal}>
+							<Plus className="text-foreground mr-2" size={16} />
+							<Text>Add item</Text>
+						</DropdownMenuItem>
+						<DropdownMenuItem onPress={() => setShowClearDialog(true)}>
+							<X className="text-foreground mr-2" size={16} />
+							<Text>Clear all</Text>
+						</DropdownMenuItem>
+						{selectedList && !selectedList.is_default && (
+							<DropdownMenuItem
+								onPress={() => updateShoppingList({ is_default: true })}
+							>
+								<Star className="text-foreground mr-2" size={16} />
+								<Text>Set as default</Text>
+							</DropdownMenuItem>
+						)}
+						{selectedList && !selectedList.is_default && (
+							<DropdownMenuItem onPress={() => setShowDeleteDialog(true)}>
+								<Trash2Icon className="text-destructive mr-2" size={16} />
+								<Text className="text-destructive">Delete list</Text>
+							</DropdownMenuItem>
+						)}
+					</DropdownMenuContent>
+				</DropdownMenu>
 			</View>
 
 			<AddItemModal
@@ -332,6 +331,19 @@ export default function ShoppingListDetail() {
 				isOpen={isCreateListModalOpen}
 				onClose={toggleCreateListModal}
 				onCreated={handleListCreated}
+			/>
+			<ClearShoppingListDialog
+				isOpen={showClearDialog}
+				onClose={() => setShowClearDialog(false)}
+				onConfirm={handleClearList}
+				isPending={isClearingList}
+			/>
+			<DeleteShoppingListDialog
+				isOpen={showDeleteDialog}
+				onClose={() => setShowDeleteDialog(false)}
+				onConfirm={deleteAndNavigate}
+				listName={selectedList?.name}
+				isPending={isDeletingList}
 			/>
 		</SafeAreaView>
 	);

@@ -15,6 +15,7 @@ export type InstructionRow = Tables<"instruction">;
 export type RecipeRow = Tables<"recipe">;
 export type RecipeMacrosRow =
 	Database["public"]["Views"]["recipe_macros"]["Row"];
+export type FoodEntryRow = Tables<"food_entry">;
 
 export type ExpandedIngredient = Omit<
 	IngredientRow,

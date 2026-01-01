@@ -1,6 +1,7 @@
 import { add, format, startOfWeek, sub } from "date-fns";
 import { createContext, useEffect, useMemo, useState } from "react";
 
+import { GetFoodEntriesResponse } from "@/app/api/food-entries/index+api";
 import { Profile } from "@/types";
 import { useFoodEntries } from "@/hooks/recipes/use-food-entries";
 import { useProfiles } from "@/hooks/profiles/useProfiles";
@@ -16,6 +17,8 @@ interface AddNoteAction {
 	mealType: "Breakfast" | "Lunch" | "Dinner" | "Snack";
 }
 
+type FoodEntry = GetFoodEntriesResponse["foodEntries"][0];
+
 interface MealPlanContextInterface {
 	startDate: Date;
 	endDate: Date;
@@ -29,8 +32,8 @@ interface MealPlanContextInterface {
 	selectedProfileIds: Set<string>;
 	isLoadingProfiles: boolean;
 	// Food entries
-	foodEntries: any[];
-	foodEntriesByDay: { [key: string]: any[] };
+	foodEntries: FoodEntry[];
+	foodEntriesByDay: { [key: string]: FoodEntry[] };
 	isLoadingFoodEntries: boolean;
 	// Notes modal
 	notesModalState: AddNoteAction | null;

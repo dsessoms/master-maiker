@@ -1,9 +1,10 @@
 import * as React from "react";
 
-import { ActivityIndicator } from "react-native";
 import { Redirect } from "expo-router";
 import { SafeAreaView } from "@/components//safe-area-view";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
+import { View } from "react-native";
 import { useMemo } from "react";
 import { useShoppingLists } from "@/hooks/shopping-lists/use-shopping-lists";
 
@@ -17,8 +18,17 @@ export default function Shopping() {
 
 	if (isLoading) {
 		return (
-			<SafeAreaView className="flex flex-1 items-center justify-center bg-background">
-				<ActivityIndicator size="large" />
+			<SafeAreaView className="flex flex-1 bg-background">
+				<View className="p-4">
+					<Skeleton className="h-10 w-48 mb-4" />
+				</View>
+				<View className="flex-1 p-4 bg-muted-background gap-2">
+					<Skeleton className="h-10 w-full" />
+					<Skeleton className="h-10 w-full" />
+					<Skeleton className="h-10 w-full" />
+					<Skeleton className="h-10 w-full" />
+					<Skeleton className="h-10 w-full" />
+				</View>
 			</SafeAreaView>
 		);
 	}

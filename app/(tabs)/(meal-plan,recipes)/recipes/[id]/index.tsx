@@ -10,12 +10,15 @@ import {
 	MoreHorizontalIcon,
 	PencilIcon,
 	Plus,
+	ShoppingCart,
 	Trash2Icon,
 } from "@/lib/icons";
 import { ScrollView, View } from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
+import { AddShoppingItemsData } from "@/components/shopping/add-shopping-items-modal/types";
+import { AddShoppingItemsModal } from "@/components/shopping/add-shopping-items-modal";
 import { Button } from "@/components/ui/button";
 import { DeleteRecipeDialog } from "@/components/recipe/delete-recipe-dialog";
 import { Header } from "@/components/recipe/header";
@@ -37,6 +40,8 @@ export default function RecipeDetails() {
 	const { deleteRecipe, isPending: isDeleting } = useDeleteRecipeMutation();
 	const [recipeServings, setRecipeServings] = useState<number>(1);
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+	const [showAddToShoppingListModal, setShowAddToShoppingListModal] =
+		useState(false);
 
 	useEffect(() => {
 		if (recipe) {
@@ -46,6 +51,19 @@ export default function RecipeDetails() {
 
 	const recipeServingsMultiplier =
 		recipeServings / (recipe?.number_of_servings || 1);
+
+	// Prepare data for shopping list modal
+	const shoppingItemsData: AddShoppingItemsData = useMemo(() => {
+		if (!recipe) return { recipes: [] };
+		return {
+			recipes: [
+				{
+					recipeId: recipe.id,
+					numberOfServings: recipeServings,
+				},
+			],
+		};
+	}, [recipe?.id, recipeServings]);
 
 	const addRecipeServing = () => {
 		setRecipeServings((servings) => servings + 1);
@@ -68,6 +86,10 @@ export default function RecipeDetails() {
 
 	const handleDeleteRecipe = () => {
 		setDeleteDialogOpen(true);
+	};
+
+	const handleAddToShoppingList = () => {
+		setShowAddToShoppingListModal(true);
 	};
 
 	const confirmDeleteRecipe = async () => {
@@ -157,6 +179,10 @@ export default function RecipeDetails() {
 									<DropdownMenuItem onPress={handleEditRecipe}>
 										<PencilIcon className="text-foreground mr-2" size={16} />
 										<Text>Edit</Text>
+									</DropdownMenuItem>
+									<DropdownMenuItem onPress={handleAddToShoppingList}>
+										<ShoppingCart className="text-foreground mr-2" size={16} />
+										<Text>Add to List</Text>
 									</DropdownMenuItem>
 									<DropdownMenuItem onPress={handleDeleteRecipe}>
 										<Trash2Icon className="text-destructive mr-2" size={16} />
@@ -291,6 +317,13 @@ export default function RecipeDetails() {
 				onConfirm={confirmDeleteRecipe}
 				onCancel={cancelDeleteRecipe}
 				isDeleting={isDeleting}
+			/>
+
+			{/* Add to Shopping List Modal */}
+			<AddShoppingItemsModal
+				isOpen={showAddToShoppingListModal}
+				onClose={() => setShowAddToShoppingListModal(false)}
+				itemsToAdd={shoppingItemsData}
 			/>
 		</View>
 	);

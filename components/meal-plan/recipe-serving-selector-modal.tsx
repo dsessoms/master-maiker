@@ -69,26 +69,22 @@ export const RecipeServingSelectorModal = ({
 						Choose the number of servings for each profile
 					</DialogDescription>
 				</DialogHeader>
-				<ScrollView className="max-h-80">
-					<View className="gap-4">
-						{profiles.map((profile) => (
-							<View key={profile.id} className="flex flex-col gap-2">
-								<Label nativeID={`servings-${profile.id}`}>
-									{profile.name}
-								</Label>
-								<Input
-									nativeID={`servings-${profile.id}`}
-									placeholder="Number of servings"
-									value={servings[profile.id]?.toString() ?? "1"}
-									onChangeText={(value) =>
-										handleServingsChange(profile.id, value)
-									}
-									keyboardType="decimal-pad"
-								/>
-							</View>
-						))}
-					</View>
-				</ScrollView>
+				<View className="gap-4">
+					{profiles.map((profile) => (
+						<View key={profile.id} className="flex flex-col gap-2">
+							<Label nativeID={`servings-${profile.id}`}>{profile.name}</Label>
+							<Input
+								nativeID={`servings-${profile.id}`}
+								placeholder="Number of servings"
+								value={servings[profile.id]?.toString() ?? "1"}
+								onChangeText={(value) =>
+									handleServingsChange(profile.id, value)
+								}
+								keyboardType="decimal-pad"
+							/>
+						</View>
+					))}
+				</View>
 				<DialogFooter>
 					<Button
 						variant="outline"

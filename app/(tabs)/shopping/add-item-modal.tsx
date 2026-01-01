@@ -12,6 +12,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { KeyboardHint } from "@/components/ui/keyboard-hint";
 import { Plus } from "@/lib/icons";
 import { View } from "react-native";
 import { useCreateShoppingListItemMutation } from "@/hooks/shopping-lists/use-create-shopping-list-item-mutation";
@@ -48,12 +49,12 @@ export const AddItemModal = ({
 
 	return (
 		<Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-			<DialogContent>
+			<DialogContent className="w-[90vw]">
 				<DialogHeader>
 					<DialogTitle>Add Item</DialogTitle>
 				</DialogHeader>
 
-				<View className="gap-4 py-4">
+				<View className="py-4">
 					<Input
 						placeholder="Item name..."
 						value={itemName}
@@ -62,17 +63,12 @@ export const AddItemModal = ({
 						onSubmitEditing={handleAdd}
 						returnKeyType="done"
 					/>
+					<KeyboardHint
+						keyLabel="enter"
+						actionText="to save"
+						show={!!itemName}
+					/>
 				</View>
-
-				<DialogFooter>
-					<Button variant="outline" onPress={handleClose}>
-						Cancel
-					</Button>
-					<Button onPress={handleAdd} disabled={isPending || !itemName.trim()}>
-						<Plus className="mr-2 h-4 w-4" />
-						Add
-					</Button>
-				</DialogFooter>
 			</DialogContent>
 		</Dialog>
 	);

@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { GetShoppingListItemsResponse } from "@/app/api/shopping-lists/[id]/items/index+api";
 import { Input } from "@/components/ui/input";
+import { Text } from "@/components/ui/text";
 import { Textarea } from "@/components/ui/textarea";
 import { Trash2Icon } from "@/lib/icons";
 import { View } from "react-native";
@@ -20,6 +21,21 @@ import { useDeleteShoppingListItemMutation } from "@/hooks/shopping-lists/use-de
 import { useShoppingListItems } from "@/hooks/shopping-lists/use-shopping-list-items";
 
 type ItemType = NonNullable<GetShoppingListItemsResponse["items"]>[0];
+
+const getServingDescription = (
+	numberOfServings: number,
+	serving: {
+		measurement_description: string | null;
+		number_of_units: number | null;
+	},
+) => {
+	if (!serving.number_of_units) {
+		return `${numberOfServings} ${serving.measurement_description || "serving"}`;
+	}
+
+	const totalUnits = numberOfServings * serving.number_of_units;
+	return `${totalUnits} ${serving.measurement_description || "unit"}`;
+};
 
 export const UpdateItemModal = ({
 	shoppingListId,
@@ -32,21 +48,40 @@ export const UpdateItemModal = ({
 	isOpen: boolean;
 	onClose: () => void;
 }) => {
-	const [name, setName] = React.useState(item.name ?? "");
+	// For items with a food reference, display the food name with serving info but treat it as read-only
+	const isIngredientItem = !item.name && !!item.food;
+	const servingInfo =
+		item.serving && item.number_of_servings
+			? getServingDescription(item.number_of_servings, item.serving)
+			: null;
+	const foodName = item.food?.food_name || "";
+	const displayName =
+		item.name || (servingInfo ? `${servingInfo} ${foodName}` : foodName);
+
+	const [name, setName] = React.useState(displayName);
 	const [notes, setNotes] = React.useState(item.notes ?? "");
 	const { updateItem } = useShoppingListItems(shoppingListId);
 	const { deleteShoppingListItem, isPending: isDeleting } =
 		useDeleteShoppingListItemMutation(shoppingListId);
 
 	React.useEffect(() => {
-		setName(item.name ?? "");
+		const newServingInfo =
+			item.serving && item.number_of_servings
+				? getServingDescription(item.number_of_servings, item.serving)
+				: null;
+		const newFoodName = item.food?.food_name || "";
+		const newDisplayName =
+			item.name ||
+			(newServingInfo ? `${newServingInfo} ${newFoodName}` : newFoodName);
+		setName(newDisplayName);
 		setNotes(item.notes ?? "");
 	}, [item]);
 
 	const handleSave = async () => {
+		// For ingredient items, we don't update the name (since it comes from the food object)
 		await updateItem({
 			id: item.id,
-			name: name.trim() || undefined,
+			name: isIngredientItem ? undefined : name.trim() || undefined,
 			notes: notes.trim() || undefined,
 		});
 		onClose();
@@ -59,7 +94,7 @@ export const UpdateItemModal = ({
 
 	return (
 		<Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-			<DialogContent>
+			<DialogContent className="w-[90vw]">
 				<DialogHeader>
 					<DialogTitle>Edit Item</DialogTitle>
 				</DialogHeader>
@@ -69,6 +104,8 @@ export const UpdateItemModal = ({
 						placeholder="Item name..."
 						value={name}
 						onChangeText={setName}
+						editable={!isIngredientItem}
+						className={isIngredientItem ? "opacity-50" : undefined}
 					/>
 					<Textarea
 						placeholder="Notes (optional)..."
@@ -89,9 +126,11 @@ export const UpdateItemModal = ({
 					</Button>
 					<View className="flex-1" />
 					<Button variant="outline" onPress={onClose}>
-						Cancel
+						<Text>Cancel</Text>
 					</Button>
-					<Button onPress={handleSave}>Save</Button>
+					<Button onPress={handleSave}>
+						<Text>Save</Text>
+					</Button>
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>

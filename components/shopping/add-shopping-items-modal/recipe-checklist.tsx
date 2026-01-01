@@ -40,7 +40,7 @@ export const RecipeCheckList = ({
 		numberOfServings / (recipe.number_of_servings || 1);
 
 	return (
-		<View className="gap-2 rounded-lg bg-card p-4">
+		<View className="gap-2 rounded-lg p-4">
 			<View className="flex-row items-center justify-between">
 				<Text className="text-lg font-semibold flex-1">{recipe.name}</Text>
 				<View className="flex-row items-center gap-2">

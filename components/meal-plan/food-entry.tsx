@@ -12,7 +12,7 @@ import {
 	DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { MoreHorizontalIcon, PencilIcon, Trash2Icon } from "@/lib/icons";
-import { Pressable, TextInput, View } from "react-native";
+import { Pressable, View } from "react-native";
 import { useContext, useRef, useState } from "react";
 
 import { Button } from "../ui/button";
@@ -20,6 +20,7 @@ import { DraggableItem } from "../ui/dnd/draggable-item";
 import { FoodEntry as FoodEntryType } from "@/app/api/food-entries/index+api";
 import { Icon } from "../ui/icon";
 import { Image } from "../image";
+import { Input } from "@/components/ui/input";
 import { MacroDisplay } from "./macro-display";
 import { MealPlanContext } from "@/context/meal-plan-context";
 import { ProfileServingBadge } from "./profile-serving-badge";
@@ -149,10 +150,6 @@ export const FoodEntry = ({ entry }: { entry: FoodEntryType }) => {
 									</Button>
 								</DropdownMenuTrigger>
 								<DropdownMenuContent align="end">
-									<DropdownMenuItem onPress={handleEdit}>
-										<PencilIcon className="mr-2 h-4 w-4" />
-										<Text>Edit</Text>
-									</DropdownMenuItem>
 									<DropdownMenuItem onPress={handleDelete}>
 										<Trash2Icon className="mr-2 h-4 w-4" />
 										<Text>Delete</Text>
@@ -171,11 +168,12 @@ export const FoodEntry = ({ entry }: { entry: FoodEntryType }) => {
 										)
 										.map((pfe) => {
 											return (
-												<ProfileServingBadge
-													key={pfe.id}
-													profileId={pfe.profile_id}
-													servings={pfe.number_of_servings}
-												/>
+												<Pressable key={pfe.id} onPress={handleEdit}>
+													<ProfileServingBadge
+														profileId={pfe.profile_id}
+														servings={pfe.number_of_servings}
+													/>
+												</Pressable>
 											);
 										})}
 								</View>
@@ -207,7 +205,7 @@ export const FoodEntry = ({ entry }: { entry: FoodEntryType }) => {
 												<Text className="text-sm font-medium">
 													{profile?.name || "Unknown"}
 												</Text>
-												<TextInput
+												<Input
 													value={editingServings[pfe.profile_id] || ""}
 													onChangeText={(value) =>
 														setEditingServings((prev) => ({
@@ -217,7 +215,6 @@ export const FoodEntry = ({ entry }: { entry: FoodEntryType }) => {
 													}
 													placeholder="Enter servings"
 													keyboardType="decimal-pad"
-													className="border border-gray-300 rounded px-3 py-2"
 												/>
 											</View>
 										);

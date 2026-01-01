@@ -2,7 +2,6 @@
 
 import * as React from "react";
 
-import { ActivityIndicator, ScrollView, View } from "react-native";
 import {
 	AddShoppingItemsData,
 	FoodServingMap,
@@ -16,6 +15,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import { ScrollView, View } from "react-native";
 import {
 	Select,
 	SelectContent,
@@ -23,11 +23,13 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { useCallback, useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
 import { FoodCheckbox } from "./food-checkbox";
 import { Plus } from "@/lib/icons";
 import { RecipeCheckList } from "./recipe-checklist";
+import { RecipeCheckListSkeleton } from "./recipe-checklist-skeleton";
 import { Text } from "@/components/ui/text";
 import { useBatchGetRecipes } from "@/hooks/recipes/use-batch-get-recipes";
 import { useCreateShoppingListItemMutation } from "@/hooks/shopping-lists/use-create-shopping-list-item-mutation";
@@ -95,20 +97,9 @@ const ModalContent = ({
 	const { createShoppingListItem, isPending: isAddingShoppingListItems } =
 		useCreateShoppingListItemMutation(shoppingListId);
 
-	// Use a ref to track the stringified recipe IDs to avoid infinite loops
-	const recipeIdsStringRef = React.useRef<string>("");
-	const recipeIdsString = JSON.stringify(
-		itemsToAdd.recipes?.map(({ recipeId }) => recipeId) ?? [],
-	);
-
-	// Only update the ref if the stringified value actually changed
-	if (recipeIdsStringRef.current !== recipeIdsString) {
-		recipeIdsStringRef.current = recipeIdsString;
-	}
-
 	const recipeIds = React.useMemo(
-		() => JSON.parse(recipeIdsStringRef.current) as string[],
-		[recipeIdsStringRef.current],
+		() => itemsToAdd.recipes?.map(({ recipeId }) => recipeId),
+		[],
 	);
 
 	const { recipes, isLoading: isLoadingRecipes } =
@@ -118,7 +109,7 @@ const ModalContent = ({
 		foodMap: {},
 	});
 
-	React.useEffect(() => {
+	useEffect(() => {
 		if (!recipes?.length) return;
 
 		const recipeMap: RecipeMap = {};
@@ -143,29 +134,25 @@ const ModalContent = ({
 		});
 
 		dispatch({ type: "loadRecipes", recipeMap });
-	}, [recipes?.length]); // Only depend on length, not the array itself
+	}, [recipes?.length]);
 
-	// Memoize dispatch callbacks to prevent re-creating functions on every render
-	const updateIngredient = React.useCallback(
+	const updateIngredient = useCallback(
 		(recipeId: string, ingredientId: string, include: boolean) => {
 			dispatch({ type: "updateIngredient", recipeId, ingredientId, include });
 		},
 		[],
 	);
 
-	const updateRecipeServing = React.useCallback(
+	const updateRecipeServing = useCallback(
 		(recipeId: string, numberOfServings: number) => {
 			dispatch({ type: "updateRecipeServing", recipeId, numberOfServings });
 		},
 		[],
 	);
 
-	const updateFood = React.useCallback(
-		(servingId: string, include: boolean) => {
-			dispatch({ type: "updateFood", servingId, include });
-		},
-		[],
-	);
+	const updateFood = useCallback((servingId: string, include: boolean) => {
+		dispatch({ type: "updateFood", servingId, include });
+	}, []);
 
 	const createAndClose = async () => {
 		const recipeItems = Object.keys(state.recipeMap).map((recipeId) => {
@@ -198,56 +185,56 @@ const ModalContent = ({
 	const isLoading = isLoadingRecipes;
 
 	return (
-		<View className="flex-1 gap-4">
-			{isLoading ? (
-				<View className="flex-1 items-center justify-center">
-					<ActivityIndicator size="large" />
-				</View>
-			) : (
-				<ScrollView className="flex-1" contentContainerClassName="gap-2 p-1">
-					{Object.values(state.recipeMap).map(
-						({ recipe, numberOfServings, ingredientMap }) => {
-							return (
-								<RecipeCheckList
-									key={recipe.id}
-									recipe={recipe}
-									numberOfServings={numberOfServings}
-									ingredientMap={ingredientMap}
-									updateSelection={(ingId, newValue) =>
-										updateIngredient(recipe.id, ingId, newValue)
-									}
-									updateServings={(newServings) =>
-										updateRecipeServing(recipe.id, newServings)
-									}
-								/>
-							);
-						},
-					)}
+		<>
+			<ScrollView className="flex-1" contentContainerClassName="gap-2">
+				{isLoading ? (
+					<>{recipeIds?.map((id) => <RecipeCheckListSkeleton key={id} />)}</>
+				) : (
+					<>
+						{Object.values(state.recipeMap).map(
+							({ recipe, numberOfServings, ingredientMap }) => {
+								return (
+									<RecipeCheckList
+										key={recipe.id}
+										recipe={recipe}
+										numberOfServings={numberOfServings}
+										ingredientMap={ingredientMap}
+										updateSelection={(ingId, newValue) =>
+											updateIngredient(recipe.id, ingId, newValue)
+										}
+										updateServings={(newServings) =>
+											updateRecipeServing(recipe.id, newServings)
+										}
+									/>
+								);
+							},
+						)}
 
-					{!!Object.entries(state.foodMap).length && (
-						<View className="my-2 h-px bg-border" />
-					)}
+						{!!Object.entries(state.foodMap).length && (
+							<View className="my-2 h-px bg-border" />
+						)}
 
-					{Object.entries(state.foodMap).map(
-						([servingId, { food, numberOfServings, include }]) => {
-							return (
-								<FoodCheckbox
-									key={servingId}
-									food={food}
-									servingId={servingId}
-									numberOfServings={numberOfServings}
-									included={include}
-									updateIncluded={(include) => updateFood(servingId, include)}
-								/>
-							);
-						},
-					)}
-				</ScrollView>
-			)}
+						{Object.entries(state.foodMap).map(
+							([servingId, { food, numberOfServings, include }]) => {
+								return (
+									<FoodCheckbox
+										key={servingId}
+										food={food}
+										servingId={servingId}
+										numberOfServings={numberOfServings}
+										included={include}
+										updateIncluded={(include) => updateFood(servingId, include)}
+									/>
+								);
+							},
+						)}
+					</>
+				)}
+			</ScrollView>
 
 			<DialogFooter>
 				<Button variant="outline" onPress={onClose}>
-					Cancel
+					<Text>Cancel</Text>
 				</Button>
 				<Button
 					disabled={isLoading || isAddingShoppingListItems}
@@ -257,7 +244,7 @@ const ModalContent = ({
 					<Text>{isAddingShoppingListItems ? "Adding..." : "Add to List"}</Text>
 				</Button>
 			</DialogFooter>
-		</View>
+		</>
 	);
 };
 
@@ -284,12 +271,12 @@ export const AddShoppingItemsModal = ({
 
 	return (
 		<Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-			<DialogContent className="max-h-[80%] w-[90%] max-w-2xl">
+			<DialogContent className="h-[80vh] w-[95vw] flex flex-col">
 				<DialogHeader>
 					<DialogTitle>Add to Shopping List</DialogTitle>
 				</DialogHeader>
 
-				<View className="gap-2">
+				<View className="gap-2 pb-4">
 					<Select
 						value={
 							selectedListId
