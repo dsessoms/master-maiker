@@ -60,6 +60,14 @@
 				}
 			],
 			"expo-secure-store"
-		]
+		],
+		"extra": {
+			"router": {
+				"origin": "http://localhost:8081"
+			},
+			"eas": {
+				"projectId": "f93cb2d2-1187-41c1-908c-3fb5609c063c"
+			}
+		}
 	}
 }
