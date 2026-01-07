@@ -2,6 +2,7 @@ import * as React from "react";
 import * as z from "zod";
 
 import { ActivityIndicator, Pressable, TextInput, View } from "react-native";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
 	Card,
 	CardContent,
@@ -11,6 +12,8 @@ import {
 } from "@/components/ui/card";
 import { Form, FormField, FormInput } from "@/components/ui/form";
 
+import { AlertCircleIcon } from "@/lib/icons";
+import { AuthError } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Separator } from "@/components/ui/separator";
@@ -19,7 +22,14 @@ import { Text } from "@/components/ui/text";
 import { useAuth } from "@/context/supabase-provider";
 import { useForm } from "react-hook-form";
 import { useRouter } from "expo-router";
+import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
+
+enum SignUpError {
+	None = "none",
+	Unknown = "unknown",
+	ExistingAccount = "existingAccount",
+}
 
 const formSchema = z.object({
 	email: z.string().email("Please enter a valid email address."),
@@ -42,9 +52,35 @@ const formSchema = z.object({
 		),
 });
 
+const ErrorAlert = ({ error }: { error: SignUpError }) => {
+	if (error === SignUpError.None) return null;
+
+	const errorMessages = {
+		[SignUpError.ExistingAccount]: {
+			title: "Account already exists",
+			description:
+				"An account with this email address already exists. Please sign in instead.",
+		},
+		[SignUpError.Unknown]: {
+			title: "Failed to register account",
+			description: "An unexpected error occurred. Please try again.",
+		},
+	};
+
+	const message = errorMessages[error] || errorMessages[SignUpError.Unknown];
+
+	return (
+		<Alert variant="destructive" icon={AlertCircleIcon}>
+			<AlertTitle>{message.title}</AlertTitle>
+			<AlertDescription>{message.description}</AlertDescription>
+		</Alert>
+	);
+};
+
 export function SignUpForm() {
 	const router = useRouter();
-	const { signUp } = useAuth();
+	const { signUp, setEmailToVerify } = useAuth();
+	const [signUpError, setSignUpError] = useState<SignUpError>(SignUpError.None);
 	const passwordInputRef = React.useRef<TextInput>(null);
 
 	const form = useForm<z.infer<typeof formSchema>>({
@@ -65,10 +101,26 @@ export function SignUpForm() {
 
 	async function onSubmit(data: z.infer<typeof formSchema>) {
 		try {
-			await signUp(data.email, data.password);
+			const userData = await signUp(data.email, data.password);
+			if (userData.isExistingAccount) {
+				setSignUpError(SignUpError.ExistingAccount);
+				return;
+			}
+
 			form.reset();
-		} catch (error: Error | any) {
-			console.error(error.message);
+			setSignUpError(SignUpError.None);
+			setEmailToVerify(data.email);
+			router.push("/verify-email");
+		} catch (error: AuthError | any) {
+			if (
+				error instanceof AuthError &&
+				error.message === "User already registered"
+			) {
+				setSignUpError(SignUpError.ExistingAccount);
+				return;
+			}
+
+			setSignUpError(SignUpError.Unknown);
 		}
 	}
 
@@ -84,6 +136,7 @@ export function SignUpForm() {
 					</CardDescription>
 				</CardHeader>
 				<CardContent className="gap-6">
+					<ErrorAlert error={signUpError} />
 					<Form {...form}>
 						<View className="gap-6">
 							<FormField

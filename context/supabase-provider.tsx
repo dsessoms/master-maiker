@@ -14,11 +14,16 @@ SplashScreen.preventAutoHideAsync();
 
 const authRoutes = ["/welcome", "/sign-in", "/sign-up", "/forgot-password"];
 
+interface SignUpUserData {
+	isExistingAccount: boolean;
+}
+
 type AuthState = {
 	initialized: boolean;
 	session: Session | null;
+	emailToVerify: string | null;
 	resetEmail: string | null;
-	signUp: (email: string, password: string) => Promise<void>;
+	signUp: (email: string, password: string) => Promise<SignUpUserData>;
 	signIn: (email: string, password: string) => Promise<void>;
 	signOut: () => Promise<void>;
 	resetPassword: (email: string) => Promise<void>;
@@ -28,20 +33,27 @@ type AuthState = {
 		token: string,
 		newPassword: string,
 	) => Promise<void>;
+	verifyEmailWithOtp: (email: string, token: string) => Promise<void>;
+	setEmailToVerify: (email: string | null) => void;
 	setResetEmail: (email: string | null) => void;
+	resendConfirmationEmail: () => Promise<void>;
 };
 
 export const AuthContext = createContext<AuthState>({
 	initialized: false,
 	session: null,
 	resetEmail: null,
-	signUp: async () => {},
+	emailToVerify: null,
+	signUp: async () => ({ isExistingAccount: false }),
 	signIn: async () => {},
 	signOut: async () => {},
 	resetPassword: async () => {},
 	confirmPasswordReset: async () => {},
 	verifyOtpAndResetPassword: async () => {},
+	verifyEmailWithOtp: async () => {},
 	setResetEmail: () => {},
+	setEmailToVerify: () => {},
+	resendConfirmationEmail: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -50,8 +62,40 @@ export function AuthProvider({ children }: PropsWithChildren) {
 	const [initialized, setInitialized] = useState(false);
 	const [session, setSession] = useState<Session | null>(null);
 	const [resetEmail, setResetEmail] = useState<string | null>(null);
+	const [emailToVerify, setEmailToVerify] = useState<string | null>(null);
 	const router = useRouter();
 	const pathname = usePathname();
+
+	const verifyEmailWithOtp = async (email: string, token: string) => {
+		const { data, error } = await supabase.auth.verifyOtp({
+			token,
+			email,
+			type: "signup",
+		});
+
+		if (error) {
+			console.error("Error signing up:", error);
+			throw error;
+		}
+
+		if (data.session) {
+			setSession(data.session);
+			console.log("User signed up:", data.user);
+		} else {
+			console.log("No user returned from sign up", data.user);
+		}
+	};
+
+	const resendConfirmationEmail = async () => {
+		if (!emailToVerify) {
+			return;
+		}
+
+		const { data, error } = await supabase.auth.resend({
+			email: emailToVerify,
+			type: "signup",
+		});
+	};
 
 	const signUp = async (email: string, password: string) => {
 		const { data, error } = await supabase.auth.signUp({
@@ -61,15 +105,21 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
 		if (error) {
 			console.error("Error signing up:", error);
-			return;
+			throw error;
 		}
+
+		const userData = {
+			isExistingAccount: (data.user?.identities?.length || 0) === 0,
+		};
 
 		if (data.session) {
 			setSession(data.session);
 			console.log("User signed up:", data.user);
 		} else {
-			console.log("No user returned from sign up");
+			console.log("No user returned from sign up", data.user);
 		}
+
+		return userData;
 	};
 
 	const signIn = async (email: string, password: string) => {
@@ -80,7 +130,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
 		if (error) {
 			console.error("Error signing in:", error);
-			return;
+			throw error;
 		}
 
 		if (data.session) {
@@ -195,7 +245,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 			SplashScreen.hideAsync();
 			if (session) {
 				if (authRoutes.includes(pathname)) {
-					router.replace("/(tabs)/meal-plan");
+					router.replace("/(tabs)/(meal-plan)/meal-plan");
 				}
 			} else {
 				if (!authRoutes.includes(pathname)) {
@@ -212,13 +262,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
 				initialized,
 				session,
 				resetEmail,
+				emailToVerify,
 				signUp,
 				signIn,
 				signOut,
 				resetPassword,
 				confirmPasswordReset,
 				verifyOtpAndResetPassword,
+				verifyEmailWithOtp,
 				setResetEmail,
+				setEmailToVerify,
+				resendConfirmationEmail,
 			}}
 		>
 			{children}
