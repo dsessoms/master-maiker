@@ -1,18 +1,14 @@
 import { Modal, ScrollView, View } from "react-native";
-import React, { useEffect, useReducer } from "react";
+import React, { useContext, useEffect, useReducer } from "react";
 import {
 	StatefulInput,
 	StatefulInputState,
 } from "@/components/forms/stateful-input/stateful-input";
-import {
-	useCreateNote,
-	useDeleteNote,
-	useNotes,
-	useUpdateNote,
-} from "@/hooks/notes";
+import { useCreateNote, useDeleteNote, useUpdateNote } from "@/hooks/notes";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { MealPlanContext } from "@/context/meal-plan-context";
 import { Text } from "@/components/ui/text";
 import { X } from "@/lib/icons";
 import { cn } from "@/lib/utils";
@@ -169,19 +165,21 @@ export const NotesModal = ({
 		undefined,
 		getInitialState,
 	);
-	const { notes = [] } = useNotes({
-		noteType: "day_meal",
-		date,
-		mealType,
-	});
+	const { notesByDayAndMeal } = useContext(MealPlanContext);
+	const notesKey = `${date}-${mealType}`;
+	const notes = notesByDayAndMeal[notesKey] || [];
 	const createNote = useCreateNote();
 	const updateNote = useUpdateNote();
 	const deleteNote = useDeleteNote();
 
 	// Sync notes from the API to local state
+	// Use a stable key based on note IDs and checked states to prevent infinite loops
+	// but still update when checkboxes are toggled
+	const notesKey2 = notes.map((n) => `${n.id}-${n.is_checked}`).join(",");
 	useEffect(() => {
 		dispatch({ type: "INITIALIZE", notes });
-	}, [notes]);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [notesKey2, date, mealType]);
 
 	const handleCheckboxToggle = (noteId: string, currentChecked: boolean) => {
 		updateNote.mutate({

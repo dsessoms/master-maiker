@@ -1,13 +1,14 @@
-import React, { useState } from "react";
-import { useNotes, useUpdateNote } from "@/hooks/notes";
+import React, { useContext, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { MealPlanContext } from "@/context/meal-plan-context";
 import { NotesModal } from "./notes-modal";
 import { PencilIcon } from "@/lib/icons";
 import { Text } from "@/components/ui/text";
 import { View } from "react-native";
 import { cn } from "@/lib/utils";
+import { useUpdateNote } from "@/hooks/notes";
 
 interface Note {
 	id: string;
@@ -24,11 +25,9 @@ interface NotesListProps {
 
 export const NotesList = ({ date, mealType }: NotesListProps) => {
 	const [isModalVisible, setIsModalVisible] = useState(false);
-	const { notes = [] } = useNotes({
-		noteType: "day_meal",
-		date,
-		mealType,
-	});
+	const { notesByDayAndMeal } = useContext(MealPlanContext);
+	const notesKey = `${date}-${mealType}`;
+	const notes = notesByDayAndMeal[notesKey] || [];
 	const updateNote = useUpdateNote();
 
 	const handleCheckboxToggle = (noteId: string, currentChecked: boolean) => {

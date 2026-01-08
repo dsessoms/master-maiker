@@ -2,8 +2,10 @@ import { add, format, startOfWeek, sub } from "date-fns";
 import { createContext, useEffect, useMemo, useState } from "react";
 
 import { GetFoodEntriesResponse } from "@/app/api/food-entries/index+api";
+import { Note } from "@/lib/schemas/note-schema";
 import { Profile } from "@/types";
 import { useFoodEntries } from "@/hooks/recipes/use-food-entries";
+import { useNotes } from "@/hooks/notes/use-notes";
 import { useProfiles } from "@/hooks/profiles/useProfiles";
 
 type SelectableProfile = Profile & {
@@ -35,6 +37,10 @@ interface MealPlanContextInterface {
 	foodEntries: FoodEntry[];
 	foodEntriesByDay: { [key: string]: FoodEntry[] };
 	isLoadingFoodEntries: boolean;
+	// Notes
+	notes: Note[];
+	notesByDayAndMeal: { [key: string]: Note[] };
+	isLoadingNotes: boolean;
 	// Notes modal
 	notesModalState: AddNoteAction | null;
 	openNotesModal: (
@@ -67,6 +73,9 @@ const INITIAL_MEAL_PLAN_CONTEXT: MealPlanContextInterface = {
 	foodEntries: [],
 	foodEntriesByDay: {},
 	isLoadingFoodEntries: false,
+	notes: [],
+	notesByDayAndMeal: {},
+	isLoadingNotes: false,
 	notesModalState: null,
 	openNotesModal: () => null,
 	closeNotesModal: () => null,
@@ -100,6 +109,13 @@ export const MealPlanContextProvider = ({ children }: { children: any }) => {
 		endDate,
 	);
 
+	// Fetch notes for the date range
+	const { notes = [], isLoading: isLoadingNotes } = useNotes({
+		noteType: "day_meal",
+		startDate: format(startDate, "yyyy-MM-dd"),
+		endDate: format(endDate, "yyyy-MM-dd"),
+	});
+
 	// Memoize food entries by day
 	const foodEntriesByDay = useMemo(() => {
 		const finalMap: { [key: string]: typeof foodEntries } = {};
@@ -116,6 +132,22 @@ export const MealPlanContextProvider = ({ children }: { children: any }) => {
 		});
 		return finalMap;
 	}, [foodEntries]);
+
+	// Memoize notes by day and meal type
+	const notesByDayAndMeal = useMemo(() => {
+		const finalMap: { [key: string]: typeof notes } = {};
+		notes?.forEach((note) => {
+			if (note.date && note.meal_type) {
+				const key = `${note.date}-${note.meal_type}`;
+				if (finalMap[key]) {
+					finalMap[key].push(note);
+				} else {
+					finalMap[key] = [note];
+				}
+			}
+		});
+		return finalMap;
+	}, [notes]);
 
 	// Auto-initialize selectable profiles when profiles are loaded
 	useEffect(() => {
@@ -200,6 +232,9 @@ export const MealPlanContextProvider = ({ children }: { children: any }) => {
 				foodEntries,
 				foodEntriesByDay,
 				isLoadingFoodEntries,
+				notes,
+				notesByDayAndMeal,
+				isLoadingNotes,
 				notesModalState: addNoteAction,
 				openNotesModal,
 				closeNotesModal,
