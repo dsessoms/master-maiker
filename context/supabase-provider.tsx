@@ -12,7 +12,13 @@ import { supabase } from "@/config/supabase";
 
 SplashScreen.preventAutoHideAsync();
 
-const authRoutes = ["/welcome", "/sign-in", "/sign-up", "/forgot-password"];
+const authRoutes = [
+	"/",
+	"/welcome",
+	"/sign-in",
+	"/sign-up",
+	"/forgot-password",
+];
 
 interface SignUpUserData {
 	isExistingAccount: boolean;
