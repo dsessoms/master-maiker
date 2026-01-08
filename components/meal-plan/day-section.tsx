@@ -44,7 +44,7 @@ export const DaySection = ({
 	const isSingleProfile = selectedProfileIds.size === 1;
 
 	return (
-		<View className="min-w-96">
+		<View>
 			<View className="mb-4 mt-8">
 				<View className="flex flex-row items-center justify-between">
 					<Text className="text-2xl mr-2">{format(date, "EEEE")}</Text>
