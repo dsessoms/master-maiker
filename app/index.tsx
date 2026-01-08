@@ -1,17 +1,22 @@
 import { H1, Large, Muted } from "@/components/ui/typography";
-import { ScrollView, View } from "react-native";
+import { Platform, ScrollView, View } from "react-native";
+import { Redirect, useRouter } from "expo-router";
 
 import { Button } from "@/components/ui/button";
 import { Image } from "@/components/image";
 import { LinearGradient } from "expo-linear-gradient";
 import { Text } from "@/components/ui/text";
 import { useColorScheme } from "@/lib/useColorScheme";
-import { useRouter } from "expo-router";
 
 export default function LandingPage() {
 	const router = useRouter();
 	const { colorScheme } = useColorScheme();
 	const isDark = colorScheme === "dark";
+
+	// Redirect to welcome page on mobile
+	if (Platform.OS !== "web") {
+		return <Redirect href="/welcome" />;
+	}
 
 	return (
 		<ScrollView className="flex-1 bg-background">
