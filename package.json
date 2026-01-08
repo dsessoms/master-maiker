@@ -11,7 +11,7 @@
 		"generate-colors": "node ./scripts/generate-colors.js && eslint ./constants/colors.ts --fix",
 		"gen-types": "npx supabase gen types typescript --project-id uanqajnerisjegeiindj > database.types.ts",
 		"gen-types:local": "npx supabase gen types typescript --local > database.types.ts",
-		"build-deploy:preview": "npx expo export --platform web && eas deploy"
+		"build-deploy": "eas env:pull && npx expo export --platform web && eas deploy"
 	},
 	"dependencies": {
 		"@google/genai": "^1.31.0",
