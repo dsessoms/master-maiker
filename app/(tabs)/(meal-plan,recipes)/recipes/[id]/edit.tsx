@@ -9,7 +9,7 @@ import {
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 
 import { LoadingIndicator } from "@/components/ui/loading-indicator";
-import { MealPlanChatRecipe } from "@/lib/schemas";
+import { Recipe } from "@/lib/schemas";
 import { RecipeForm } from "@/components/forms/RecipeForm";
 import { SafeAreaView } from "@/components/safe-area-view";
 import { Text } from "@/components/ui/text";
@@ -25,11 +25,11 @@ export default function EditRecipe() {
 	const { recipe, isLoading, error } = useRecipe(id!);
 	const { updateRecipe, isPending } = useUpdateRecipeMutation();
 
-	const handleSubmit = async (data: Partial<MealPlanChatRecipe>) => {
+	const handleSubmit = async (data: Partial<Recipe>) => {
 		if (!id) return;
 
 		try {
-			await updateRecipe({ id, recipe: data as MealPlanChatRecipe });
+			await updateRecipe({ id, recipe: data as Recipe });
 			router.replace({ pathname: "/recipes/[id]", params: { id } });
 		} catch (error) {
 			console.error("Error updating recipe:", error);
@@ -37,7 +37,7 @@ export default function EditRecipe() {
 	};
 
 	// Transform the recipe data to match the expected format
-	const getInitialValues = (): MealPlanChatRecipe | undefined => {
+	const getInitialValues = (): Recipe | undefined => {
 		if (!recipe) return undefined;
 
 		return {
