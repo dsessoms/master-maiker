@@ -1,7 +1,9 @@
-import { View, Platform } from "react-native";
+import type {
+	FatSecretFood,
+	FatSecretServing,
+} from "@/lib/server/fat-secret/types";
+import { Platform, View } from "react-native";
 import React, { useEffect, useRef, useState } from "react";
-import { Input } from "../ui/input";
-import { Text } from "../ui/text";
 import {
 	Select,
 	SelectContent,
@@ -11,13 +13,12 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "../ui/select";
+
+import { Input } from "../ui/input";
+import { Macros } from "@/components/meal-plan/macros";
+import { Text } from "../ui/text";
 import type { TriggerRef } from "@rn-primitives/select";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Macros } from "@/components/meal-plan/macros";
-import type {
-	FatSecretFood,
-	FatSecretServing,
-} from "@/lib/server/fat-secret/types";
 
 // Utility function for rounding
 const round = (value: number, precision: number = 2): number => {
@@ -115,7 +116,7 @@ export const FoodServingEditor: React.FC<FoodServingEditorProps> = ({
 							setSelectedServingId(option?.value || "")
 						}
 					>
-						<SelectTrigger className="h-10" ref={selectTriggerRef}>
+						<SelectTrigger ref={selectTriggerRef}>
 							<SelectValue placeholder="Select serving" className="text-sm" />
 						</SelectTrigger>
 						<SelectContent insets={contentInsets}>

@@ -14,6 +14,8 @@ interface SelectContextType {
 	value?: { value: string; label: string } | null;
 	onValueChange: (option: { value: string; label: string } | null) => void;
 	options: Option[];
+	registerOption: (option: Option) => void;
+	unregisterOption: (value: string) => void;
 }
 
 const SelectContext = React.createContext<SelectContextType | null>(null);
@@ -36,42 +38,25 @@ interface SelectRootProps {
 function SelectRoot({ children, value, onValueChange }: SelectRootProps) {
 	const [options, setOptions] = React.useState<Option[]>([]);
 
-	// Extract options from children
-	React.useEffect(() => {
-		const extractedOptions: Option[] = [];
+	const registerOption = React.useCallback((option: Option) => {
+		setOptions((prev) => {
+			// Check if option already exists
+			const exists = prev.some((opt) => opt.value === option.value);
+			if (exists) return prev;
+			return [...prev, option];
+		});
+	}, []);
 
-		const extractFromChildren = (children: React.ReactNode) => {
-			// Convert children to array without using React.Children utilities
-			const childrenArray = Array.isArray(children) ? children : [children];
-
-			childrenArray.forEach((child) => {
-				if (React.isValidElement(child)) {
-					if (child.type === SelectItem) {
-						const props = child.props as SelectItemProps;
-						extractedOptions.push({
-							value: props.value,
-							label: props.label,
-							disabled: props.disabled,
-						});
-					} else if (
-						child.props &&
-						typeof child.props === "object" &&
-						"children" in child.props
-					) {
-						extractFromChildren((child.props as any).children);
-					}
-				}
-			});
-		};
-
-		extractFromChildren(children);
-		setOptions(extractedOptions);
-	}, [children]);
+	const unregisterOption = React.useCallback((value: string) => {
+		setOptions((prev) => prev.filter((opt) => opt.value !== value));
+	}, []);
 
 	const contextValue = {
 		value,
 		onValueChange: onValueChange || (() => {}),
 		options,
+		registerOption,
+		unregisterOption,
 	};
 
 	return (
@@ -119,9 +104,36 @@ interface SelectGroupProps extends React.HTMLAttributes<HTMLDivElement> {
 const SelectTrigger = React.forwardRef<HTMLDivElement, SelectTriggerProps>(
 	({ className, children, size = "default", disabled, ...props }, ref) => {
 		const { value, onValueChange, options } = useSelectContext();
+		const [placeholder, setPlaceholder] = React.useState("Select an option");
+
+		// Extract placeholder from SelectValue child
+		React.useEffect(() => {
+			const extractPlaceholder = (children: React.ReactNode): string | null => {
+				const childrenArray = Array.isArray(children) ? children : [children];
+
+				for (const child of childrenArray) {
+					if (React.isValidElement(child)) {
+						const props = child.props as any;
+						if (child.type === SelectValue && props?.placeholder) {
+							return props.placeholder;
+						}
+						if (props && typeof props === "object" && "children" in props) {
+							const found = extractPlaceholder(props.children);
+							if (found) return found;
+						}
+					}
+				}
+				return null;
+			};
+
+			const found = extractPlaceholder(children);
+			if (found) setPlaceholder(found);
+		}, [children]);
 
 		const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
 			const selectedValue = e.target.value;
+			if (!selectedValue) return;
+
 			const selectedOption = options.find((opt) => opt.value === selectedValue);
 			if (selectedOption) {
 				onValueChange({
@@ -131,18 +143,16 @@ const SelectTrigger = React.forwardRef<HTMLDivElement, SelectTriggerProps>(
 			}
 		};
 
-		// Filter out any conflicting props
-		const divProps = { ...props };
-		delete (divProps as any).onChange;
-
 		return (
 			<div className="relative" ref={ref}>
 				<select
 					className={cn(
-						"border-input dark:bg-input/30 bg-background flex h-10 w-full appearance-none items-center justify-between gap-2 rounded-md border px-3 py-2 pr-10 text-sm shadow-sm shadow-black/5 sm:h-9",
+						"border-input dark:bg-input/30 bg-background flex h-10 w-full appearance-none items-center justify-between gap-2 rounded-md border px-3 py-2 pr-10 text-sm",
 						"focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none",
 						"disabled:cursor-not-allowed disabled:opacity-50",
-						"text-foreground cursor-pointer",
+						"cursor-pointer",
+						!value && "text-muted-foreground",
+						value && "text-foreground",
 						size === "sm" && "h-8 py-2 sm:py-1.5",
 						className,
 					)}
@@ -152,7 +162,7 @@ const SelectTrigger = React.forwardRef<HTMLDivElement, SelectTriggerProps>(
 				>
 					{!value && (
 						<option value="" disabled>
-							{/* Placeholder will be handled by SelectValue */}
+							{placeholder}
 						</option>
 					)}
 					{options.map((option) => (
@@ -186,8 +196,8 @@ function SelectValue({ className, placeholder, ...props }: SelectValueProps) {
 }
 
 function SelectContent({ children, ...props }: SelectContentProps) {
-	// This component is ignored in web - native select handles the dropdown
-	return null;
+	// Render children so SelectItems can register themselves, but don't display anything
+	return <div style={{ display: "none" }}>{children}</div>;
 }
 
 function SelectLabel({ children, ...props }: SelectLabelProps) {
@@ -196,7 +206,13 @@ function SelectLabel({ children, ...props }: SelectLabelProps) {
 }
 
 function SelectItem({ children, value, label, disabled }: SelectItemProps) {
-	// Items are handled by the context system, this component doesn't render anything
+	const { registerOption, unregisterOption } = useSelectContext();
+
+	React.useEffect(() => {
+		registerOption({ value, label, disabled });
+		return () => unregisterOption(value);
+	}, [value, label, disabled, registerOption, unregisterOption]);
+
 	return null;
 }
 
