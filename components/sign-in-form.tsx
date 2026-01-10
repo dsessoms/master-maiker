@@ -146,12 +146,12 @@ export function SignInForm() {
 							</Text>
 						</Pressable>
 					</View>
-					<View className="flex-row items-center">
+					{/* <View className="flex-row items-center">
 						<Separator className="flex-1" />
 						<Text className="text-muted-foreground px-4 text-sm">or</Text>
 						<Separator className="flex-1" />
 					</View>
-					<SocialConnections />
+					<SocialConnections /> */}
 				</CardContent>
 			</Card>
 		</View>
