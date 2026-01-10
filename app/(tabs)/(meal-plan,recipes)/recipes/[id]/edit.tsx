@@ -126,6 +126,11 @@ export default function EditRecipe() {
 
 	return (
 		<View className="flex flex-1 bg-background">
+			<Stack.Screen
+				options={{
+					title: "Edit Recipe",
+				}}
+			/>
 			<KeyboardAvoidingView
 				style={{ flex: 1 }}
 				behavior={Platform.OS === "ios" ? "padding" : "height"}
