@@ -202,10 +202,10 @@ export default function ShoppingListDetail() {
 	if (isLoading) {
 		return (
 			<SafeAreaView className="flex flex-1 bg-background">
-				<View className="p-4">
+				<View className="p-4 w-full max-w-3xl mx-auto">
 					<Skeleton className="h-10 w-48 mb-2" />
 				</View>
-				<View className="flex-1 p-4 bg-muted-background gap-2">
+				<View className="flex-1 p-4 w-full max-w-3xl mx-auto bg-muted-background gap-2">
 					<Skeleton className="h-10 w-full" />
 					<Skeleton className="h-10 w-full" />
 					<Skeleton className="h-10 w-full" />
@@ -223,7 +223,7 @@ export default function ShoppingListDetail() {
 
 	return (
 		<SafeAreaView className="flex flex-1 bg-background">
-			<View className="flex-row items-center justify-between p-4">
+			<View className="flex-row items-center justify-between p-4 w-full max-w-3xl mx-auto">
 				<ShoppingListSelector
 					currentListId={id!}
 					lists={lists}
@@ -231,47 +231,52 @@ export default function ShoppingListDetail() {
 				/>
 			</View>
 
-			<ScrollView className="flex-1 p-4 bg-muted-background">
-				<View className="gap-2">
-					{uncheckedItems?.map((item) => (
-						<ListItem
-							key={item.id}
-							item={item}
-							listId={id!}
-							onClick={() => setItemToUpdate(item)}
-						/>
-					))}
-				</View>
+			<ScrollView
+				className="flex-1 bg-background"
+				contentContainerStyle={{ flexGrow: 1 }}
+			>
+				<View className="p-4 flex-1 w-full max-w-3xl mx-auto bg-muted-background">
+					<View className="gap-2">
+						{uncheckedItems?.map((item) => (
+							<ListItem
+								key={item.id}
+								item={item}
+								listId={id!}
+								onClick={() => setItemToUpdate(item)}
+							/>
+						))}
+					</View>
 
-				{hasCheckedItems && (
-					<>
-						<View className="flex-row items-center justify-between py-4">
-							<Text className="text-lg font-semibold">Checked Items</Text>
-							<Button
-								variant="outline"
-								size="sm"
-								onPress={() =>
-									clearShoppingList({
-										action: "clear",
-										itemsToClear: "checked",
-									})
-								}
-							>
-								<Text>Clear</Text>
-							</Button>
-						</View>
-						<View className="gap-2">
-							{checkedItems?.map((item) => (
-								<ListItem
-									key={item.id}
-									item={item}
-									listId={id!}
-									onClick={() => setItemToUpdate(item)}
-								/>
-							))}
-						</View>
-					</>
-				)}
+					{hasCheckedItems && (
+						<>
+							<View className="flex-row items-center justify-between py-4">
+								<Text className="text-lg font-semibold">Checked Items</Text>
+								<Button
+									variant="outline"
+									size="sm"
+									onPress={() =>
+										clearShoppingList({
+											action: "clear",
+											itemsToClear: "checked",
+										})
+									}
+								>
+									<Text>Clear</Text>
+								</Button>
+							</View>
+							<View className="gap-2">
+								{checkedItems?.map((item) => (
+									<ListItem
+										key={item.id}
+										item={item}
+										listId={id!}
+										onClick={() => setItemToUpdate(item)}
+									/>
+								))}
+							</View>
+						</>
+					)}
+				</View>
 			</ScrollView>
 
 			<View className="flex flex-col justify-center items-center gap-2 absolute bottom-6 right-6">

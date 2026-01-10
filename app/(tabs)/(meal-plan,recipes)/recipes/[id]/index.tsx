@@ -118,7 +118,9 @@ export default function RecipeDetails() {
 					}}
 				/>
 				<ScrollView className="flex-1">
-					<RecipeDetailsSkeleton />
+					<View className="w-full max-w-3xl mx-auto">
+						<RecipeDetailsSkeleton />
+					</View>
 				</ScrollView>
 			</View>
 		);
@@ -147,7 +149,7 @@ export default function RecipeDetails() {
 				}}
 			/>
 			<ScrollView className="flex-1">
-				<View className="p-4">
+				<View className="p-4 w-full max-w-3xl mx-auto">
 					{/* Recipe Image */}
 					<View className="mb-6 relative">
 						{!!imageUrl ? (

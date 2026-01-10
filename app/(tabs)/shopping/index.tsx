@@ -19,10 +19,10 @@ export default function Shopping() {
 	if (isLoading) {
 		return (
 			<SafeAreaView className="flex flex-1 bg-background">
-				<View className="p-4">
+				<View className="p-4 w-full max-w-3xl mx-auto">
 					<Skeleton className="h-10 w-48 mb-4" />
 				</View>
-				<View className="flex-1 p-4 bg-muted-background gap-2">
+				<View className="flex-1 p-4 w-full max-w-3xl mx-auto bg-muted-background gap-2">
 					<Skeleton className="h-10 w-full" />
 					<Skeleton className="h-10 w-full" />
 					<Skeleton className="h-10 w-full" />

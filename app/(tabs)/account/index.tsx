@@ -18,7 +18,7 @@ export default function Account() {
 
 	return (
 		<ScrollView className="flex-1 bg-background">
-			<View className="p-4 gap-y-6">
+			<View className="p-4 w-full max-w-3xl mx-auto gap-y-6">
 				<View>
 					<Card className="p-6 relative">
 						<View className="items-center gap-y-3">
