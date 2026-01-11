@@ -43,7 +43,8 @@
 					"resizeMode": "cover",
 					"image": "./assets/splash-dark.png"
 				}
-			}
+			},
+			"package": "com.flemingvincent.ExpoSupabaseStarter"
 		},
 		"web": {
 			"output": "server",
