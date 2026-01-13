@@ -184,6 +184,13 @@ export function ProfileForm({
 		return new Date(year, month - 1, day); // month is 0-indexed
 	});
 
+	// State for the birthday text input
+	const [birthdayInput, setBirthdayInput] = useState<string>(() => {
+		if (!profile?.birthday) return "";
+		const [year, month, day] = profile.birthday.split("-").map(Number);
+		return `${String(month).padStart(2, "0")}/${String(day).padStart(2, "0")}/${year}`;
+	});
+
 	// Avatar state management
 	const [selectedAvatar, setSelectedAvatar] = useState<
 		{ file: File; uri: string } | string | undefined
@@ -358,6 +365,63 @@ export function ProfileForm({
 			const day = String(dateObj.getDate()).padStart(2, "0");
 			const formattedDate = `${year}-${month}-${day}`;
 			updateField("birthday", formattedDate);
+
+			// Update the text input display
+			setBirthdayInput(`${month}/${day}/${year}`);
+		}
+	};
+
+	// Handle text input for birthday
+	const handleBirthdayTextChange = (text: string) => {
+		// Remove non-numeric and non-slash characters
+		let cleaned = text.replace(/[^\d/]/g, "");
+
+		// Auto-add slashes as user types
+		if (cleaned.length === 2 && birthdayInput.length === 1) {
+			cleaned = cleaned + "/";
+		} else if (cleaned.length === 5 && birthdayInput.length === 4) {
+			cleaned = cleaned + "/";
+		}
+
+		// Limit to MM/DD/YYYY format (10 characters)
+		if (cleaned.length > 10) {
+			cleaned = cleaned.slice(0, 10);
+		}
+
+		// Update the input display
+		setBirthdayInput(cleaned);
+
+		// Parse and validate the complete date
+		const parts = cleaned.split("/");
+		if (
+			parts.length === 3 &&
+			parts[0].length === 2 &&
+			parts[1].length === 2 &&
+			parts[2].length === 4
+		) {
+			const month = parseInt(parts[0]);
+			const day = parseInt(parts[1]);
+			const year = parseInt(parts[2]);
+
+			// Validate the date values
+			if (
+				month >= 1 &&
+				month <= 12 &&
+				day >= 1 &&
+				day <= 31 &&
+				year >= 1900 &&
+				year <= 2100
+			) {
+				// Create date object and update both states
+				const dateObj = new Date(year, month - 1, day);
+				const formattedDate = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+				updateField("birthday", formattedDate);
+				setSelectedDate(dateObj);
+			}
+		} else if (cleaned.length === 0) {
+			// Clear the date if input is empty
+			updateField("birthday", "");
+			setSelectedDate(undefined);
 		}
 	};
 
@@ -474,7 +538,6 @@ export function ProfileForm({
 					{/* Basic Information */}
 					<View className="gap-y-3">
 						<H4>Basic Information</H4>
-
 						<View className="gap-y-2">
 							<Label>Name</Label>
 							<Input
@@ -483,41 +546,35 @@ export function ProfileForm({
 								onChangeText={(text) => updateField("name", text)}
 							/>
 						</View>
-
 						<View className="gap-y-2">
 							<Label>Birthday</Label>
-							<Popover>
-								<PopoverTrigger asChild>
-									<Button
-										variant="outline"
-										className="flex-row justify-start gap-2"
-									>
-										<Calendar className="text-foreground" size={20} />
-										<Text
-											className={
-												selectedDate
-													? "text-foreground"
-													: "text-muted-foreground"
-											}
-										>
-											{selectedDate
-												? formatDate(selectedDate)
-												: "Select birthday"}
-										</Text>
-									</Button>
-								</PopoverTrigger>
-								<PopoverContent className="w-64 p-0" align="start">
-									<DateTimePicker
-										mode="single"
-										date={selectedDate}
-										onChange={({ date }) => handleDateSelect(date)}
-										styles={defaultStyles}
-										navigationPosition="right"
+							<View className="flex-row gap-2">
+								<View className="flex-1">
+									<Input
+										placeholder="MM/DD/YYYY"
+										value={birthdayInput}
+										onChangeText={handleBirthdayTextChange}
+										keyboardType="numeric"
 									/>
-								</PopoverContent>
-							</Popover>
+								</View>
+								<Popover>
+									<PopoverTrigger asChild>
+										<Button variant="outline" size="icon" className="h-10 w-10">
+											<Calendar className="text-foreground" size={20} />
+										</Button>
+									</PopoverTrigger>
+									<PopoverContent className="w-64 p-0" align="start">
+										<DateTimePicker
+											mode="single"
+											date={selectedDate}
+											onChange={({ date }) => handleDateSelect(date)}
+											styles={defaultStyles}
+											navigationPosition="right"
+										/>
+									</PopoverContent>
+								</Popover>
+							</View>
 						</View>
-
 						<GenderSelect
 							value={formData.gender}
 							onValueChange={(value) => updateField("gender", value)}
@@ -569,7 +626,7 @@ export function ProfileForm({
 									updateField("goal_lbs_per_week", value)
 								}
 							/>
-						)}{" "}
+						)}
 						<View className="gap-y-2">
 							<Label>Daily Calorie Goal</Label>
 							<Input
