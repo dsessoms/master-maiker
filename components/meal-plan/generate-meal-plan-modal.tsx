@@ -17,6 +17,7 @@ import React, {
 import { differenceInDays, format, isBefore, startOfDay } from "date-fns";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { CircleCheck } from "@/lib/icons/circle-check";
 import { Input } from "@/components/ui/input";
 import { MealPlanContext } from "@/context/meal-plan-context";
@@ -101,16 +102,24 @@ type IntroStepsAction =
 const createInitialIntroStepsState = (
 	defaultStartDate: Date,
 	defaultEndDate: Date,
+	profiles: Profile[] = [],
 ): IntroStepsState => {
 	const start = startOfDay(defaultStartDate);
 	const end = startOfDay(defaultEndDate);
 
 	const today = startOfDay(new Date());
 
+	// Auto-select primary profile
+	const primaryProfile = profiles.find((p) => p.is_primary);
+	const selectedProfileIds = new Set<string>();
+	if (primaryProfile) {
+		selectedProfileIds.add(primaryProfile.id);
+	}
+
 	return {
 		startDate: isBefore(start, today) ? today : start,
 		endDate: isBefore(end, today) ? today : end,
-		selectedProfileIds: new Set(),
+		selectedProfileIds,
 		selectedRecipeIds: new Set(),
 		additionalContext: "",
 	};
@@ -160,6 +169,7 @@ const introStepsReducer = (
 			return createInitialIntroStepsState(
 				state.startDate as Date,
 				state.endDate as Date,
+				[],
 			);
 		default:
 			return state;
@@ -177,16 +187,11 @@ const SelectableProfileCard = ({
 	onToggle: () => void;
 }) => {
 	return (
-		<TouchableOpacity onPress={onToggle} className="mb-3" activeOpacity={0.7}>
-			<View className="flex-row items-center p-4 bg-card border border-border rounded-lg">
-				<View className="flex-1">
+		<TouchableOpacity onPress={onToggle} className="mb-2" activeOpacity={0.7}>
+			<View className="flex-row items-center p-2 bg-card border border-border rounded-lg">
+				<Checkbox checked={isSelected} onCheckedChange={onToggle} />
+				<View className="flex-1 ml-3">
 					<Text className="font-semibold">{profile.name}</Text>
-				</View>
-				<View className="ml-3">
-					{isSelected && <CircleCheck size={24} className="text-primary" />}
-					{!isSelected && (
-						<View className="w-6 h-6 border-2 border-muted-foreground rounded-full" />
-					)}
 				</View>
 			</View>
 		</TouchableOpacity>
@@ -249,7 +254,11 @@ export const GenerateMealPlanModal = ({
 	// State for the collected data using reducer
 	const [introStepsState, dispatch] = useReducer(
 		introStepsReducer,
-		createInitialIntroStepsState(defaultStartDate, defaultEndDate),
+		createInitialIntroStepsState(
+			defaultStartDate,
+			defaultEndDate,
+			selectableProfiles,
+		),
 	);
 
 	// Chat messages
