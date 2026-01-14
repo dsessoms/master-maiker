@@ -292,7 +292,7 @@ const ThinkingIndicator = ({ appIcon }: { appIcon: any }) => {
 	return (
 		<View className="mb-3">
 			<View className="flex-row items-end justify-start">
-				<View className="w-8 h-8 rounded-full bg-primary items-center justify-center mr-2 shadow-sm">
+				<View className="w-8 h-8 rounded-full bg-primary items-center justify-center mr-2">
 					<Image contentFit="contain" source={appIcon} className="w-6 h-6" />
 				</View>
 				<View className="p-3 rounded-lg bg-primary/70" style={{ width: 110 }}>
