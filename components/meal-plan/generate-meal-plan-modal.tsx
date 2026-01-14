@@ -277,6 +277,9 @@ export const GenerateMealPlanModal = ({
 	// Chat input for critiquing meal plan
 	const [chatInput, setChatInput] = useState("");
 
+	// Recipe search state
+	const [recipeSearchQuery, setRecipeSearchQuery] = useState("");
+
 	// Auto-scroll to bottom when messages change
 	useEffect(() => {
 		setTimeout(() => {
@@ -570,6 +573,17 @@ export const GenerateMealPlanModal = ({
 		}
 	};
 
+	// Filter recipes based on search query
+	const filteredRecipes = useMemo(() => {
+		if (!recipes) return [];
+		if (!recipeSearchQuery.trim()) return recipes;
+
+		const query = recipeSearchQuery.toLowerCase();
+		return recipes.filter((recipe) =>
+			recipe.name.toLowerCase().includes(query),
+		);
+	}, [recipes, recipeSearchQuery]);
+
 	return (
 		<Modal animationType="slide" visible={isVisible} onRequestClose={onClose}>
 			<View className="flex-1 bg-background mt-safe mb-safe">
@@ -739,7 +753,7 @@ export const GenerateMealPlanModal = ({
 										className="mb-4"
 										contentContainerStyle={{ paddingRight: 16 }}
 									>
-										{recipes.map((recipe) => (
+										{filteredRecipes.map((recipe) => (
 											<SelectableRecipeCard
 												key={recipe.id}
 												recipe={recipe}
@@ -750,6 +764,17 @@ export const GenerateMealPlanModal = ({
 											/>
 										))}
 									</ScrollView>
+									<Input
+										placeholder="Search recipes by name..."
+										value={recipeSearchQuery}
+										onChangeText={setRecipeSearchQuery}
+										className="mb-4"
+									/>
+									{filteredRecipes.length === 0 && (
+										<Text className="text-muted-foreground text-center mb-4">
+											No recipes found matching "{recipeSearchQuery}"
+										</Text>
+									)}
 									<Button onPress={saveRecipes}>
 										<Text>
 											{introStepsState.selectedRecipeIds.size > 0
