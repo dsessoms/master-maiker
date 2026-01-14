@@ -99,7 +99,7 @@ export const MealPlanPreview = ({
 						<View
 							key={date.toISOString()}
 							className={cn(
-								"w-12 items-center py-2 border-b border-gray-200",
+								"w-9 items-center py-2 border-b border-gray-200",
 								idx % 2 === 0 ? "bg-slate-100" : "bg-white",
 							)}
 						>
@@ -136,7 +136,7 @@ export const MealPlanPreview = ({
 									<View
 										key={dateString}
 										className={cn(
-											"w-12 items-center justify-center py-3 self-stretch",
+											"w-9 items-center justify-center py-3 self-stretch",
 											idx % 2 === 0 ? "bg-slate-100" : "bg-white",
 										)}
 									>
