@@ -19,6 +19,7 @@ import { differenceInDays, format, isBefore, startOfDay } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CircleCheck } from "@/lib/icons/circle-check";
+import { Image } from "@/components/image";
 import { Input } from "@/components/ui/input";
 import { MealPlanContext } from "@/context/meal-plan-context";
 import { MealPlanPreview } from "@/components/meal-plan/meal-plan-preview";
@@ -27,6 +28,7 @@ import { RecipeCard } from "@/components/recipe/recipe-card";
 import { Text } from "@/components/ui/text";
 import { Textarea } from "@/components/ui/textarea";
 import { X } from "@/lib/icons";
+import { useColorScheme } from "@/lib/useColorScheme";
 import { useGenerateMealPlanChat } from "@/hooks/meal-plans/use-generate-meal-plan-chat";
 import { useRecipes } from "@/hooks/recipes/use-recipes";
 import { useSaveMealPlan } from "@/hooks/meal-plans/use-save-meal-plan";
@@ -250,6 +252,13 @@ export const GenerateMealPlanModal = ({
 	const defaultClassNames = useDefaultClassNames();
 	const { sendMessage, isPending } = useGenerateMealPlanChat();
 	const { saveMealPlan, isPending: isSaving } = useSaveMealPlan();
+	const { colorScheme } = useColorScheme();
+
+	// Determine which app icon to use based on color scheme
+	const appIcon =
+		colorScheme === "dark"
+			? require("@/assets/logo-with-yellow-background.png")
+			: require("@/assets/bottle-logo.png");
 
 	// State for the collected data using reducer
 	const [introStepsState, dispatch] = useReducer(
@@ -624,20 +633,30 @@ export const GenerateMealPlanModal = ({
 						.map((message, index) => (
 							<View key={message.id} className="mb-3">
 								<View
-									className={`flex-row ${
+									className={`flex-row items-end ${
 										message.role === "user" ? "justify-end" : "justify-start"
 									}`}
 								>
+									{/* Agent Icon */}
+									{message.role === "assistant" && (
+										<View className="w-8 h-8 rounded-full bg-primary items-center justify-center mr-2 shadow-sm">
+											<Image
+												contentFit="contain"
+												source={appIcon}
+												className="w-6 h-6"
+											/>
+										</View>
+									)}
 									<View
 										className={`max-w-[80%] p-3 rounded-lg ${
-											message.role === "user" ? "bg-primary" : "bg-secondary"
+											message.role === "user" ? "bg-secondary" : "bg-primary/70"
 										}`}
 									>
 										<Text
 											className={`${
 												message.role === "user"
-													? "text-primary-foreground"
-													: "text-foreground"
+													? "text-foreground"
+													: "text-primary-foreground"
 											}`}
 										>
 											{message.content}
