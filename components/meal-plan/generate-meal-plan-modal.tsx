@@ -21,6 +21,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Send, X } from "@/lib/icons";
 import { differenceInDays, format, isBefore, startOfDay } from "date-fns";
 
 import { Button } from "@/components/ui/button";
@@ -34,7 +35,6 @@ import { Profile } from "@/types";
 import { RecipeCard } from "@/components/recipe/recipe-card";
 import { Text } from "@/components/ui/text";
 import { Textarea } from "@/components/ui/textarea";
-import { X } from "@/lib/icons";
 import { useColorScheme } from "@/lib/useColorScheme";
 import { useGenerateMealPlanChat } from "@/hooks/meal-plans/use-generate-meal-plan-chat";
 import { useRecipes } from "@/hooks/recipes/use-recipes";
@@ -269,6 +269,36 @@ const SelectableRecipeCard = ({
 				onPress={onToggle}
 				overlay={checkboxOverlay}
 			/>
+		</View>
+	);
+};
+
+// Thinking indicator component with animated dots
+const ThinkingIndicator = ({ appIcon }: { appIcon: any }) => {
+	const [dots, setDots] = useState(".");
+
+	useEffect(() => {
+		const interval = setInterval(() => {
+			setDots((prev) => {
+				if (prev === ".") return "..";
+				if (prev === "..") return "...";
+				return ".";
+			});
+		}, 500);
+
+		return () => clearInterval(interval);
+	}, []);
+
+	return (
+		<View className="mb-3">
+			<View className="flex-row items-end justify-start">
+				<View className="w-8 h-8 rounded-full bg-primary items-center justify-center mr-2 shadow-sm">
+					<Image contentFit="contain" source={appIcon} className="w-6 h-6" />
+				</View>
+				<View className="p-3 rounded-lg bg-primary/70" style={{ width: 110 }}>
+					<Text className="text-primary-foreground">thinking{dots}</Text>
+				</View>
+			</View>
 		</View>
 	);
 };
@@ -670,7 +700,7 @@ export const GenerateMealPlanModal = ({
 					style={{ flex: 1 }}
 				>
 					{messages
-						.filter((message) => !message.isHidden)
+						.filter((message) => !message.isHidden && !!message.content.length)
 						.map((message, index) => (
 							<View key={message.id} className="mb-3">
 								<View
@@ -680,7 +710,7 @@ export const GenerateMealPlanModal = ({
 								>
 									{/* Agent Icon */}
 									{message.role === "assistant" && (
-										<View className="w-8 h-8 rounded-full bg-primary items-center justify-center mr-2 shadow-sm">
+										<View className="w-8 h-8 rounded-full bg-primary items-center justify-center mr-2">
 											<Image
 												contentFit="contain"
 												source={appIcon}
@@ -727,15 +757,7 @@ export const GenerateMealPlanModal = ({
 						</View>
 					)}
 					{/* Thinking indicator - Show when bot is processing */}
-					{isPending && (
-						<View className="mb-3">
-							<View className="flex-row justify-start">
-								<View className="max-w-[80%] p-3 rounded-lg bg-secondary">
-									<Text className="text-foreground italic">thinking...</Text>
-								</View>
-							</View>
-						</View>
-					)}
+					{isPending && <ThinkingIndicator appIcon={appIcon} />}
 				</ScrollView>
 
 				{currentMessage.role === "assistant" &&
@@ -916,10 +938,12 @@ export const GenerateMealPlanModal = ({
 									placeholder="Ask for changes to the meal plan..."
 									value={chatInput}
 									onChangeText={setChatInput}
-									multiline
 									maxLength={500}
 									editable={!isPending && !isSaving}
 									placeholderTextColor="#888"
+									returnKeyType="send"
+									submitBehavior="blurAndSubmit"
+									onSubmitEditing={handleSendChatMessage}
 								/>
 							</View>
 							<Button
@@ -927,7 +951,7 @@ export const GenerateMealPlanModal = ({
 								onPress={handleSendChatMessage}
 								disabled={!chatInput.trim() || isPending || isSaving}
 							>
-								<Text className="text-lg">➤</Text>
+								<Send className="h-5 w-5" />
 							</Button>
 						</View>
 					</View>
