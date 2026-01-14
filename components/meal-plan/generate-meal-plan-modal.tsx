@@ -14,6 +14,13 @@ import React, {
 	useRef,
 	useState,
 } from "react";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { differenceInDays, format, isBefore, startOfDay } from "date-fns";
 
 import { Button } from "@/components/ui/button";
@@ -32,6 +39,40 @@ import { useColorScheme } from "@/lib/useColorScheme";
 import { useGenerateMealPlanChat } from "@/hooks/meal-plans/use-generate-meal-plan-chat";
 import { useRecipes } from "@/hooks/recipes/use-recipes";
 import { useSaveMealPlan } from "@/hooks/meal-plans/use-save-meal-plan";
+
+// Example prompts for the additional context step
+const EXAMPLE_PROMPTS = [
+	{
+		value: "quick-simple",
+		label: "Quick and Simple",
+		prompt:
+			"I want quick and simple meals that take less than 30 minutes to prepare. Focus on easy recipes with minimal ingredients.",
+	},
+	{
+		value: "new-fun",
+		label: "New and Fun",
+		prompt:
+			"I want to try new and exciting recipes! Surprise me with creative dishes and interesting flavor combinations I haven't tried before.",
+	},
+	{
+		value: "healthy-balanced",
+		label: "Healthy and Balanced",
+		prompt:
+			"I want well-balanced, nutritious meals that help me meet my daily macro goals. Focus on whole foods and lean proteins.",
+	},
+	{
+		value: "comfort-food",
+		label: "Comfort Food",
+		prompt:
+			"I'm craving comfort food! Give me hearty, satisfying meals that are warm and cozy.",
+	},
+	{
+		value: "meal-prep",
+		label: "Meal Prep Friendly",
+		prompt:
+			"I want meals that are great for meal prep and can be made in advance. Focus on recipes that store and reheat well.",
+	},
+];
 
 // Helper function to build basic information for the meal plan request
 const buildBasicInformation = (
@@ -819,6 +860,38 @@ export const GenerateMealPlanModal = ({
 				{currentMessage.role === "assistant" &&
 					currentMessage.introStep === IntroStep.ADDITIONAL_CONTEXT && (
 						<View className="border-t border-border bg-background p-4">
+							<Select
+								value={undefined}
+								onValueChange={(option) => {
+									const selectedPrompt = EXAMPLE_PROMPTS.find(
+										(p) => p.value === option?.value,
+									);
+									if (selectedPrompt) {
+										dispatch({
+											type: "SET_OPEN_ENDED_INPUT",
+											input: selectedPrompt.prompt,
+										});
+									}
+								}}
+							>
+								<SelectTrigger className="mb-4">
+									<SelectValue
+										className="text-sm native:text-lg"
+										placeholder="Try an example prompt..."
+									/>
+								</SelectTrigger>
+								<SelectContent>
+									{EXAMPLE_PROMPTS.map((prompt) => (
+										<SelectItem
+											key={prompt.value}
+											label={prompt.label}
+											value={prompt.value}
+										>
+											{prompt.label}
+										</SelectItem>
+									))}
+								</SelectContent>
+							</Select>
 							<Textarea
 								placeholder="E.g., vegetarian, low-carb, no nuts, kid-friendly meals..."
 								value={introStepsState.additionalContext}

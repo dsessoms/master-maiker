@@ -144,44 +144,45 @@ const SelectTrigger = React.forwardRef<HTMLDivElement, SelectTriggerProps>(
 		};
 
 		return (
-			<div className="relative" ref={ref}>
-				<select
-					className={cn(
-						"border-input dark:bg-input/30 bg-background flex h-10 w-full appearance-none items-center justify-between gap-2 rounded-md border px-3 py-2 pr-10 text-sm",
-						"focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none",
-						"disabled:cursor-not-allowed disabled:opacity-50",
-						"cursor-pointer",
-						!value && "text-muted-foreground",
-						value && "text-foreground",
-						size === "sm" && "h-8 py-2 sm:py-1.5",
-						className,
-					)}
-					value={value?.value || ""}
-					onChange={handleChange}
-					disabled={disabled}
-				>
-					{!value && (
-						<option value="" disabled>
-							{placeholder}
-						</option>
-					)}
-					{options.map((option) => (
-						<option
-							key={option.value}
-							value={option.value}
-							disabled={option.disabled}
-							className="text-foreground bg-background"
-						>
-							{option.label}
-						</option>
-					))}
-				</select>
-				<div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-					<Icon
-						as={ChevronDown}
-						aria-hidden={true}
-						className="text-muted-foreground size-4"
-					/>
+			<div className={className} ref={ref}>
+				<div className="relative">
+					<select
+						className={cn(
+							"border-input dark:bg-input/30 bg-background flex h-10 w-full appearance-none items-center justify-between gap-2 rounded-md border px-3 py-2 pr-10 text-sm",
+							"focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none",
+							"disabled:cursor-not-allowed disabled:opacity-50",
+							"cursor-pointer",
+							!value && "text-muted-foreground",
+							value && "text-foreground",
+							size === "sm" && "h-8 py-2 sm:py-1.5",
+						)}
+						value={value?.value || ""}
+						onChange={handleChange}
+						disabled={disabled}
+					>
+						{!value && (
+							<option value="" disabled>
+								{placeholder}
+							</option>
+						)}
+						{options.map((option) => (
+							<option
+								key={option.value}
+								value={option.value}
+								disabled={option.disabled}
+								className="text-foreground bg-background"
+							>
+								{option.label}
+							</option>
+						))}
+					</select>
+					<div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+						<Icon
+							as={ChevronDown}
+							aria-hidden={true}
+							className="text-muted-foreground size-4"
+						/>
+					</div>
 				</div>
 			</div>
 		);
