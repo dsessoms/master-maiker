@@ -14,7 +14,7 @@ import React, {
 	useRef,
 	useState,
 } from "react";
-import { differenceInDays, format } from "date-fns";
+import { differenceInDays, format, isBefore, startOfDay } from "date-fns";
 
 import { Button } from "@/components/ui/button";
 import { CircleCheck } from "@/lib/icons/circle-check";
@@ -101,13 +101,20 @@ type IntroStepsAction =
 const createInitialIntroStepsState = (
 	defaultStartDate: Date,
 	defaultEndDate: Date,
-): IntroStepsState => ({
-	startDate: defaultStartDate,
-	endDate: defaultEndDate,
-	selectedProfileIds: new Set(),
-	selectedRecipeIds: new Set(),
-	additionalContext: "",
-});
+): IntroStepsState => {
+	const start = startOfDay(defaultStartDate);
+	const end = startOfDay(defaultEndDate);
+
+	const today = startOfDay(new Date());
+
+	return {
+		startDate: isBefore(start, today) ? today : start,
+		endDate: isBefore(end, today) ? today : end,
+		selectedProfileIds: new Set(),
+		selectedRecipeIds: new Set(),
+		additionalContext: "",
+	};
+};
 
 const introStepsReducer = (
 	state: IntroStepsState,
