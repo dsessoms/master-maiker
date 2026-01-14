@@ -120,40 +120,44 @@ export default function MealPlanScreen() {
 					headerShown: false,
 				}}
 			/>
-			<View className="flex flex-1 bg-muted-background">
+			<View className="flex flex-1 bg-background">
 				<View className="flex flex-row justify-between p-4 bg-background">
-					<ProfileDropdown
-						profiles={selectableProfiles}
-						onProfileToggle={onProfileToggle}
-					/>
-					<WeekSelector
-						startDate={startDate}
-						endDate={endDate}
-						onPreviousClick={viewPrevious}
-						onNextClick={viewNext}
-						onThisWeek={viewThisWeek}
-					/>
-					<View className="w-10" />
+					<View className="w-full max-w-3xl mx-auto flex flex-row justify-between">
+						<ProfileDropdown
+							profiles={selectableProfiles}
+							onProfileToggle={onProfileToggle}
+						/>
+						<WeekSelector
+							startDate={startDate}
+							endDate={endDate}
+							onPreviousClick={viewPrevious}
+							onNextClick={viewNext}
+							onThisWeek={viewThisWeek}
+						/>
+						<View className="w-10" />
+					</View>
 				</View>
 				<DnDScrollView
-					contentContainerStyle={{ padding: 16, flexGrow: 1 }}
+					contentContainerStyle={{ flexGrow: 1 }}
 					style={{ flex: 1 }}
 				>
-					{weekDates.map((date) => {
-						const dateString = format(date, "yyyy-MM-dd");
-						return (
-							<DaySection
-								key={dateString}
-								date={date}
-								recipeEntries={foodEntriesByDay[dateString]}
-								onAdd={(mealType) =>
-									router.push(
-										`/(tabs)/(meal-plan)/meal-plan/add-recipe?mealType=${mealType}&date=${dateString}`,
-									)
-								}
-							/>
-						);
-					})}
+					<View className="w-full max-w-3xl mx-auto bg-muted-background p-4">
+						{weekDates.map((date) => {
+							const dateString = format(date, "yyyy-MM-dd");
+							return (
+								<DaySection
+									key={dateString}
+									date={date}
+									recipeEntries={foodEntriesByDay[dateString]}
+									onAdd={(mealType) =>
+										router.push(
+											`/(tabs)/(meal-plan)/meal-plan/add-recipe?mealType=${mealType}&date=${dateString}`,
+										)
+									}
+								/>
+							);
+						})}
+					</View>
 				</DnDScrollView>
 			</View>
 			{notesModalState && (
