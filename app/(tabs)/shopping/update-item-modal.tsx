@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 
 import { Button } from "@/components/ui/button";
+import { ConsolidatedItemType } from "./types";
 import { GetShoppingListItemsResponse } from "@/app/api/shopping-lists/[id]/items/index+api";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
@@ -44,12 +45,14 @@ export const UpdateItemModal = ({
 	onClose,
 }: {
 	shoppingListId: string;
-	item: ItemType;
+	item: ConsolidatedItemType;
 	isOpen: boolean;
 	onClose: () => void;
 }) => {
 	// For items with a food reference, display the food name with serving info but treat it as read-only
 	const isIngredientItem = !item.name && !!item.food;
+	const isConsolidated =
+		item.consolidatedIds && item.consolidatedIds.length > 1;
 	const servingInfo =
 		item.serving && item.number_of_servings
 			? getServingDescription(item.number_of_servings, item.serving)
@@ -78,17 +81,28 @@ export const UpdateItemModal = ({
 	}, [item]);
 
 	const handleSave = async () => {
-		// For ingredient items, we don't update the name (since it comes from the food object)
-		await updateItem({
-			id: item.id,
-			name: isIngredientItem ? undefined : name.trim() || undefined,
-			notes: notes.trim() || undefined,
-		});
+		const idsToUpdate = item.consolidatedIds || [item.id];
+
+		// Update all consolidated items with the same notes
+		await Promise.all(
+			idsToUpdate.map((itemId) =>
+				updateItem({
+					id: itemId,
+					name: isIngredientItem ? undefined : name.trim() || undefined,
+					notes: notes.trim() || undefined,
+				}),
+			),
+		);
 		onClose();
 	};
 
 	const handleDelete = async () => {
-		await deleteShoppingListItem({ id: item.id });
+		const idsToDelete = item.consolidatedIds || [item.id];
+
+		// Delete all consolidated items
+		await Promise.all(
+			idsToDelete.map((itemId) => deleteShoppingListItem({ id: itemId })),
+		);
 		onClose();
 	};
 
@@ -100,6 +114,15 @@ export const UpdateItemModal = ({
 				</DialogHeader>
 
 				<View className="gap-4 py-4">
+					{isConsolidated && (
+						<View className="p-3 bg-muted rounded-md">
+							<Text className="text-sm text-muted-foreground">
+								This is a consolidated entry representing{" "}
+								{item.consolidatedIds?.length} items. Changes will apply to all
+								of them.
+							</Text>
+						</View>
+					)}
 					<Input
 						placeholder="Item name..."
 						value={name}

@@ -1,5 +1,3 @@
-"use client";
-
 import * as React from "react";
 
 import { ChevronDown, Plus, Star, Trash2Icon, X } from "@/lib/icons";
@@ -11,12 +9,14 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Pressable, ScrollView, View } from "react-native";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { router, useLocalSearchParams } from "expo-router";
 
 import { AddItemModal } from "./add-item-modal";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ClearShoppingListDialog } from "./clear-shopping-list-dialog";
+import { ConsolidatedItemType } from "./types";
 import { CreateShoppingListModal } from "./create-shopping-list-modal";
 import { DeleteShoppingListDialog } from "./delete-shopping-list-dialog";
 import { GetShoppingListItemsResponse } from "@/app/api/shopping-lists/[id]/items/index+api";
@@ -34,6 +34,12 @@ import { useToggle } from "@/hooks/useToggle";
 import { useUpdateShoppingListMutation } from "@/hooks/shopping-lists/use-update-shopping-list-mutation";
 
 type ItemType = NonNullable<GetShoppingListItemsResponse["items"]>[0];
+
+// Special grouping keys for non-recipe items
+enum SpecialGroupKey {
+	CUSTOM = "Custom",
+	OTHER = "Other",
+}
 
 const getServingDescription = (
 	numberOfServings: number,
@@ -56,7 +62,7 @@ const ListItem = ({
 	onClick,
 }: {
 	listId: string;
-	item: ItemType;
+	item: ConsolidatedItemType;
 	onClick: () => void;
 }) => {
 	const { updateItem } = useShoppingListItems(listId);
@@ -68,6 +74,22 @@ const ListItem = ({
 			? getServingDescription(item.number_of_servings, item.serving)
 			: null;
 
+	// Handle checkbox for consolidated items - update all consolidated IDs
+	const handleCheckChange = async () => {
+		const newCheckedState = !item.is_checked;
+		const idsToUpdate = item.consolidatedIds || [item.id];
+
+		// Update all consolidated items
+		await Promise.all(
+			idsToUpdate.map((id) =>
+				updateItem({
+					id,
+					isChecked: newCheckedState,
+				}),
+			),
+		);
+	};
+
 	return (
 		<Pressable
 			onPress={onClick}
@@ -75,12 +97,7 @@ const ListItem = ({
 		>
 			<Checkbox
 				checked={item.is_checked ?? false}
-				onCheckedChange={() =>
-					updateItem({
-						id: item.id,
-						isChecked: !item.is_checked,
-					})
-				}
+				onCheckedChange={handleCheckChange}
 			/>
 			<View className="flex-1">
 				<View className="flex-row flex-wrap gap-1">
@@ -108,6 +125,224 @@ const ListItem = ({
 				)}
 			</View>
 		</Pressable>
+	);
+};
+
+// Helper function to get aisle from food (returns first aisle if multiple)
+const getAisle = (item: ItemType): string => {
+	// Use the aisle field from the food item if available
+	if (item.food?.aisle) {
+		// Split by semicolon to handle multiple aisles, use first one
+		const aisles = item.food.aisle
+			.split(";")
+			.map((aisle) => aisle.trim())
+			.filter((aisle) => aisle.length > 0);
+
+		if (aisles.length > 0) {
+			return aisles[0];
+		}
+	}
+
+	// Fallback categorization based on food type
+	if (item.food?.food_type === "Brand") {
+		return "Packaged Foods";
+	}
+
+	// Default to "Other" if no aisle information is available
+	return "Other";
+};
+
+// Group items by recipe
+const groupByRecipe = (items: ConsolidatedItemType[] | undefined) => {
+	if (!items) return {};
+
+	const grouped: Record<string, ConsolidatedItemType[]> = {};
+
+	items.forEach((item) => {
+		const key = item.recipe_id
+			? item.recipe_id
+			: item.food
+				? SpecialGroupKey.OTHER
+				: SpecialGroupKey.CUSTOM;
+
+		if (!grouped[key]) {
+			grouped[key] = [];
+		}
+		grouped[key].push(item);
+	});
+
+	return grouped;
+};
+
+// Consolidate items that share the same food and serving
+const consolidateItems = (
+	items: ItemType[] | undefined,
+	groupByRecipe: boolean = false,
+): ConsolidatedItemType[] => {
+	if (!items) return [];
+
+	const consolidated = new Map<string, ConsolidatedItemType>();
+
+	items.forEach((item) => {
+		let key: string | null = null;
+
+		// Create unique key based on food ID, serving, and notes
+		// When grouping by recipe, include recipe_id in the key to prevent cross-recipe consolidation
+		const recipePrefix = groupByRecipe
+			? `recipe-${item.recipe_id || "none"}-`
+			: "";
+		const notesKey = `notes-${item.notes || ""}`;
+
+		if (item.food?.spoonacular_id && item.serving?.measurement_description) {
+			key = `${recipePrefix}spoonacular-${item.food.spoonacular_id}-${item.serving.measurement_description}-${notesKey}`;
+		} else if (item.food?.fat_secret_id && item.serving?.id) {
+			key = `${recipePrefix}fatsecret-${item.food.fat_secret_id}-${item.serving.id}-${notesKey}`;
+		}
+
+		// If we can create a key, check if we should consolidate
+		if (key) {
+			const existing = consolidated.get(key);
+			if (existing) {
+				// Consolidate: sum the servings and track all consolidated IDs
+				const newServings =
+					(existing.number_of_servings || 0) + (item.number_of_servings || 0);
+
+				consolidated.set(key, {
+					...existing,
+					number_of_servings: newServings,
+					consolidatedIds: [...(existing.consolidatedIds || []), item.id],
+				});
+				return;
+			}
+		}
+
+		// If no key or no existing item, use item ID as unique key
+		const itemKey = key || `item-${item.id}`;
+		consolidated.set(itemKey, {
+			...item,
+			consolidatedIds: [item.id], // Track this item's ID
+		});
+	});
+
+	return Array.from(consolidated.values());
+};
+
+// Group items by aisle
+const groupByAisle = (items: ConsolidatedItemType[] | undefined) => {
+	if (!items) return {};
+
+	const grouped: Record<string, ConsolidatedItemType[]> = {};
+
+	items.forEach((item) => {
+		const aisle = getAisle(item);
+
+		if (!grouped[aisle]) {
+			grouped[aisle] = [];
+		}
+		grouped[aisle].push(item);
+	});
+
+	return grouped;
+};
+
+// Sort recipe groups
+const sortRecipeGroups = (
+	grouped: Record<string, ConsolidatedItemType[]>,
+	items: ConsolidatedItemType[] | undefined,
+): Array<{ key: string; name: string; items: ConsolidatedItemType[] }> => {
+	if (!items) return [];
+
+	const recipeMap = new Map<string, { name: string; id?: number }>();
+
+	// Build map of recipe info
+	items.forEach((item) => {
+		if (item.recipe_id && item.recipe) {
+			const sortId = item.food?.spoonacular_id || item.food?.fat_secret_id || 0;
+			recipeMap.set(item.recipe_id, {
+				name: item.recipe.name,
+				id: sortId,
+			});
+		}
+	});
+
+	const result: Array<{
+		key: string;
+		name: string;
+		items: ConsolidatedItemType[];
+	}> = [];
+
+	// Process groups - check special keys first, then treat the rest as recipes
+	Object.entries(grouped).forEach(([key, groupItems]) => {
+		if (key === SpecialGroupKey.CUSTOM) {
+			result.push({
+				key,
+				name: SpecialGroupKey.CUSTOM,
+				items: groupItems,
+			});
+		} else if (key === SpecialGroupKey.OTHER) {
+			result.push({
+				key,
+				name: SpecialGroupKey.OTHER,
+				items: groupItems,
+			});
+		} else {
+			// Assume it's a recipe ID
+			const recipeInfo = recipeMap.get(key);
+			result.push({
+				key,
+				name: recipeInfo?.name || "Recipe",
+				items: groupItems,
+			});
+		}
+	});
+
+	// Sort by recipe ID (spoonacular_id or fat_secret_id)
+	return result.sort((a, b) => {
+		// Special keys always go to the end
+		if (a.key === SpecialGroupKey.CUSTOM) return 1;
+		if (b.key === SpecialGroupKey.CUSTOM) return -1;
+		if (a.key === SpecialGroupKey.OTHER) return 1;
+		if (b.key === SpecialGroupKey.OTHER) return -1;
+
+		// Both are recipes, sort by their IDs
+		const aInfo = recipeMap.get(a.key);
+		const bInfo = recipeMap.get(b.key);
+
+		return (aInfo?.id || 0) - (bInfo?.id || 0);
+	});
+};
+
+const GroupedItemsList = ({
+	groups,
+	listId,
+	onItemClick,
+}: {
+	groups: Array<{
+		key: string;
+		name: string;
+		items: ConsolidatedItemType[];
+	}>;
+	listId: string;
+	onItemClick: (item: ConsolidatedItemType) => void;
+}) => {
+	return (
+		<View className="gap-4">
+			{groups.map((group) => (
+				<View key={group.key} className="gap-2">
+					<Text className="text-lg font-semibold px-1">{group.name}</Text>
+					<View className="gap-2">
+						{group.items.map((item) => (
+							<ListItem
+								key={item.id}
+								item={item}
+								listId={listId}
+								onClick={() => onItemClick(item)}
+							/>
+						))}
+					</View>
+				</View>
+			))}
+		</View>
 	);
 };
 
@@ -177,12 +412,59 @@ export default function ShoppingListDetail() {
 	const [isCreateListModalOpen, toggleCreateListModal] = useToggle();
 	const [showClearDialog, setShowClearDialog] = React.useState(false);
 	const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
-	const [itemToUpdate, setItemToUpdate] = React.useState<ItemType>();
+	const [itemToUpdate, setItemToUpdate] =
+		React.useState<ConsolidatedItemType>();
+	const [groupingMode, setGroupingMode] = React.useState<"recipe" | "aisle">(
+		"recipe",
+	);
 
 	const selectedList = lists?.find((list) => list.id === id);
 	const uncheckedItems = items?.filter((item) => !item.is_checked);
 	const checkedItems = items?.filter((item) => item.is_checked);
 	const hasCheckedItems = checkedItems && checkedItems.length > 0;
+
+	// Consolidate items before grouping
+	const consolidatedUnchecked = React.useMemo(
+		() => consolidateItems(uncheckedItems, groupingMode === "recipe"),
+		[uncheckedItems, groupingMode],
+	);
+	const consolidatedChecked = React.useMemo(
+		() => consolidateItems(checkedItems, groupingMode === "recipe"),
+		[checkedItems, groupingMode],
+	);
+
+	// Group items based on selected mode
+	const groupedUnchecked = React.useMemo(() => {
+		if (groupingMode === "recipe") {
+			const grouped = groupByRecipe(consolidatedUnchecked);
+			return sortRecipeGroups(grouped, consolidatedUnchecked);
+		} else {
+			const grouped = groupByAisle(consolidatedUnchecked);
+			return Object.entries(grouped)
+				.map(([name, items]) => ({ key: name, name, items }))
+				.sort((a, b) => {
+					if (a.name === "Other") return 1;
+					if (b.name === "Other") return -1;
+					return a.name.localeCompare(b.name);
+				});
+		}
+	}, [consolidatedUnchecked, groupingMode]);
+
+	const groupedChecked = React.useMemo(() => {
+		if (groupingMode === "recipe") {
+			const grouped = groupByRecipe(consolidatedChecked);
+			return sortRecipeGroups(grouped, consolidatedChecked);
+		} else {
+			const grouped = groupByAisle(consolidatedChecked);
+			return Object.entries(grouped)
+				.map(([name, items]) => ({ key: name, name, items }))
+				.sort((a, b) => {
+					if (a.name === "Other") return 1;
+					if (b.name === "Other") return -1;
+					return a.name.localeCompare(b.name);
+				});
+		}
+	}, [consolidatedChecked, groupingMode]);
 
 	const deleteAndNavigate = async () => {
 		const defaultList = lists?.find(
@@ -231,53 +513,102 @@ export default function ShoppingListDetail() {
 				/>
 			</View>
 
-			<ScrollView
-				className="flex-1 bg-background"
-				contentContainerStyle={{ flexGrow: 1 }}
+			<Tabs
+				value={groupingMode}
+				onValueChange={(value) => setGroupingMode(value as "recipe" | "aisle")}
+				className="flex-1"
 			>
-				<View className="p-4 flex-1 w-full max-w-3xl mx-auto bg-muted-background">
-					<View className="gap-2">
-						{uncheckedItems?.map((item) => (
-							<ListItem
-								key={item.id}
-								item={item}
-								listId={id!}
-								onClick={() => setItemToUpdate(item)}
-							/>
-						))}
-					</View>
-
-					{hasCheckedItems && (
-						<>
-							<View className="flex-row items-center justify-between py-4">
-								<Text className="text-lg font-semibold">Checked Items</Text>
-								<Button
-									variant="outline"
-									size="sm"
-									onPress={() =>
-										clearShoppingList({
-											action: "clear",
-											itemsToClear: "checked",
-										})
-									}
-								>
-									<Text>Clear</Text>
-								</Button>
-							</View>
-							<View className="gap-2">
-								{checkedItems?.map((item) => (
-									<ListItem
-										key={item.id}
-										item={item}
-										listId={id!}
-										onClick={() => setItemToUpdate(item)}
-									/>
-								))}
-							</View>
-						</>
-					)}
+				<View className="px-4 w-full max-w-3xl mx-auto">
+					<TabsList>
+						<TabsTrigger value="recipe">
+							<Text>By Recipe</Text>
+						</TabsTrigger>
+						<TabsTrigger value="aisle">
+							<Text>By Aisle</Text>
+						</TabsTrigger>
+					</TabsList>
 				</View>
-			</ScrollView>
+
+				<TabsContent value="recipe" className="flex-1">
+					<ScrollView
+						className="flex-1 bg-background"
+						contentContainerStyle={{ flexGrow: 1 }}
+					>
+						<View className="p-4 flex-1 w-full max-w-3xl mx-auto bg-muted-background">
+							<GroupedItemsList
+								groups={groupedUnchecked}
+								listId={id!}
+								onItemClick={setItemToUpdate}
+							/>
+
+							{hasCheckedItems && (
+								<>
+									<View className="flex-row items-center justify-between py-4">
+										<Text className="text-lg font-semibold">Checked Items</Text>
+										<Button
+											variant="outline"
+											size="sm"
+											onPress={() =>
+												clearShoppingList({
+													action: "clear",
+													itemsToClear: "checked",
+												})
+											}
+										>
+											<Text>Clear</Text>
+										</Button>
+									</View>
+									<GroupedItemsList
+										groups={groupedChecked}
+										listId={id!}
+										onItemClick={setItemToUpdate}
+									/>
+								</>
+							)}
+						</View>
+					</ScrollView>
+				</TabsContent>
+
+				<TabsContent value="aisle" className="flex-1">
+					<ScrollView
+						className="flex-1 bg-background"
+						contentContainerStyle={{ flexGrow: 1 }}
+					>
+						<View className="p-4 flex-1 w-full max-w-3xl mx-auto bg-muted-background">
+							<GroupedItemsList
+								groups={groupedUnchecked}
+								listId={id!}
+								onItemClick={setItemToUpdate}
+							/>
+
+							{hasCheckedItems && (
+								<>
+									<View className="flex-row items-center justify-between py-4">
+										<Text className="text-lg font-semibold">Checked Items</Text>
+										<Button
+											variant="outline"
+											size="sm"
+											onPress={() =>
+												clearShoppingList({
+													action: "clear",
+													itemsToClear: "checked",
+												})
+											}
+										>
+											<Text>Clear</Text>
+										</Button>
+									</View>
+									<GroupedItemsList
+										groups={groupedChecked}
+										listId={id!}
+										onItemClick={setItemToUpdate}
+									/>
+								</>
+							)}
+						</View>
+					</ScrollView>
+				</TabsContent>
+			</Tabs>
 
 			<View className="flex flex-col justify-center items-center gap-2 absolute bottom-6 right-6">
 				<Button

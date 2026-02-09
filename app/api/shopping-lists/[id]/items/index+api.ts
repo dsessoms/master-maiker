@@ -135,7 +135,9 @@ export async function GET(req: Request, { id }: { id: string }) {
       is_checked,
       number_of_servings,
       notes,
-      food(id, food_name, food_type, brand_name, serving(*)), 
+      recipe_id,
+      food(id, food_name, food_type, brand_name, aisle, fat_secret_id, spoonacular_id, serving(*)), 
+      recipe(id, name),
       serving(
         id, 
         measurement_description,
