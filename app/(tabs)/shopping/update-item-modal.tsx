@@ -1,5 +1,3 @@
-"use client";
-
 import * as React from "react";
 
 import {
@@ -12,16 +10,17 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { ConsolidatedItemType } from "./types";
-import { GetShoppingListItemsResponse } from "@/app/api/shopping-lists/[id]/items/index+api";
+import { Image } from "@/components/image";
 import { Input } from "@/components/ui/input";
+import { Pressable } from "react-native";
 import { Text } from "@/components/ui/text";
 import { Textarea } from "@/components/ui/textarea";
 import { Trash2Icon } from "@/lib/icons";
 import { View } from "react-native";
+import { router } from "expo-router";
 import { useDeleteShoppingListItemMutation } from "@/hooks/shopping-lists/use-delete-shopping-list-item-mutation";
+import { useRecipeImage } from "@/hooks/recipes/use-recipe-image";
 import { useShoppingListItems } from "@/hooks/shopping-lists/use-shopping-list-items";
-
-type ItemType = NonNullable<GetShoppingListItemsResponse["items"]>[0];
 
 const getServingDescription = (
 	numberOfServings: number,
@@ -38,6 +37,38 @@ const getServingDescription = (
 	return serving.measurement_description
 		? `${totalUnits} ${serving.measurement_description}`
 		: totalUnits.toString();
+};
+
+const RecipeRow = ({
+	recipe,
+	onPress,
+}: {
+	recipe: { id: string; name: string; image_id?: string | null };
+	onPress: () => void;
+}) => {
+	const imageUrl = useRecipeImage(recipe.image_id);
+
+	return (
+		<Pressable
+			onPress={onPress}
+			className="flex-row items-center gap-3 p-2 rounded-md bg-muted active:bg-muted/80"
+		>
+			{imageUrl ? (
+				<Image
+					source={{ uri: imageUrl }}
+					className="h-12 w-12 rounded"
+					contentFit="cover"
+				/>
+			) : (
+				<View className="h-12 w-12 rounded bg-muted-foreground/20 items-center justify-center">
+					<Text className="text-xs font-bold text-muted-foreground">
+						{recipe.name.substring(0, 2).toUpperCase()}
+					</Text>
+				</View>
+			)}
+			<Text className="flex-1 text-sm font-medium">{recipe.name}</Text>
+		</Pressable>
+	);
 };
 
 export const UpdateItemModal = ({
@@ -65,9 +96,36 @@ export const UpdateItemModal = ({
 
 	const [name, setName] = React.useState(displayName);
 	const [notes, setNotes] = React.useState(item.notes ?? "");
-	const { updateItem } = useShoppingListItems(shoppingListId);
+	const { items, updateItem } = useShoppingListItems(shoppingListId);
 	const { deleteShoppingListItem, isPending: isDeleting } =
 		useDeleteShoppingListItemMutation(shoppingListId);
+
+	// Get unique recipes for this item's consolidated IDs
+	const recipes = React.useMemo(() => {
+		if (!items) return [];
+
+		const idsToCheck = item.consolidatedIds || [item.id];
+		const recipeMap = new Map<
+			string,
+			{ id: string; name: string; image_id?: string | null }
+		>();
+
+		items.forEach((shoppingItem) => {
+			if (
+				idsToCheck.includes(shoppingItem.id) &&
+				shoppingItem.recipe_id &&
+				shoppingItem.recipe
+			) {
+				recipeMap.set(shoppingItem.recipe_id, {
+					id: shoppingItem.recipe_id,
+					name: shoppingItem.recipe.name,
+					image_id: shoppingItem.recipe.image_id,
+				});
+			}
+		});
+
+		return Array.from(recipeMap.values());
+	}, [items, item]);
 
 	React.useEffect(() => {
 		const newServingInfo =
@@ -108,6 +166,17 @@ export const UpdateItemModal = ({
 		onClose();
 	};
 
+	const handleRecipePress = (recipeId: string) => {
+		onClose();
+		router.push(
+			{
+				pathname: "/(tabs)/(recipes)/recipes/[id]",
+				params: { id: recipeId },
+			},
+			{ withAnchor: true },
+		);
+	};
+
 	return (
 		<Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
 			<DialogContent className="w-[90vw]">
@@ -138,6 +207,22 @@ export const UpdateItemModal = ({
 						onChangeText={setNotes}
 						numberOfLines={3}
 					/>
+					{recipes.length > 0 && (
+						<View className="gap-2">
+							<Text className="text-sm font-semibold">
+								{recipes.length === 1 ? "Recipe" : "Recipes"}
+							</Text>
+							<View className="gap-2">
+								{recipes.map((recipe) => (
+									<RecipeRow
+										key={recipe.id}
+										recipe={recipe}
+										onPress={() => handleRecipePress(recipe.id)}
+									/>
+								))}
+							</View>
+						</View>
+					)}
 				</View>
 
 				<DialogFooter>
