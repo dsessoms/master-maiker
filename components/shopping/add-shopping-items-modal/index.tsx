@@ -117,7 +117,10 @@ const ModalContent = ({
 		recipes.forEach((recipe) => {
 			if (!recipe) return;
 			const ingredientMap: IngredientMap = {};
-			recipe.ingredient?.forEach((ing) => (ingredientMap[ing.id] = true));
+			const filteredIngredients = recipe.ingredient?.filter(
+				(ing) => ing.type !== "header",
+			);
+			filteredIngredients?.forEach((ing) => (ingredientMap[ing.id] = true));
 			const numberOfServings =
 				itemsToAdd.recipes?.find(({ recipeId }) => recipeId === recipe.id)
 					?.numberOfServings ??
@@ -126,7 +129,7 @@ const ModalContent = ({
 			recipeMap[recipe.id] = {
 				recipe: {
 					...recipe,
-					ingredients: recipe.ingredient,
+					ingredients: filteredIngredients,
 				},
 				numberOfServings,
 				ingredientMap: ingredientMap,
