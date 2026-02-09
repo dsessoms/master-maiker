@@ -35,7 +35,9 @@ const getServingDescription = (
 	}
 
 	const totalUnits = numberOfServings * serving.number_of_units;
-	return `${totalUnits} ${serving.measurement_description || "unit"}`;
+	return serving.measurement_description
+		? `${totalUnits} ${serving.measurement_description}`
+		: totalUnits.toString();
 };
 
 export const UpdateItemModal = ({

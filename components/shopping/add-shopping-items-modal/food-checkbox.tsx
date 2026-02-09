@@ -23,7 +23,7 @@ const getServingDescription = (
 	const totalUnits = numberOfServings * serving.number_of_units;
 	return {
 		countString: totalUnits.toString(),
-		description: serving.measurement_description || "unit",
+		description: serving.measurement_description,
 	};
 };
 
@@ -55,7 +55,9 @@ export const FoodCheckbox = ({
 				{servingDetails && (
 					<>
 						<Text className="font-bold">{servingDetails.countString}</Text>
-						<Text className="font-bold">{servingDetails.description}</Text>
+						{servingDetails.description && (
+							<Text className="font-bold">{servingDetails.description}</Text>
+						)}
 					</>
 				)}
 				<Text>{food.food_name}</Text>
