@@ -507,20 +507,18 @@ export default function ShoppingListDetail() {
 
 	return (
 		<SafeAreaView className="flex flex-1 bg-background">
-			<View className="flex-row items-center justify-between p-4 w-full max-w-3xl mx-auto">
-				<ShoppingListSelector
-					currentListId={id!}
-					lists={lists}
-					onCreateNew={toggleCreateListModal}
-				/>
-			</View>
-
 			<Tabs
 				value={groupingMode}
 				onValueChange={(value) => setGroupingMode(value as "recipe" | "aisle")}
 				className="flex-1"
 			>
-				<View className="px-4 w-full max-w-3xl mx-auto">
+				<View className="flex-row items-center justify-between p-4 w-full max-w-3xl mx-auto">
+					<ShoppingListSelector
+						currentListId={id!}
+						lists={lists}
+						onCreateNew={toggleCreateListModal}
+					/>
+
 					<TabsList>
 						<TabsTrigger value="recipe">
 							<Text>By Recipe</Text>
