@@ -136,7 +136,7 @@ export async function GET(req: Request, { id }: { id: string }) {
       number_of_servings,
       notes,
       recipe_id,
-      food(id, food_name, food_type, brand_name, aisle, fat_secret_id, spoonacular_id, serving(*)), 
+      food(id, food_name, food_type, brand_name, aisle, image_url, fat_secret_id, spoonacular_id, serving(*)), 
       recipe(id, name, image_id),
       serving(
         id, 

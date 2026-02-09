@@ -26,6 +26,7 @@ import { SafeAreaView } from "@/components/safe-area-view";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import { UpdateItemModal } from "./update-item-modal";
+import { cn } from "@/lib/utils";
 import { useClearShoppingListMutation } from "@/hooks/shopping-lists/use-clear-shopping-list-mutation";
 import { useDeleteShoppingListMutation } from "@/hooks/shopping-lists/use-delete-shopping-list-mutation";
 import { useShoppingListItems } from "@/hooks/shopping-lists/use-shopping-list-items";
@@ -95,12 +96,15 @@ const ListItem = ({
 	return (
 		<Pressable
 			onPress={onClick}
-			className="flex-row items-center gap-2 rounded-md bg-card p-3"
+			className="flex-row items-center gap-3 rounded-md bg-card p-3"
 		>
-			<Checkbox
-				checked={item.is_checked ?? false}
-				onCheckedChange={handleCheckChange}
-			/>
+			{item.food?.image_url && (
+				<Image
+					source={{ uri: item.food.image_url }}
+					className={cn("h-7 w-7 rounded-md", item.is_checked && "opacity-30")}
+					contentFit="contain"
+				/>
+			)}
 			<View className="flex-1">
 				<View className="flex-row flex-wrap gap-1">
 					{servingInfo && (
@@ -126,6 +130,10 @@ const ListItem = ({
 					<Text className="text-sm text-muted-foreground">{item.notes}</Text>
 				)}
 			</View>
+			<Checkbox
+				checked={item.is_checked ?? false}
+				onCheckedChange={handleCheckChange}
+			/>
 		</Pressable>
 	);
 };
@@ -452,22 +460,6 @@ export default function ShoppingListDetail() {
 		}
 	}, [consolidatedUnchecked, groupingMode]);
 
-	const groupedChecked = React.useMemo(() => {
-		if (groupingMode === "recipe") {
-			const grouped = groupByRecipe(consolidatedChecked);
-			return sortRecipeGroups(grouped, consolidatedChecked);
-		} else {
-			const grouped = groupByAisle(consolidatedChecked);
-			return Object.entries(grouped)
-				.map(([name, items]) => ({ key: name, name, items }))
-				.sort((a, b) => {
-					if (a.name === "Other") return 1;
-					if (b.name === "Other") return -1;
-					return a.name.localeCompare(b.name);
-				});
-		}
-	}, [consolidatedChecked, groupingMode]);
-
 	const deleteAndNavigate = async () => {
 		const defaultList = lists?.find(
 			(list) => list.is_default && list.id !== id,
@@ -558,11 +550,16 @@ export default function ShoppingListDetail() {
 											<Text>Clear</Text>
 										</Button>
 									</View>
-									<GroupedItemsList
-										groups={groupedChecked}
-										listId={id!}
-										onItemClick={setItemToUpdate}
-									/>
+									<View className="gap-2">
+										{consolidatedChecked.map((item) => (
+											<ListItem
+												key={item.id}
+												item={item}
+												listId={id!}
+												onClick={() => setItemToUpdate(item)}
+											/>
+										))}
+									</View>
 								</>
 							)}
 						</View>
@@ -598,11 +595,16 @@ export default function ShoppingListDetail() {
 											<Text>Clear</Text>
 										</Button>
 									</View>
-									<GroupedItemsList
-										groups={groupedChecked}
-										listId={id!}
-										onItemClick={setItemToUpdate}
-									/>
+									<View className="gap-2">
+										{consolidatedChecked.map((item) => (
+											<ListItem
+												key={item.id}
+												item={item}
+												listId={id!}
+												onClick={() => setItemToUpdate(item)}
+											/>
+										))}
+									</View>
 								</>
 							)}
 						</View>
