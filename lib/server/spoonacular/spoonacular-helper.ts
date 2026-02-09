@@ -221,6 +221,7 @@ export const convertSpoonacularToIngredient = (
 		image_url: spoonacularIngredient.image
 			? `${THUMBNAIL_BASE_URL}${spoonacularIngredient.image}`
 			: undefined,
+		aisle: spoonacularIngredient.aisle,
 		spoonacular_id: spoonacularIngredient.id, // Add spoonacular food ID
 		serving: {
 			measurement_description:
@@ -277,6 +278,7 @@ export const convertSpoonacularExtendedIngredientToIngredient = (
 		image_url: extendedIngredient.image
 			? `${THUMBNAIL_BASE_URL}${extendedIngredient.image}`
 			: undefined,
+		aisle: extendedIngredient.aisle,
 		spoonacular_id: extendedIngredient.id,
 		serving: {
 			measurement_description:

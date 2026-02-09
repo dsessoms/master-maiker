@@ -18,6 +18,7 @@ export const FoodItemSchema = z.object({
 	original_name: z.string().optional(), // The original user-entered or parsed name
 	// TODO: only allow specific urls in database
 	image_url: z.string().optional(),
+	aisle: z.string().optional(),
 	serving: ServingSchema,
 	fat_secret_id: z.number().optional(), // For tracking fat secret food ID
 	spoonacular_id: z.number().optional(), // For tracking spoonacular food ID
