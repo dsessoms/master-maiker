@@ -2,6 +2,7 @@ import { Recipe } from "@/lib/schemas";
 import { extractParamsFromRequest } from "@/lib/url-params";
 import { jsonResponse } from "@/lib/server/json-response";
 import { supabase } from "@/config/supabase-server";
+import { upsertRecipe } from "@/lib/server/recipe-helpers";
 import { validateSession } from "@/lib/server/validate-session";
 
 export type GetRecipeResponse = NonNullable<Awaited<ReturnType<typeof GET>>>;
@@ -78,35 +79,12 @@ export async function PUT(req: Request) {
 		);
 	}
 
-	// Use the add_recipe RPC function with the existing recipe ID to update
-	const { data, error } = await supabase.rpc("add_recipe", {
-		recipe_id: recipeId,
-		name: recipe.name,
-		number_of_servings: Number(recipe.servings),
-		description: recipe.description ?? undefined,
-		prep_time_hours: recipe.prep_time_hours
-			? Number(recipe.prep_time_hours)
-			: undefined,
-		prep_time_minutes: recipe.prep_time_minutes
-			? Number(recipe.prep_time_minutes)
-			: undefined,
-		cook_time_hours: recipe.cook_time_hours
-			? Number(recipe.cook_time_hours)
-			: undefined,
-		cook_time_minutes: recipe.cook_time_minutes
-			? Number(recipe.cook_time_minutes)
-			: undefined,
-		image_id: recipe.image_id ?? undefined,
-		instructions: recipe.instructions ?? [],
-		ingredients: recipe.ingredients,
-	});
-
-	if (error) {
-		console.error("Recipe update error:", error);
+	try {
+		const id = await upsertRecipe(recipe, recipeId);
+		return jsonResponse({ id });
+	} catch {
 		return jsonResponse({ id: undefined }, { status: 500 });
 	}
-
-	return jsonResponse({ id: data });
 }
 
 export async function DELETE(req: Request) {

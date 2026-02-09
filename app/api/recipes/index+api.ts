@@ -1,6 +1,7 @@
 import { Recipe } from "@/lib/schemas";
 import { jsonResponse } from "@/lib/server/json-response";
 import { supabase } from "@/config/supabase-server";
+import { upsertRecipe } from "@/lib/server/recipe-helpers";
 import { validateSession } from "@/lib/server/validate-session";
 
 export const dynamic = "force-dynamic";
@@ -22,34 +23,12 @@ export async function POST(req: Request) {
 		return jsonResponse({ id: undefined }, { status: 401 });
 	}
 
-	// create recipe
-	const { data, error } = await supabase.rpc("add_recipe", {
-		name: recipe.name,
-		number_of_servings: Number(recipe.servings),
-		description: recipe.description ?? undefined,
-		prep_time_hours: recipe.prep_time_hours
-			? Number(recipe.prep_time_hours)
-			: undefined,
-		prep_time_minutes: recipe.prep_time_minutes
-			? Number(recipe.prep_time_minutes)
-			: undefined,
-		cook_time_hours: recipe.cook_time_hours
-			? Number(recipe.cook_time_hours)
-			: undefined,
-		cook_time_minutes: recipe.cook_time_minutes
-			? Number(recipe.cook_time_minutes)
-			: undefined,
-		image_id: recipe.image_id ?? undefined,
-		instructions: recipe.instructions ?? [],
-		ingredients: recipe.ingredients,
-	});
-
-	if (error) {
-		console.error(error);
+	try {
+		const id = await upsertRecipe(recipe);
+		return jsonResponse({ id });
+	} catch {
 		return jsonResponse({ id: undefined }, { status: 400 });
 	}
-
-	return jsonResponse({ id: data });
 }
 
 export async function GET(req: Request) {
