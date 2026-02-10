@@ -189,6 +189,7 @@ export interface SpoonacularRecipeResponse {
 export const getNutrition = (
 	nutrients: NutrientInformation[],
 	name: string,
+	divideBy?: number,
 ): NutrientInformation => {
 	const base = {
 		name: "",
@@ -197,17 +198,32 @@ export const getNutrition = (
 		percentOfDailyNeeds: 0,
 	};
 	const nutrition = nutrients.find((nutrient) => nutrient.name === name);
-	return { ...base, ...nutrition };
+	const result = { ...base, ...nutrition };
+
+	// Divide amount if divideBy is provided and greater than 0
+	if (divideBy && divideBy > 0) {
+		result.amount = result.amount / divideBy;
+		result.percentOfDailyNeeds = result.percentOfDailyNeeds / divideBy;
+	}
+
+	return result;
 };
 
 export const convertSpoonacularToIngredient = (
 	spoonacularIngredient: SpoonacularIngredient,
 ): Ingredient => {
 	const { nutrition } = spoonacularIngredient;
-	const calories = getNutrition(nutrition.nutrients, "Calories").amount;
-	const carbs = getNutrition(nutrition.nutrients, "Carbohydrates").amount;
-	const fat = getNutrition(nutrition.nutrients, "Fat").amount;
-	const protein = getNutrition(nutrition.nutrients, "Protein").amount;
+	const amount = spoonacularIngredient.amount;
+
+	// Nutrition values are for the total amount, so divide by amount to get per unit
+	const calories = getNutrition(nutrition.nutrients, "Calories", amount).amount;
+	const carbs = getNutrition(
+		nutrition.nutrients,
+		"Carbohydrates",
+		amount,
+	).amount;
+	const fat = getNutrition(nutrition.nutrients, "Fat", amount).amount;
+	const protein = getNutrition(nutrition.nutrients, "Protein", amount).amount;
 
 	return {
 		type: "ingredient",
@@ -217,7 +233,7 @@ export const convertSpoonacularToIngredient = (
 			spoonacularIngredient.meta.length > 0
 				? spoonacularIngredient.meta.join(", ")
 				: null,
-		number_of_servings: 1,
+		number_of_servings: amount,
 		image_url: spoonacularIngredient.image
 			? `${THUMBNAIL_BASE_URL}${spoonacularIngredient.image}`
 			: undefined,
@@ -226,12 +242,12 @@ export const convertSpoonacularToIngredient = (
 		serving: {
 			measurement_description:
 				spoonacularIngredient.unitLong || spoonacularIngredient.unit,
-			serving_description: `${spoonacularIngredient.amount} ${spoonacularIngredient.unitLong || spoonacularIngredient.unit}`,
+			serving_description: `1 ${spoonacularIngredient.unitLong || spoonacularIngredient.unit}`,
 			metric_serving_amount:
-				spoonacularIngredient.nutrition.weightPerServing.amount,
+				spoonacularIngredient.nutrition.weightPerServing.amount / amount,
 			metric_serving_unit:
 				spoonacularIngredient.nutrition.weightPerServing.unit,
-			number_of_units: spoonacularIngredient.amount,
+			number_of_units: 1,
 			calories,
 			carbohydrate_grams: carbs,
 			fat_grams: fat,
@@ -250,20 +266,23 @@ export const convertSpoonacularExtendedIngredientToIngredient = (
 		(ing) => ing.id === extendedIngredient.id,
 	);
 
+	const amount = extendedIngredient.amount;
+
+	// Nutrition values are per serving, multiply by recipe servings to get total,
+	// then divide by ingredient amount to get per unit
+	const divideBy = amount / recipeServings;
 	const calories = ingredientNutrition
-		? getNutrition(ingredientNutrition.nutrients, "Calories").amount *
-			recipeServings
+		? getNutrition(ingredientNutrition.nutrients, "Calories", divideBy).amount
 		: 0;
 	const carbs = ingredientNutrition
-		? getNutrition(ingredientNutrition.nutrients, "Carbohydrates").amount *
-			recipeServings
+		? getNutrition(ingredientNutrition.nutrients, "Carbohydrates", divideBy)
+				.amount
 		: 0;
 	const fat = ingredientNutrition
-		? getNutrition(ingredientNutrition.nutrients, "Fat").amount * recipeServings
+		? getNutrition(ingredientNutrition.nutrients, "Fat", divideBy).amount
 		: 0;
 	const protein = ingredientNutrition
-		? getNutrition(ingredientNutrition.nutrients, "Protein").amount *
-			recipeServings
+		? getNutrition(ingredientNutrition.nutrients, "Protein", divideBy).amount
 		: 0;
 
 	return {
@@ -274,7 +293,7 @@ export const convertSpoonacularExtendedIngredientToIngredient = (
 			extendedIngredient.meta.length > 0
 				? extendedIngredient.meta.join(", ")
 				: null,
-		number_of_servings: 1,
+		number_of_servings: extendedIngredient.amount,
 		image_url: extendedIngredient.image
 			? `${THUMBNAIL_BASE_URL}${extendedIngredient.image}`
 			: undefined,
@@ -285,14 +304,14 @@ export const convertSpoonacularExtendedIngredientToIngredient = (
 				extendedIngredient.measures.us.unitLong ||
 				extendedIngredient.measures.us.unitShort ||
 				extendedIngredient.unit,
-			serving_description: `${extendedIngredient.amount} ${
+			serving_description: `1 ${
 				extendedIngredient.measures.us.unitLong ||
 				extendedIngredient.measures.us.unitShort ||
 				extendedIngredient.unit
 			}`,
-			metric_serving_amount: extendedIngredient.measures.metric.amount,
+			metric_serving_amount: extendedIngredient.measures.metric.amount / amount,
 			metric_serving_unit: extendedIngredient.measures.metric.unitShort,
-			number_of_units: extendedIngredient.amount,
+			number_of_units: 1,
 			calories,
 			carbohydrate_grams: carbs,
 			fat_grams: fat,
