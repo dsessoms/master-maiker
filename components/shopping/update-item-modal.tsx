@@ -60,9 +60,9 @@ const RecipeRow = ({
 					contentFit="cover"
 				/>
 			) : (
-				<View className="h-12 w-12 rounded bg-muted-foreground/20 items-center justify-center">
-					<Text className="text-xs font-bold text-muted-foreground">
-						{recipe.name.substring(0, 2).toUpperCase()}
+				<View className="h-12 w-12 rounded bg-muted-foreground/20 items-center justify-center overflow-hidden">
+					<Text className="text-xs font-bold opacity-20 text-muted-foreground">
+						{recipe.name.toUpperCase()}
 					</Text>
 				</View>
 			)}

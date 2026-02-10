@@ -134,7 +134,7 @@ export const FoodEntry = ({ entry }: { entry: FoodEntryType }) => {
 							/>
 						) : (
 							<View className="w-full h-full bg-muted flex items-center justify-center">
-								<Text className="text-xs font-bold text-muted-foreground opacity-20 text-center px-1">
+								<Text className="text-lg font-bold text-muted-foreground opacity-20 px-1">
 									{foodName.toUpperCase()}
 								</Text>
 							</View>
