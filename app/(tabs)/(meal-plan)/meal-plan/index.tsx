@@ -141,7 +141,7 @@ export default function MealPlanScreen() {
 					contentContainerStyle={{ flexGrow: 1 }}
 					style={{ flex: 1 }}
 				>
-					<View className="w-full max-w-3xl mx-auto bg-muted-background p-4">
+					<View className="w-full max-w-3xl mx-auto bg-muted-background px-4">
 						{weekDates.map((date) => {
 							const dateString = format(date, "yyyy-MM-dd");
 							return (

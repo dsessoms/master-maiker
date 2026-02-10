@@ -140,23 +140,25 @@ export default function ShoppingListDetail() {
 			<Tabs
 				value={groupingMode}
 				onValueChange={(value) => setGroupingMode(value as GroupingMode)}
-				className="flex-1"
+				className="flex-1 gap-0"
 			>
-				<View className="flex-row items-center justify-between p-4 w-full max-w-3xl mx-auto">
-					<ShoppingListSelector
-						currentListId={id!}
-						lists={lists}
-						onCreateNew={toggleCreateListModal}
-					/>
+				<View className="flex flex-row justify-between p-4 bg-background">
+					<View className="w-full max-w-3xl mx-auto flex flex-row justify-between">
+						<ShoppingListSelector
+							currentListId={id!}
+							lists={lists}
+							onCreateNew={toggleCreateListModal}
+						/>
 
-					<TabsList>
-						<TabsTrigger value={GroupingMode.AISLE}>
-							<Text>By Aisle</Text>
-						</TabsTrigger>
-						<TabsTrigger value={GroupingMode.RECIPE}>
-							<Text>By Recipe</Text>
-						</TabsTrigger>
-					</TabsList>
+						<TabsList>
+							<TabsTrigger value={GroupingMode.AISLE}>
+								<Text>By Aisle</Text>
+							</TabsTrigger>
+							<TabsTrigger value={GroupingMode.RECIPE}>
+								<Text>By Recipe</Text>
+							</TabsTrigger>
+						</TabsList>
+					</View>
 				</View>
 
 				<ScrollView

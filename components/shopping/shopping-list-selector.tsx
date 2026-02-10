@@ -28,8 +28,8 @@ export const ShoppingListSelector = ({
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
-				<Button variant="secondary" className="flex-row items-center gap-2">
-					<Text className="text-lg font-bold">
+				<Button variant="outline" className="flex-row items-center gap-2">
+					<Text className="text-lg">
 						{currentList?.name || "Shopping List"}
 					</Text>
 					<ChevronDown className="h-5 w-5" />
