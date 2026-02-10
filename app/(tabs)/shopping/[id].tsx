@@ -27,6 +27,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import { UpdateItemModal } from "./update-item-modal";
 import { cn } from "@/lib/utils";
+import { getServingDescription } from "@/lib/utils/serving-description";
 import { useClearShoppingListMutation } from "@/hooks/shopping-lists/use-clear-shopping-list-mutation";
 import { useDeleteShoppingListMutation } from "@/hooks/shopping-lists/use-delete-shopping-list-mutation";
 import { useShoppingListItems } from "@/hooks/shopping-lists/use-shopping-list-items";
@@ -41,23 +42,6 @@ enum SpecialGroupKey {
 	CUSTOM = "Custom",
 	OTHER = "Other",
 }
-
-const getServingDescription = (
-	numberOfServings: number,
-	serving: {
-		measurement_description: string | null;
-		number_of_units: number | null;
-	},
-) => {
-	if (!serving.number_of_units) {
-		return `${numberOfServings} ${serving.measurement_description || "serving"}`;
-	}
-
-	const totalUnits = numberOfServings * serving.number_of_units;
-	return serving.measurement_description
-		? `${totalUnits} ${serving.measurement_description}`
-		: totalUnits.toString();
-};
 
 const ListItem = ({
 	listId,

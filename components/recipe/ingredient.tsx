@@ -3,6 +3,7 @@ import { Image } from "@/components/image";
 import { ShoppingBasket } from "@/lib/icons";
 import { Text } from "../ui/text";
 import { View } from "react-native";
+import { getServingDescription } from "@/lib/utils/serving-description";
 
 interface IngredientProps {
 	ingredient: ExpandedIngredient;
@@ -23,7 +24,10 @@ export function Ingredient({
 
 	const displayServings =
 		ingredient.number_of_servings * recipeServingsMultiplier;
-	const displayUnits = ingredient.serving.number_of_units * displayServings;
+	const servingDesc = getServingDescription(
+		displayServings,
+		ingredient.serving,
+	);
 
 	return (
 		<View className="flex flex-row items-center py-2">
@@ -56,9 +60,7 @@ export function Ingredient({
 			{/* Text content */}
 			<View style={{ flex: 1 }}>
 				<View className="flex flex-row items-center flex-wrap">
-					<Text className="font-medium text-base">
-						{`${displayUnits} ${ingredient.serving.measurement_description}`}{" "}
-					</Text>
+					<Text className="font-medium text-base">{`${servingDesc} `}</Text>
 					<Text className="text-base">
 						{ingredient.food.food_name}
 						{ingredient.food.brand_name && ` (${ingredient.food.brand_name})`}

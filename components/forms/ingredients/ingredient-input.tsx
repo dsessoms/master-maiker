@@ -15,6 +15,7 @@ import { SearchFoodModal } from "@/components/food/search-food-modal";
 import { ShoppingBasket } from "@/lib/icons";
 import { Text } from "@/components/ui/text";
 import { View } from "react-native";
+import { getServingDescription } from "@/lib/utils/serving-description";
 
 export interface FoodData {
 	food: FatSecretFood;
@@ -70,7 +71,12 @@ export function IngredientInput({
 				onSearch={() => setShowSearchModal(true)}
 				renderParsed={(parsed) => {
 					const { name, number_of_servings, serving, image_url } = parsed;
-					const displayedCount = number_of_servings * serving.number_of_units;
+
+					// Use the getServingDescription function for displaying serving info
+					const servingDescription = getServingDescription(number_of_servings, {
+						measurement_description: serving.measurement_description,
+						number_of_units: serving.number_of_units,
+					});
 
 					// Calculate nutrition for the actual number of servings
 					const totalCalories = serving.calories * number_of_servings;
@@ -103,13 +109,8 @@ export function IngredientInput({
 								<View className="flex-1 min-w-0">
 									<View className="flex-row items-center flex-wrap mb-1">
 										<Text className="font-bold text-base">
-											{displayedCount}
+											{servingDescription}
 										</Text>
-										{serving.measurement_description ? (
-											<Text className="font-bold text-base ml-1">
-												{serving.measurement_description}
-											</Text>
-										) : null}
 										<Text className="ml-2 text-base flex-shrink">{name}</Text>
 									</View>
 									{parsed.meta && (

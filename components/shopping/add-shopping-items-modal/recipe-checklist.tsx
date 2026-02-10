@@ -7,23 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Text } from "@/components/ui/text";
 import { View } from "react-native";
-
-const getServingDescription = (
-	numberOfServings: number,
-	serving: {
-		measurement_description: string | null;
-		number_of_units: number | null;
-	},
-) => {
-	if (!serving.number_of_units) {
-		return `${numberOfServings} ${serving.measurement_description || "serving"}`;
-	}
-
-	const totalUnits = numberOfServings * serving.number_of_units;
-	return serving.measurement_description
-		? `${totalUnits} ${serving.measurement_description}`
-		: totalUnits.toString();
-};
+import { getServingDescription } from "@/lib/utils/serving-description";
 
 export const RecipeCheckList = ({
 	recipe,
@@ -76,7 +60,6 @@ export const RecipeCheckList = ({
 				const servingDesc = ing.serving
 					? getServingDescription(scaledServings, ing.serving)
 					: null;
-
 				return (
 					<View key={ing.id} className="flex-row items-center gap-2">
 						<Checkbox
