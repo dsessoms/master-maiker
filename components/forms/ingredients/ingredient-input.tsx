@@ -12,10 +12,11 @@ import { Ingredient } from "@/lib/schemas";
 import { KeyboardHint } from "@/components/ui/keyboard-hint";
 import { Macros } from "@/components/meal-plan/macros";
 import { SearchFoodModal } from "@/components/food/search-food-modal";
-import { ShoppingBasket } from "@/lib/icons";
+import { GripVertical, ShoppingBasket } from "@/lib/icons";
 import { Text } from "@/components/ui/text";
-import { View } from "react-native";
+import { Pressable, View } from "react-native";
 import { getServingDescription } from "@/lib/utils/serving-description";
+import Sortable from "react-native-sortables";
 
 export interface FoodData {
 	food: FatSecretFood;
@@ -69,7 +70,7 @@ export function IngredientInput({
 			<StatefulInput<Ingredient>
 				{...props}
 				onSearch={() => setShowSearchModal(true)}
-				renderParsed={(parsed) => {
+				renderParsed={(parsed, onEdit) => {
 					const { name, number_of_servings, serving, image_url } = parsed;
 
 					// Use the getServingDescription function for displaying serving info
@@ -94,39 +95,48 @@ export function IngredientInput({
 						<View className="flex-1 min-h-[60px] bg-background rounded-md">
 							<View className="flex-row py-2 items-center">
 								{/* Thumbnail image or placeholder */}
-								<View className="w-10 h-10 rounded-full mr-3 overflow-hidden justify-center items-center flex-shrink-0">
-									{image_url ? (
-										<Image
-											source={{ uri: image_url }}
-											className="w-[30px] h-[30px]"
-											contentFit="contain"
-										/>
-									) : (
-										<ShoppingBasket size={20} color="#666" />
-									)}
-								</View>
+								<Pressable onPress={onEdit} className="flex-1">
+									<View className="flex-1 flex-row items-center">
+										<View className="w-10 h-10 rounded-full mr-3 overflow-hidden justify-center items-center flex-shrink-0">
+											{image_url ? (
+												<Image
+													source={{ uri: image_url }}
+													className="w-[30px] h-[30px]"
+													contentFit="contain"
+												/>
+											) : (
+												<ShoppingBasket size={20} color="#666" />
+											)}
+										</View>
 
-								<View className="flex-1 min-w-0">
-									<View className="flex-row items-center flex-wrap mb-1">
-										<Text className="font-bold text-base">
-											{servingDescription}
-										</Text>
-										<Text className="ml-2 text-base flex-shrink">{name}</Text>
+										<View className="flex-1 min-w-0">
+											<View className="flex-row items-center flex-wrap mb-1">
+												<Text className="font-bold text-base select-none">
+													{servingDescription}
+												</Text>
+												<Text className="ml-2 text-base flex-shrink select-none">
+													{name}
+												</Text>
+											</View>
+											{parsed.meta && (
+												<Text className="text-xs text-muted-foreground mb-1 select-none">
+													{parsed.meta}
+												</Text>
+											)}
+											<View>
+												<Macros
+													calories={caloriesPerServing}
+													carbohydrate={carbsPerServing}
+													protein={proteinPerServing}
+													fat={fatPerServing}
+												/>
+											</View>
+										</View>
 									</View>
-									{parsed.meta && (
-										<Text className="text-xs text-muted-foreground mb-1">
-											{parsed.meta}
-										</Text>
-									)}
-									<View>
-										<Macros
-											calories={caloriesPerServing}
-											carbohydrate={carbsPerServing}
-											protein={proteinPerServing}
-											fat={fatPerServing}
-										/>
-									</View>
-								</View>
+								</Pressable>
+								<Sortable.Handle>
+									<GripVertical size={20} color="#666" />
+								</Sortable.Handle>
 							</View>
 						</View>
 					);

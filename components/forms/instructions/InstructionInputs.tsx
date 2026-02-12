@@ -4,18 +4,26 @@ import {
 	InstructionOrHeader,
 } from "./InstructionInput";
 import React, { useEffect, useReducer } from "react";
+import { AnimatedRef } from "react-native-reanimated";
+import Sortable, { SortableGridRenderItem } from "react-native-sortables";
+import { v4 as uuidv4 } from "uuid";
 
 import { Button } from "@/components/ui/button";
-import { Plus } from "@/lib/icons";
+import { GripVertical, Plus } from "@/lib/icons";
 import { StatefulInputState } from "../stateful-input/stateful-input";
 import { Text } from "@/components/ui/text";
-import { View } from "react-native";
+import { Pressable, View } from "react-native";
 import { cn } from "@/lib/utils";
 
 interface InstructionInputsProps {
 	onInstructionsChange: (instructions: InstructionOrHeader[]) => void;
 	initialValues?: InstructionOrHeader[];
+	scrollableRef?: AnimatedRef<any>;
 }
+
+type ExtendedInstructionInputValue = InstructionInputValue & {
+	id: string;
+};
 
 function getRawValue(instruction: InstructionOrHeader) {
 	return instruction.type === "header" ? instruction.name : instruction.value;
@@ -25,7 +33,7 @@ type InstructionAction =
 	| {
 			type: "UPDATE";
 			index: number;
-			updates: Partial<InstructionInputValue>;
+			updates: Partial<ExtendedInstructionInputValue>;
 	  }
 	| {
 			type: "DELETE";
@@ -34,8 +42,7 @@ type InstructionAction =
 	| {
 			type: "INSERT";
 			index: number;
-			instruction: InstructionInputValue;
-			setFocus?: boolean;
+			instruction: ExtendedInstructionInputValue;
 	  }
 	| {
 			type: "MULTIPLE_PASTE";
@@ -43,12 +50,13 @@ type InstructionAction =
 			instructionLines: string[];
 	  }
 	| {
-			type: "CLEAR_FOCUS";
+			type: "REORDER";
+			from: number;
+			to: number;
 	  };
 
 interface InstructionState {
-	instructions: InstructionInputValue[];
-	focusedIndex: number | null;
+	instructions: ExtendedInstructionInputValue[];
 }
 
 function instructionsReducer(
@@ -74,27 +82,12 @@ function instructionsReducer(
 					state: StatefulInputState.New,
 					raw: "",
 					parsed: undefined,
+					id: uuidv4(),
 				});
-			}
-
-			// Auto-focus when entering edit state
-			const shouldFocus = action.updates.state === StatefulInputState.Edit;
-
-			// After saving (View state), focus next new instruction
-			let focusedIndex = state.focusedIndex;
-			if (action.updates.state === StatefulInputState.View) {
-				const nextNewIndex = newInstructions.findIndex(
-					(ins, idx) =>
-						idx > action.index && ins.state === StatefulInputState.New,
-				);
-				focusedIndex = nextNewIndex !== -1 ? nextNewIndex : null;
-			} else if (shouldFocus) {
-				focusedIndex = action.index;
 			}
 
 			return {
 				instructions: newInstructions,
-				focusedIndex,
 			};
 		}
 
@@ -103,7 +96,6 @@ function instructionsReducer(
 			newInstructions.splice(action.index, 1);
 			return {
 				instructions: newInstructions,
-				focusedIndex: state.focusedIndex,
 			};
 		}
 
@@ -112,7 +104,6 @@ function instructionsReducer(
 			newInstructions.splice(action.index, 0, action.instruction);
 			return {
 				instructions: newInstructions,
-				focusedIndex: action.setFocus ? action.index : state.focusedIndex,
 			};
 		}
 
@@ -135,6 +126,7 @@ function instructionsReducer(
 						state: StatefulInputState.View,
 						raw: line,
 						parsed: { type: "instruction" as const, value: line },
+						id: uuidv4(),
 					});
 				}
 			});
@@ -144,6 +136,7 @@ function instructionsReducer(
 				state: StatefulInputState.New,
 				raw: "",
 				parsed: undefined,
+				id: uuidv4(),
 			});
 
 			// Focus the new instruction at the end
@@ -151,14 +144,23 @@ function instructionsReducer(
 
 			return {
 				instructions: newInstructions,
-				focusedIndex,
 			};
 		}
 
-		case "CLEAR_FOCUS": {
+		case "REORDER": {
+			const { from, to } = action;
+
+			if (from < 0 || to < 0 || from >= state.instructions.length) {
+				return state; // Invalid index, do nothing
+			}
+
+			const newInstructions = [...state.instructions];
+			const [movedItem] = newInstructions.splice(from, 1);
+			newInstructions.splice(to, 0, movedItem);
+
 			return {
 				...state,
-				focusedIndex: null,
+				instructions: newInstructions,
 			};
 		}
 
@@ -170,12 +172,13 @@ function instructionsReducer(
 function getInitialState(
 	initialValues?: InstructionOrHeader[],
 ): InstructionState {
-	const instructions: InstructionInputValue[] =
+	const instructions: ExtendedInstructionInputValue[] =
 		initialValues && initialValues.length > 0
 			? initialValues.map((instruction) => ({
 					state: StatefulInputState.View,
 					raw: getRawValue(instruction),
 					parsed: instruction,
+					id: uuidv4(),
 				}))
 			: [];
 
@@ -184,22 +187,27 @@ function getInitialState(
 		state: StatefulInputState.New,
 		raw: "",
 		parsed: undefined,
+		id: uuidv4(),
 	});
 
 	return {
 		instructions,
-		focusedIndex: null,
 	};
 }
 
 export function InstructionInputs({
 	onInstructionsChange,
 	initialValues,
+	scrollableRef,
 }: InstructionInputsProps) {
-	const [{ instructions, focusedIndex }, dispatch] = useReducer(
+	const [{ instructions }, dispatch] = useReducer(
 		instructionsReducer,
 		initialValues,
 		getInitialState,
+	);
+
+	const sortEnabled = instructions.every(
+		(instruction) => instruction.state !== StatefulInputState.Edit,
 	);
 
 	useEffect(() => {
@@ -225,9 +233,10 @@ export function InstructionInputs({
 		);
 
 		const headerItem = {
-			state: StatefulInputState.New,
+			state: StatefulInputState.Edit,
 			raw: "",
 			parsed: { type: "header" as const, name: "" },
+			id: uuidv4(),
 		};
 
 		const insertIndex =
@@ -237,135 +246,162 @@ export function InstructionInputs({
 			type: "INSERT",
 			index: insertIndex,
 			instruction: headerItem,
-			setFocus: true,
 		});
 	}, [instructions]);
 
-	return (
-		<>
-			{instructions.map((instruction, index) => {
-				// Calculate step number for instructions (excluding headers)
-				const instructionStepNumber =
-					instructions
-						.slice(0, index)
-						.filter(
-							(ins) =>
-								ins.parsed?.type === "instruction" &&
-								(ins.state === StatefulInputState.View ||
-									ins.state === StatefulInputState.Edit),
-						).length + 1;
+	const renderItem = React.useCallback<
+		SortableGridRenderItem<ExtendedInstructionInputValue>
+	>(
+		({ item: instruction, index }) => {
+			// Calculate step number for instructions (excluding headers)
+			const instructionStepNumber =
+				instructions
+					.slice(0, index)
+					.filter(
+						(ins) =>
+							ins.parsed?.type === "instruction" &&
+							(ins.state === StatefulInputState.View ||
+								ins.state === StatefulInputState.Edit),
+					).length + 1;
 
-				return (
-					<InstructionInput
-						key={index}
-						placeholder={
-							instruction.parsed?.type === "header"
-								? "Header name"
-								: `Step ${instructionStepNumber}`
-						}
-						value={instruction}
-						onMultiplePaste={(instructionLines: string[]) => {
-							dispatch({
-								type: "MULTIPLE_PASTE",
-								index,
-								instructionLines,
-							});
-						}}
-						onChange={(rawValue: string) => {
-							const currentInstruction = instructions[index];
+			return (
+				<InstructionInput
+					key={instruction.id}
+					placeholder={
+						instruction.parsed?.type === "header"
+							? "Header name"
+							: `Step ${instructionStepNumber}`
+					}
+					value={instruction}
+					onMultiplePaste={(instructionLines: string[]) => {
+						dispatch({
+							type: "MULTIPLE_PASTE",
+							index,
+							instructionLines,
+						});
+					}}
+					onChange={(rawValue: string) => {
+						const currentInstruction = instructions[index];
 
-							// Create updated parsed value
-							let updatedParsed: InstructionOrHeader;
-							if (currentInstruction.parsed) {
-								if (currentInstruction.parsed.type === "header") {
-									updatedParsed = { type: "header", name: rawValue };
-								} else {
-									updatedParsed = { type: "instruction", value: rawValue };
-								}
+						// Create updated parsed value
+						let updatedParsed: InstructionOrHeader;
+						if (currentInstruction.parsed) {
+							if (currentInstruction.parsed.type === "header") {
+								updatedParsed = { type: "header", name: rawValue };
 							} else {
 								updatedParsed = { type: "instruction", value: rawValue };
 							}
+						} else {
+							updatedParsed = { type: "instruction", value: rawValue };
+						}
 
-							dispatch({
-								type: "UPDATE",
-								index,
-								updates: {
-									raw: rawValue,
-									parsed: updatedParsed,
-									state: StatefulInputState.Edit,
-								},
-							});
-						}}
-						onSave={() => {
-							const currentInstruction = instructions[index];
-							const isEmpty = !currentInstruction.raw.trim();
+						dispatch({
+							type: "UPDATE",
+							index,
+							updates: {
+								raw: rawValue,
+								parsed: updatedParsed,
+								state: StatefulInputState.Edit,
+							},
+						});
+					}}
+					onSave={() => {
+						const currentInstruction = instructions[index];
+						const isEmpty = !currentInstruction.raw.trim();
 
-							// Handle empty instructions
-							if (
-								isEmpty &&
-								currentInstruction.state === StatefulInputState.New &&
-								currentInstruction.parsed?.type !== "header"
-							) {
-								return;
-							}
+						// Handle empty instructions
+						if (
+							isEmpty &&
+							currentInstruction.state === StatefulInputState.New &&
+							currentInstruction.parsed?.type !== "header"
+						) {
+							return;
+						}
 
-							if (isEmpty) {
-								// Delete empty instruction
-								dispatch({ type: "DELETE", index });
-								return;
-							}
-
-							// Mark as parsed and focus next NEW instruction
-							dispatch({
-								type: "UPDATE",
-								index,
-								updates: { state: StatefulInputState.View },
-							});
-						}}
-						onEdit={() => {
-							dispatch({
-								type: "UPDATE",
-								index,
-								updates: { state: StatefulInputState.Edit },
-							});
-						}}
-						onClear={() => {
+						if (isEmpty) {
+							// Delete empty instruction
 							dispatch({ type: "DELETE", index });
-						}}
-						renderParsed={(parsed) => {
-							if (parsed.type === "header") {
-								return (
-									<Text
-										className={cn({
-											"text-foreground": true,
-											"font-semibold": true,
-										})}
-									>
-										{parsed.name}
-									</Text>
-								);
-							}
+							return;
+						}
 
-							// For instructions, match the recipe details page format
+						// Mark as parsed and focus next NEW instruction
+						dispatch({
+							type: "UPDATE",
+							index,
+							updates: { state: StatefulInputState.View },
+						});
+					}}
+					onEdit={() => {
+						dispatch({
+							type: "UPDATE",
+							index,
+							updates: { state: StatefulInputState.Edit },
+						});
+					}}
+					onClear={() => {
+						dispatch({ type: "DELETE", index });
+					}}
+					renderParsed={(parsed, onEdit) => {
+						if (parsed.type === "header") {
 							return (
-								<View className="flex-row w-full">
-									<Text className="font-semibold text-base mr-3 text-primary">
-										{instructionStepNumber}.
-									</Text>
-									<Text
-										className="flex-1 text-base leading-6"
-										style={{ flexShrink: 1 }}
-									>
-										{parsed.value}
-									</Text>
+								<View className="flex-row justify-between w-full bg-background rounded-md">
+									<Pressable onPress={onEdit} className="flex-1">
+										<Text className="text-foreground font-semibold select-none">
+											{parsed.name}
+										</Text>
+									</Pressable>
+									<Sortable.Handle>
+										<GripVertical size={20} color="#666" />
+									</Sortable.Handle>
 								</View>
 							);
-						}}
-						shouldFocus={focusedIndex === index}
-						onFocus={() => dispatch({ type: "CLEAR_FOCUS" })}
-					/>
-				);
-			})}
+						}
+
+						return (
+							<View className="flex-row w-full bg-background rounded-md">
+								<Pressable onPress={onEdit} className="flex-1">
+									<View className="flex-1 flex-row">
+										<Text className="font-semibold text-base mr-3 select-none">
+											{instructionStepNumber}.
+										</Text>
+										<Text
+											className="flex-1 text-base leading-6 select-none"
+											style={{ flexShrink: 1 }}
+										>
+											{parsed.value}
+										</Text>
+									</View>
+								</Pressable>
+
+								<Sortable.Handle>
+									<GripVertical size={20} color="#666" />
+								</Sortable.Handle>
+							</View>
+						);
+					}}
+				/>
+			);
+		},
+		[instructions],
+	);
+
+	return (
+		<>
+			<Sortable.Grid
+				data={instructions}
+				renderItem={renderItem}
+				onDragEnd={({ fromIndex, toIndex }) =>
+					dispatch({ type: "REORDER", from: fromIndex, to: toIndex })
+				}
+				keyExtractor={(item) => item.id}
+				columns={1}
+				rowGap={8}
+				scrollableRef={scrollableRef}
+				sortEnabled={sortEnabled}
+				enableActiveItemSnap={false}
+				activeItemShadowOpacity={0}
+				customHandle
+			/>
 
 			<Button
 				variant="outline"

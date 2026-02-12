@@ -35,3 +35,4 @@ export * from "./x";
 export * from "./calendar";
 export * from "./alert-circle";
 export * from "./send";
+export * from "./grip-vertical";

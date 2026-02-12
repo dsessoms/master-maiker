@@ -1,6 +1,7 @@
-import { ActivityIndicator, ScrollView, View } from "react-native";
+import { ActivityIndicator, View } from "react-native";
 import { Form, FormField, FormInput, FormTextarea } from "../ui/form";
 import { Ingredient, Recipe, RecipeSchema } from "../../lib/schemas";
+import Animated, { useAnimatedRef } from "react-native-reanimated";
 
 import { Button } from "../ui/button";
 import { ImageUploader } from "./ImageUploader";
@@ -37,6 +38,7 @@ export function RecipeForm({
 	isEdit,
 }: RecipeFormProps) {
 	const existingImageUrl = useRecipeImage(initialValues?.image_id);
+	const scrollableRef = useAnimatedRef<Animated.ScrollView>();
 
 	const form = useForm<Recipe>({
 		resolver: zodResolver(RecipeSchema),
@@ -113,9 +115,10 @@ export function RecipeForm({
 	};
 
 	return (
-		<ScrollView
+		<Animated.ScrollView
 			contentContainerStyle={{ flexGrow: 1 }}
 			keyboardShouldPersistTaps="handled"
+			ref={scrollableRef}
 		>
 			<View className="flex flex-1">
 				<View className="p-4 w-full max-w-3xl mx-auto">
@@ -186,11 +189,13 @@ export function RecipeForm({
 								onIngredientsChange={setParsedIngredients}
 								recipeServings={form.watch("servings") || 1}
 								initialValues={initialValues?.ingredients}
+								scrollableRef={scrollableRef}
 							/>
 							<Label className="text-xl font-semibold">Instructions</Label>
 							<InstructionInputs
 								onInstructionsChange={setParsedInstructions}
 								initialValues={initialValues?.instructions}
+								scrollableRef={scrollableRef}
 							/>
 							{/* Prep Time Section */}
 							<Label className="text-xl font-semibold">Prep Time</Label>
@@ -291,6 +296,6 @@ export function RecipeForm({
 					</Button>
 				</View>
 			</View>
-		</ScrollView>
+		</Animated.ScrollView>
 	);
 }

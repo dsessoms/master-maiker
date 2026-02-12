@@ -7,11 +7,15 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { IngredientInput } from "@/components/forms/ingredients/ingredient-input";
-import { Plus } from "@/lib/icons";
-import { Pressable } from "react-native";
+import { GripVertical, Plus } from "@/lib/icons";
+import { Pressable, View } from "react-native";
 import React from "react";
 import { Text } from "@/components/ui/text";
 import { useParseIngredients } from "../../../hooks/recipes/use-parse-ingredients";
+import Animated, { AnimatedRef } from "react-native-reanimated";
+import type { SortableGridRenderItem } from "react-native-sortables";
+import Sortable from "react-native-sortables";
+import { v4 as uuidv4 } from "uuid";
 
 // Union type for ingredients or headers
 type IngredientOrHeader = Ingredient | Header;
@@ -20,10 +24,12 @@ interface IngredientInputsProps {
 	onIngredientsChange: (ingredients: IngredientOrHeader[]) => void;
 	initialValues?: IngredientOrHeader[];
 	recipeServings?: number;
+	scrollableRef?: AnimatedRef<any>;
 }
 
 type IngredientInputValue = StatefulInputValue<IngredientOrHeader> & {
 	previouslyParsedRaw?: string;
+	id: string;
 };
 
 type IngredientsAction =
@@ -40,7 +46,6 @@ type IngredientsAction =
 			type: "INSERT";
 			index: number;
 			ingredient: IngredientInputValue;
-			setFocus?: boolean;
 	  }
 	| {
 			type: "MULTIPLE_UPDATE";
@@ -49,12 +54,13 @@ type IngredientsAction =
 			addNewAtEnd?: boolean;
 	  }
 	| {
-			type: "CLEAR_FOCUS";
+			type: "REORDER";
+			from: number;
+			to: number;
 	  };
 
 interface IngredientsState {
 	ingredients: IngredientInputValue[];
-	focusedIndex: number | null;
 }
 
 function ingredientsReducer(
@@ -79,27 +85,12 @@ function ingredientsReducer(
 				newIngredients.push({
 					state: StatefulInputState.New,
 					raw: "",
+					id: uuidv4(),
 				});
-			}
-
-			// Auto-focus when entering edit state
-			const shouldFocus = action.updates.state === StatefulInputState.Edit;
-
-			// After saving (View state), focus next new ingredient
-			let focusedIndex = state.focusedIndex;
-			if (action.updates.state === StatefulInputState.View) {
-				const nextNewIndex = newIngredients.findIndex(
-					(ing, idx) =>
-						idx > action.index && ing.state === StatefulInputState.New,
-				);
-				focusedIndex = nextNewIndex !== -1 ? nextNewIndex : null;
-			} else if (shouldFocus) {
-				focusedIndex = action.index;
 			}
 
 			return {
 				ingredients: newIngredients,
-				focusedIndex,
 			};
 		}
 
@@ -108,7 +99,6 @@ function ingredientsReducer(
 			newIngredients.splice(action.index, 1);
 			return {
 				ingredients: newIngredients,
-				focusedIndex: state.focusedIndex,
 			};
 		}
 
@@ -117,7 +107,6 @@ function ingredientsReducer(
 			newIngredients.splice(action.index, 0, action.ingredient);
 			return {
 				ingredients: newIngredients,
-				focusedIndex: action.setFocus ? action.index : state.focusedIndex,
 			};
 		}
 
@@ -135,6 +124,7 @@ function ingredientsReducer(
 					newIngredients.push({
 						state: StatefulInputState.New,
 						raw: "",
+						id: uuidv4(),
 						...update,
 					} as IngredientInputValue);
 				}
@@ -145,27 +135,28 @@ function ingredientsReducer(
 				newIngredients.push({
 					state: StatefulInputState.New,
 					raw: "",
+					id: uuidv4(),
 				});
-			}
-
-			// Set focus to the new ingredient at the end if we added multiple
-			let focusedIndex = state.focusedIndex;
-			if (action.addNewAtEnd && action.updates.length > 0) {
-				focusedIndex = action.startIndex + action.updates.length;
-			} else if (action.updates[0]?.state === StatefulInputState.Edit) {
-				focusedIndex = action.startIndex;
 			}
 
 			return {
 				ingredients: newIngredients,
-				focusedIndex,
 			};
 		}
 
-		case "CLEAR_FOCUS": {
+		case "REORDER": {
+			const { from, to } = action;
+
+			if (from < 0 || to < 0 || from >= state.ingredients.length) {
+				return state; // Invalid index, do nothing
+			}
+
+			const newIngredients = [...state.ingredients];
+			const [movedItem] = newIngredients.splice(from, 1);
+			newIngredients.splice(to, 0, movedItem);
+
 			return {
-				...state,
-				focusedIndex: null,
+				ingredients: newIngredients,
 			};
 		}
 
@@ -187,6 +178,7 @@ function getInitialState(
 							raw: parsed.name,
 							parsed,
 							previouslyParsedRaw: parsed.name,
+							id: uuidv4(),
 						};
 					}
 
@@ -198,16 +190,20 @@ function getInitialState(
 						raw: displayName,
 						parsed: ingredient,
 						previouslyParsedRaw: displayName,
+						id: uuidv4(),
 					};
 				})
 			: [];
 
 	// Always add a new empty ingredient at the end
-	ingredients.push({ state: StatefulInputState.New, raw: "" });
+	ingredients.push({
+		state: StatefulInputState.New,
+		raw: "",
+		id: uuidv4(),
+	});
 
 	return {
 		ingredients,
-		focusedIndex: null,
 	};
 }
 
@@ -215,12 +211,16 @@ export function IngredientInputs({
 	onIngredientsChange,
 	initialValues,
 	recipeServings = 1,
+	scrollableRef,
 }: IngredientInputsProps) {
 	const { parseIngredients } = useParseIngredients();
-	const [{ ingredients, focusedIndex }, dispatch] = React.useReducer(
+	const [{ ingredients }, dispatch] = React.useReducer(
 		ingredientsReducer,
 		initialValues,
 		getInitialState,
+	);
+	const sortEnabled = ingredients.every(
+		(ingredient) => ingredient.state !== StatefulInputState.Edit,
 	);
 
 	// Keep parent in sync with parsed ingredients and headers
@@ -289,9 +289,10 @@ export function IngredientInputs({
 		);
 
 		const headerItem = {
-			state: StatefulInputState.New,
+			state: StatefulInputState.Edit,
 			raw: "",
 			parsed: { type: "header", name: "" } as Header,
+			id: uuidv4(),
 		};
 
 		const insertIndex =
@@ -301,215 +302,49 @@ export function IngredientInputs({
 			type: "INSERT",
 			index: insertIndex,
 			ingredient: headerItem,
-			setFocus: true,
 		});
 	}, [ingredients]);
 
-	return (
-		<>
-			{ingredients.map((ingredient, index) => {
-				// Handle headers separately
-				if (ingredient.parsed?.type === "header") {
-					const headerItem = ingredient.parsed as Header;
-
-					if (ingredient.state === StatefulInputState.View) {
-						return (
-							<Pressable
-								key={index}
-								onPress={() => {
-									dispatch({
-										type: "UPDATE",
-										index,
-										updates: { state: StatefulInputState.Edit },
-									});
-								}}
-								className="mb-2 min-h-[40px] rounded px-2 py-1 active:bg-muted/50"
-							>
-								<Text className="text-lg font-semibold text-foreground">
-									{headerItem.name}
-								</Text>
-							</Pressable>
-						);
-					}
-
-					// Render header input for editing/new states
-					return (
-						<StatefulInput<Header>
-							key={index}
-							placeholder="Header name (e.g., 'For the sauce')"
-							value={ingredient as StatefulInputValue<Header>}
-							onChange={(rawValue) => {
-								dispatch({
-									type: "UPDATE",
-									index,
-									updates: {
-										raw: rawValue,
-										parsed: { type: "header", name: rawValue } as Header,
-									},
-								});
-							}}
-							onSave={() => {
-								if (ingredient.raw.trim()) {
-									dispatch({
-										type: "UPDATE",
-										index,
-										updates: {
-											state: StatefulInputState.View,
-											parsed: {
-												type: "header",
-												name: ingredient.raw,
-											} as Header,
-										},
-									});
-								} else {
-									// Delete empty header
-									dispatch({ type: "DELETE", index });
-								}
-							}}
-							onEdit={() => {
-								dispatch({
-									type: "UPDATE",
-									index,
-									updates: { state: StatefulInputState.Edit },
-								});
-							}}
-							onCancel={() => {
-								dispatch({
-									type: "UPDATE",
-									index,
-									updates: { state: StatefulInputState.View },
-								});
-							}}
-							onClear={() => {
-								dispatch({ type: "DELETE", index });
-							}}
-							renderParsed={(parsed) => (
-								<Text className="text-lg font-semibold text-foreground">
-									{parsed.name}
-								</Text>
-							)}
-							shouldFocus={focusedIndex === index}
-							onFocus={() => dispatch({ type: "CLEAR_FOCUS" })}
-						/>
-					);
-				}
-
+	const renderItem = React.useCallback<
+		SortableGridRenderItem<IngredientInputValue>
+	>(
+		({ item: ingredient, index }) => {
+			// Handle headers separately
+			if (ingredient.parsed?.type === "header") {
+				// Render header input for editing/new states
 				return (
-					<IngredientInput
-						key={index}
-						placeholder="something tasty"
-						value={ingredient as StatefulInputValue<Ingredient>}
-						recipeServings={recipeServings}
-						onMultiplePaste={async (ingredientLines) => {
-							// Set current ingredient to parsing and add additional parsing ingredients
-							dispatch({
-								type: "MULTIPLE_UPDATE",
-								startIndex: index,
-								updates: [
-									{
-										raw: ingredientLines[0] || "",
-										state: StatefulInputState.Load,
-									},
-									...ingredientLines.slice(1).map((line) => ({
-										state: StatefulInputState.Load as const,
-										raw: line,
-									})),
-								],
-								addNewAtEnd: true,
-							});
-
-							// Parse all pasted ingredients
-							await parseIngredientsAndUpdate(ingredientLines, index);
-						}}
-						onFoodSelect={(foodData) => {
-							// Convert FoodData to Ingredient format
-							const ingredient: Ingredient = {
-								type: "ingredient",
-								name: foodData.food.food_name,
-								original_name: foodData.originalName,
-								number_of_servings: foodData.amount,
-								meta:
-									foodData.originalName &&
-									foodData.originalName !== foodData.food.food_name
-										? foodData.originalName
-										: undefined,
-								image_url: undefined,
-								fat_secret_id: foodData.fat_secret_id,
-								serving: {
-									measurement_description:
-										foodData.food.food_type === "Generic"
-											? foodData.serving.measurement_description
-											: foodData.serving.serving_description,
-									serving_description: foodData.serving.serving_description,
-									number_of_units: foodData.serving.number_of_units,
-									calories: foodData.serving.calories,
-									carbohydrate_grams: foodData.serving.carbohydrate,
-									fat_grams: foodData.serving.fat,
-									protein_grams: foodData.serving.protein,
-									fat_secret_id: foodData.serving.serving_id,
-								},
-							};
-
-							const displayName = ingredient.original_name || ingredient.name;
-
-							dispatch({
-								type: "UPDATE",
-								index,
-								updates: {
-									state: StatefulInputState.View,
-									parsed: ingredient,
-									raw: displayName,
-									previouslyParsedRaw: displayName,
-								},
-							});
-						}}
+					<StatefulInput<Header>
+						key={ingredient.id}
+						placeholder="Header name (e.g., 'For the sauce')"
+						value={ingredient as StatefulInputValue<Header>}
 						onChange={(rawValue) => {
 							dispatch({
 								type: "UPDATE",
 								index,
 								updates: {
-									raw: rawValue,
 									state: StatefulInputState.Edit,
+									raw: rawValue,
+									parsed: { type: "header", name: rawValue } as Header,
 								},
 							});
 						}}
-						onSave={async () => {
-							const currentIngredient = ingredients[index];
-
-							if (
-								currentIngredient.raw.trim() === "" &&
-								currentIngredient.state === StatefulInputState.New
-							) {
-								return;
-							}
-
-							// Delete empty ingredients
-							if (currentIngredient.raw.trim() === "") {
-								dispatch({ type: "DELETE", index });
-								return;
-							}
-
-							// Handle unchanged previously parsed ingredients
-							if (
-								currentIngredient.previouslyParsedRaw === currentIngredient.raw
-							) {
+						onSave={() => {
+							if (ingredient.raw.trim()) {
 								dispatch({
 									type: "UPDATE",
 									index,
-									updates: { state: StatefulInputState.View },
+									updates: {
+										state: StatefulInputState.View,
+										parsed: {
+											type: "header",
+											name: ingredient.raw,
+										} as Header,
+									},
 								});
-								return;
+							} else {
+								// Delete empty header
+								dispatch({ type: "DELETE", index });
 							}
-
-							// Set to parsing state
-							dispatch({
-								type: "UPDATE",
-								index,
-								updates: { state: StatefulInputState.Load },
-							});
-
-							// Parse the ingredient
-							await parseIngredientsAndUpdate([currentIngredient.raw], index);
 						}}
 						onEdit={() => {
 							dispatch({
@@ -528,11 +363,180 @@ export function IngredientInputs({
 						onClear={() => {
 							dispatch({ type: "DELETE", index });
 						}}
-						shouldFocus={focusedIndex === index}
-						onFocus={() => dispatch({ type: "CLEAR_FOCUS" })}
+						renderParsed={(parsed, onEdit) => (
+							<View className="flex-row justify-between w-full bg-background rounded-md">
+								<Pressable onPress={onEdit}>
+									<Text className="text-foreground font-semibold select-none">
+										{parsed.name}
+									</Text>
+								</Pressable>
+								<Sortable.Handle>
+									<GripVertical size={20} color="#666" />
+								</Sortable.Handle>
+							</View>
+						)}
 					/>
 				);
-			})}
+			}
+
+			return (
+				<IngredientInput
+					key={ingredient.id}
+					placeholder="something tasty"
+					value={ingredient as StatefulInputValue<Ingredient>}
+					recipeServings={recipeServings}
+					onMultiplePaste={async (ingredientLines) => {
+						// Set current ingredient to parsing and add additional parsing ingredients
+						dispatch({
+							type: "MULTIPLE_UPDATE",
+							startIndex: index,
+							updates: [
+								{
+									raw: ingredientLines[0] || "",
+									state: StatefulInputState.Load,
+								},
+								...ingredientLines.slice(1).map((line) => ({
+									state: StatefulInputState.Load as const,
+									raw: line,
+								})),
+							],
+							addNewAtEnd: true,
+						});
+
+						// Parse all pasted ingredients
+						await parseIngredientsAndUpdate(ingredientLines, index);
+					}}
+					onFoodSelect={(foodData) => {
+						// Convert FoodData to Ingredient format
+						const ingredient: Ingredient = {
+							type: "ingredient",
+							name: foodData.food.food_name,
+							original_name: foodData.originalName,
+							number_of_servings: foodData.amount,
+							meta:
+								foodData.originalName &&
+								foodData.originalName !== foodData.food.food_name
+									? foodData.originalName
+									: undefined,
+							image_url: undefined,
+							fat_secret_id: foodData.fat_secret_id,
+							serving: {
+								measurement_description:
+									foodData.food.food_type === "Generic"
+										? foodData.serving.measurement_description
+										: foodData.serving.serving_description,
+								serving_description: foodData.serving.serving_description,
+								number_of_units: foodData.serving.number_of_units,
+								calories: foodData.serving.calories,
+								carbohydrate_grams: foodData.serving.carbohydrate,
+								fat_grams: foodData.serving.fat,
+								protein_grams: foodData.serving.protein,
+								fat_secret_id: foodData.serving.serving_id,
+							},
+						};
+
+						const displayName = ingredient.original_name || ingredient.name;
+
+						dispatch({
+							type: "UPDATE",
+							index,
+							updates: {
+								state: StatefulInputState.View,
+								parsed: ingredient,
+								raw: displayName,
+								previouslyParsedRaw: displayName,
+							},
+						});
+					}}
+					onChange={(rawValue) => {
+						dispatch({
+							type: "UPDATE",
+							index,
+							updates: {
+								raw: rawValue,
+								state: StatefulInputState.Edit,
+							},
+						});
+					}}
+					onSave={async () => {
+						const currentIngredient = ingredients[index];
+
+						if (
+							currentIngredient.raw.trim() === "" &&
+							currentIngredient.state === StatefulInputState.New
+						) {
+							return;
+						}
+
+						// Delete empty ingredients
+						if (currentIngredient.raw.trim() === "") {
+							dispatch({ type: "DELETE", index });
+							return;
+						}
+
+						// Handle unchanged previously parsed ingredients
+						if (
+							currentIngredient.previouslyParsedRaw === currentIngredient.raw
+						) {
+							dispatch({
+								type: "UPDATE",
+								index,
+								updates: { state: StatefulInputState.View },
+							});
+							return;
+						}
+
+						// Set to parsing state
+						dispatch({
+							type: "UPDATE",
+							index,
+							updates: { state: StatefulInputState.Load },
+						});
+
+						// Parse the ingredient
+						await parseIngredientsAndUpdate([currentIngredient.raw], index);
+					}}
+					onEdit={() => {
+						dispatch({
+							type: "UPDATE",
+							index,
+							updates: { state: StatefulInputState.Edit },
+						});
+					}}
+					onCancel={() => {
+						dispatch({
+							type: "UPDATE",
+							index,
+							updates: { state: StatefulInputState.View },
+						});
+					}}
+					onClear={() => {
+						dispatch({ type: "DELETE", index });
+					}}
+				/>
+			);
+		},
+		[ingredients, parseIngredientsAndUpdate, recipeServings],
+	);
+
+	return (
+		<>
+			<Sortable.Grid
+				data={ingredients}
+				renderItem={renderItem}
+				onDragEnd={({ fromIndex, toIndex }) =>
+					dispatch({ type: "REORDER", from: fromIndex, to: toIndex })
+				}
+				keyExtractor={(item) => item.id}
+				columns={1}
+				rowGap={8}
+				scrollableRef={scrollableRef}
+				sortEnabled={sortEnabled}
+				enableActiveItemSnap={false}
+				activeItemShadowOpacity={0}
+				autoScrollEnabled
+				customHandle
+			/>
 
 			<Button
 				variant="outline"
