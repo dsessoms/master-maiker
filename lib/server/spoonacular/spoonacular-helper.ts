@@ -323,7 +323,6 @@ export const convertSpoonacularExtendedIngredientToIngredient = (
 export const convertSpoonacularRecipeToRecipe = (
 	spoonacularRecipe: SpoonacularRecipeResponse,
 ): Recipe => {
-	// Convert ingredients
 	const ingredients = spoonacularRecipe.extendedIngredients.map((ingredient) =>
 		convertSpoonacularExtendedIngredientToIngredient(
 			ingredient,
