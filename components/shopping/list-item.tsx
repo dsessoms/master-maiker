@@ -74,6 +74,17 @@ export const ListItem = ({
 					>
 						{displayName}
 					</Text>
+					{item.meta && (
+						<Text
+							className={
+								item.is_checked
+									? "text-muted-foreground line-through"
+									: "text-muted-foreground"
+							}
+						>
+							({item.meta})
+						</Text>
+					)}
 				</View>
 				{item.notes && (
 					<Text className="text-sm text-muted-foreground">{item.notes}</Text>

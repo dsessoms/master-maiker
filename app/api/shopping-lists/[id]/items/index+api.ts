@@ -81,7 +81,7 @@ export async function POST(req: Request, { id }: { id: string }) {
 			const { data } = await supabase
 				.from("ingredient")
 				.select(
-					`id, recipe(number_of_servings), food_id, serving_id, number_of_servings`,
+					`id, recipe(number_of_servings), food_id, serving_id, number_of_servings, meta`,
 				)
 				.eq("user_id", session.user.id)
 				.eq("recipe_id", recipeId);
@@ -103,6 +103,7 @@ export async function POST(req: Request, { id }: { id: string }) {
 					food_id: ingredient.food_id,
 					serving_id: ingredient.serving_id,
 					recipe_id: recipeId,
+					meta: ingredient.meta,
 				});
 			}
 		}
@@ -135,6 +136,7 @@ export async function GET(req: Request, { id }: { id: string }) {
       is_checked,
       number_of_servings,
       notes,
+	  meta,
       recipe_id,
       food(id, food_name, food_type, brand_name, aisle, image_url, fat_secret_id, spoonacular_id, serving(*)), 
       recipe(id, name, image_id),

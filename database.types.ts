@@ -588,6 +588,7 @@ export type Database = {
           food_id: string | null
           id: string
           is_checked: boolean
+          meta: string | null
           name: string | null
           notes: string | null
           number_of_servings: number | null
@@ -601,6 +602,7 @@ export type Database = {
           food_id?: string | null
           id?: string
           is_checked?: boolean
+          meta?: string | null
           name?: string | null
           notes?: string | null
           number_of_servings?: number | null
@@ -614,6 +616,7 @@ export type Database = {
           food_id?: string | null
           id?: string
           is_checked?: boolean
+          meta?: string | null
           name?: string | null
           notes?: string | null
           number_of_servings?: number | null
@@ -786,22 +789,28 @@ export type Database = {
       buckets_analytics: {
         Row: {
           created_at: string
+          deleted_at: string | null
           format: string
           id: string
+          name: string
           type: Database["storage"]["Enums"]["buckettype"]
           updated_at: string
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
           format?: string
-          id: string
+          id?: string
+          name: string
           type?: Database["storage"]["Enums"]["buckettype"]
           updated_at?: string
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
           format?: string
           id?: string
+          name?: string
           type?: Database["storage"]["Enums"]["buckettype"]
           updated_at?: string
         }
@@ -830,30 +839,36 @@ export type Database = {
       }
       iceberg_namespaces: {
         Row: {
-          bucket_id: string
+          bucket_name: string
+          catalog_id: string
           created_at: string
           id: string
+          metadata: Json
           name: string
           updated_at: string
         }
         Insert: {
-          bucket_id: string
+          bucket_name: string
+          catalog_id: string
           created_at?: string
           id?: string
+          metadata?: Json
           name: string
           updated_at?: string
         }
         Update: {
-          bucket_id?: string
+          bucket_name?: string
+          catalog_id?: string
           created_at?: string
           id?: string
+          metadata?: Json
           name?: string
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "iceberg_namespaces_bucket_id_fkey"
-            columns: ["bucket_id"]
+            foreignKeyName: "iceberg_namespaces_catalog_id_fkey"
+            columns: ["catalog_id"]
             isOneToOne: false
             referencedRelation: "buckets_analytics"
             referencedColumns: ["id"]
@@ -862,36 +877,48 @@ export type Database = {
       }
       iceberg_tables: {
         Row: {
-          bucket_id: string
+          bucket_name: string
+          catalog_id: string
           created_at: string
           id: string
           location: string
           name: string
           namespace_id: string
+          remote_table_id: string | null
+          shard_id: string | null
+          shard_key: string | null
           updated_at: string
         }
         Insert: {
-          bucket_id: string
+          bucket_name: string
+          catalog_id: string
           created_at?: string
           id?: string
           location: string
           name: string
           namespace_id: string
+          remote_table_id?: string | null
+          shard_id?: string | null
+          shard_key?: string | null
           updated_at?: string
         }
         Update: {
-          bucket_id?: string
+          bucket_name?: string
+          catalog_id?: string
           created_at?: string
           id?: string
           location?: string
           name?: string
           namespace_id?: string
+          remote_table_id?: string | null
+          shard_id?: string | null
+          shard_key?: string | null
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "iceberg_tables_bucket_id_fkey"
-            columns: ["bucket_id"]
+            foreignKeyName: "iceberg_tables_catalog_id_fkey"
+            columns: ["catalog_id"]
             isOneToOne: false
             referencedRelation: "buckets_analytics"
             referencedColumns: ["id"]
@@ -932,7 +959,6 @@ export type Database = {
           created_at: string | null
           id: string
           last_accessed_at: string | null
-          level: number | null
           metadata: Json | null
           name: string | null
           owner: string | null
@@ -947,7 +973,6 @@ export type Database = {
           created_at?: string | null
           id?: string
           last_accessed_at?: string | null
-          level?: number | null
           metadata?: Json | null
           name?: string | null
           owner?: string | null
@@ -962,7 +987,6 @@ export type Database = {
           created_at?: string | null
           id?: string
           last_accessed_at?: string | null
-          level?: number | null
           metadata?: Json | null
           name?: string | null
           owner?: string | null
@@ -975,38 +999,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "objects_bucketId_fkey"
-            columns: ["bucket_id"]
-            isOneToOne: false
-            referencedRelation: "buckets"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      prefixes: {
-        Row: {
-          bucket_id: string
-          created_at: string | null
-          level: number
-          name: string
-          updated_at: string | null
-        }
-        Insert: {
-          bucket_id: string
-          created_at?: string | null
-          level?: number
-          name: string
-          updated_at?: string | null
-        }
-        Update: {
-          bucket_id?: string
-          created_at?: string | null
-          level?: number
-          name?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "prefixes_bucketId_fkey"
             columns: ["bucket_id"]
             isOneToOne: false
             referencedRelation: "buckets"
@@ -1161,28 +1153,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      add_prefixes: {
-        Args: { _bucket_id: string; _name: string }
-        Returns: undefined
-      }
       can_insert_object: {
         Args: { bucketid: string; metadata: Json; name: string; owner: string }
         Returns: undefined
       }
-      delete_leaf_prefixes: {
-        Args: { bucket_ids: string[]; names: string[] }
-        Returns: undefined
-      }
-      delete_prefix: {
-        Args: { _bucket_id: string; _name: string }
-        Returns: boolean
-      }
       extension: { Args: { name: string }; Returns: string }
       filename: { Args: { name: string }; Returns: string }
       foldername: { Args: { name: string }; Returns: string[] }
-      get_level: { Args: { name: string }; Returns: number }
-      get_prefix: { Args: { name: string }; Returns: string }
-      get_prefixes: { Args: { name: string }; Returns: string[] }
       get_size_by_bucket: {
         Args: never
         Returns: {
@@ -1221,92 +1198,45 @@ export type Database = {
           updated_at: string
         }[]
       }
-      lock_top_prefixes: {
-        Args: { bucket_ids: string[]; names: string[] }
-        Returns: undefined
-      }
       operation: { Args: never; Returns: string }
-      search: {
-        Args: {
-          bucketname: string
-          levels?: number
-          limits?: number
-          offsets?: number
-          prefix: string
-          search?: string
-          sortcolumn?: string
-          sortorder?: string
-        }
-        Returns: {
-          created_at: string
-          id: string
-          last_accessed_at: string
-          metadata: Json
-          name: string
-          updated_at: string
-        }[]
-      }
-      search_legacy_v1: {
-        Args: {
-          bucketname: string
-          levels?: number
-          limits?: number
-          offsets?: number
-          prefix: string
-          search?: string
-          sortcolumn?: string
-          sortorder?: string
-        }
-        Returns: {
-          created_at: string
-          id: string
-          last_accessed_at: string
-          metadata: Json
-          name: string
-          updated_at: string
-        }[]
-      }
-      search_v1_optimised: {
-        Args: {
-          bucketname: string
-          levels?: number
-          limits?: number
-          offsets?: number
-          prefix: string
-          search?: string
-          sortcolumn?: string
-          sortorder?: string
-        }
-        Returns: {
-          created_at: string
-          id: string
-          last_accessed_at: string
-          metadata: Json
-          name: string
-          updated_at: string
-        }[]
-      }
-      search_v2: {
-        Args: {
-          bucket_name: string
-          levels?: number
-          limits?: number
-          prefix: string
-          sort_column?: string
-          sort_column_after?: string
-          sort_order?: string
-          start_after?: string
-        }
-        Returns: {
-          created_at: string
-          id: string
-          key: string
-          last_accessed_at: string
-          metadata: Json
-          name: string
-          updated_at: string
-        }[]
-      }
+      search:
+        | {
+            Args: {
+              bucketname: string
+              levels?: number
+              limits?: number
+              offsets?: number
+              prefix: string
+            }
+            Returns: {
+              created_at: string
+              id: string
+              last_accessed_at: string
+              metadata: Json
+              name: string
+              updated_at: string
+            }[]
+          }
+        | {
+            Args: {
+              bucketname: string
+              levels?: number
+              limits?: number
+              offsets?: number
+              prefix: string
+              search?: string
+              sortcolumn?: string
+              sortorder?: string
+            }
+            Returns: {
+              created_at: string
+              id: string
+              last_accessed_at: string
+              metadata: Json
+              name: string
+              updated_at: string
+            }[]
+          }
     }
     Enums: {
       buckettype: "STANDARD" | "ANALYTICS" | "VECTOR"

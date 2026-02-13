@@ -68,11 +68,12 @@ export const consolidateItems = (
 			? `recipe-${item.recipe_id || "none"}-`
 			: "";
 		const notesKey = `notes-${item.notes || ""}`;
+		const metaKey = `meta-${item.meta || ""}`;
 
 		if (item.food?.spoonacular_id && item.serving?.measurement_description) {
-			key = `${recipePrefix}spoonacular-${item.food.spoonacular_id}-${item.serving.measurement_description}-${notesKey}`;
+			key = `${recipePrefix}spoonacular-${item.food.spoonacular_id}-${item.serving.measurement_description}-${notesKey}-${metaKey}`;
 		} else if (item.food?.fat_secret_id && item.serving?.id) {
-			key = `${recipePrefix}fatsecret-${item.food.fat_secret_id}-${item.serving.id}-${notesKey}`;
+			key = `${recipePrefix}fatsecret-${item.food.fat_secret_id}-${item.serving.id}-${notesKey}-${metaKey}`;
 		}
 
 		// If we can create a key, check if we should consolidate
