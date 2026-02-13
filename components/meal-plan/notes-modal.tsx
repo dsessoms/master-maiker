@@ -12,6 +12,7 @@ import { MealPlanContext } from "@/context/meal-plan-context";
 import { Text } from "@/components/ui/text";
 import { X } from "@/lib/icons";
 import { cn } from "@/lib/utils";
+import { Pressable } from "react-native-gesture-handler";
 
 interface Note {
 	id: string;
@@ -235,16 +236,18 @@ export const NotesModal = ({
 									<StatefulInput<Note>
 										value={noteStateful}
 										placeholder="Add a note..."
-										renderParsed={(parsed) => {
+										renderParsed={(parsed, onEdit) => {
 											return (
-												<Text
-													className={cn({
-														"text-muted-foreground line-through":
-															note?.is_checked,
-													})}
-												>
-													{parsed.value}
-												</Text>
+												<Pressable onPress={onEdit}>
+													<Text
+														className={cn({
+															"text-muted-foreground line-through":
+																note?.is_checked,
+														})}
+													>
+														{parsed.value}
+													</Text>
+												</Pressable>
 											);
 										}}
 										onChange={(rawValue) => {
@@ -334,8 +337,6 @@ export const NotesModal = ({
 											// Remove from local state
 											dispatch({ type: "DELETE", index });
 										}}
-										shouldFocus={focusedIndex === index}
-										onFocus={() => dispatch({ type: "CLEAR_FOCUS" })}
 									/>
 								</View>
 							</View>
