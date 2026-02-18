@@ -427,8 +427,8 @@ export const convertSpoonacularExtendedIngredientToIngredient = (
 				extendedIngredient.measures.us.unitShort ||
 				extendedIngredient.unit
 			}`,
-			metric_serving_amount: extendedIngredient.measures.metric.amount / amount,
-			metric_serving_unit: extendedIngredient.measures.metric.unitShort,
+			metric_serving_amount: nutrition.weightPerServing.amount / divideBy,
+			metric_serving_unit: nutrition.weightPerServing.unit,
 			number_of_units: 1,
 			calories,
 			carbohydrate_grams: carbs,
