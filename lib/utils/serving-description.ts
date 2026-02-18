@@ -1,4 +1,14 @@
+import { FoodRow } from "@/types";
 import { Fraction } from "fraction.js";
+
+/**
+ * Matches: 1/4 crust (half cooked)
+ * group 1 - descriptionMultiplier: number ex: 5 | 1/4 | .25 | undefined
+ * group 2 - description: serving size ex: crust
+ * group 3 - extra: extra meta ex: (half cooked) | undefined
+ */
+const fatSecretServingRegex =
+	/^((?<descriptionMultiplier>[0-9]*\s[0-9]*\/[0-9]*|[0-9]*|[0-9]*\/[0-9]*|\.[0-9]*)\s)*(?<description>[^\(^,]+)\s*(?<extra>\(.*\)|,.*)*$/;
 
 /**
  * Unicode superscript characters for building fractions
@@ -132,7 +142,6 @@ export function getFraction(numerator: string, denominator: string): string {
  * Get a formatted serving description with fancy Unicode fractions
  * @param numberOfServings - Number of servings to display
  * @param serving - Serving object with measurement details
- * @param useFancyFractions - Whether to use Unicode fractions (default: true)
  * @returns Formatted serving description string
  */
 export function getServingDescription(
@@ -140,20 +149,40 @@ export function getServingDescription(
 	serving: {
 		measurement_description: string | null;
 		number_of_units: number | null;
+		serving_description?: string | null;
 	},
-	useFancyFractions = true,
+	food: {
+		fat_secret_id?: number | null;
+		food_type?: FoodRow["food_type"] | null;
+	},
 ): string {
-	if (!serving.number_of_units) {
-		return `${numberOfServings} ${serving.measurement_description || "serving"}`;
-	}
+	let description =
+		food.food_type === "Generic"
+			? serving.measurement_description
+			: serving.serving_description;
 
-	const totalUnits = numberOfServings * serving.number_of_units;
+	let descriptionMultiplier = 1;
+	let totalUnits = numberOfServings * (serving.number_of_units || 1);
 
-	// If fancy fractions are disabled, return simple format
-	if (!useFancyFractions) {
-		return serving.measurement_description
-			? `${totalUnits} ${serving.measurement_description}`
-			: totalUnits.toString();
+	if (food.fat_secret_id != null && description) {
+		const found = fatSecretServingRegex.exec(description);
+
+		if (found) {
+			const groups = found.groups as {
+				descriptionMultiplier?: string;
+				description?: string;
+				extra?: string;
+			};
+			descriptionMultiplier = new Fraction(
+				groups.descriptionMultiplier ?? 1,
+			).valueOf();
+			description = groups.description ?? description;
+
+			totalUnits =
+				numberOfServings *
+				Number(serving.number_of_units) *
+				descriptionMultiplier;
+		}
 	}
 
 	// Use fancy fractions

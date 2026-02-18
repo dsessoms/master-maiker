@@ -27,6 +27,7 @@ export function Ingredient({
 	const servingDesc = getServingDescription(
 		displayServings,
 		ingredient.serving,
+		ingredient.food,
 	);
 
 	return (

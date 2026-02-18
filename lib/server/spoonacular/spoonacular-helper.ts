@@ -224,9 +224,60 @@ export const convertSpoonacularToIngredient = (
 	).amount;
 	const fat = getNutrition(nutrition.nutrients, "Fat", amount).amount;
 	const protein = getNutrition(nutrition.nutrients, "Protein", amount).amount;
+	const sugar = getNutrition(nutrition.nutrients, "Sugar", amount).amount;
+	const sodium = getNutrition(nutrition.nutrients, "Sodium", amount).amount;
+	const fiber = getNutrition(nutrition.nutrients, "Fiber", amount).amount;
+	const potassium = getNutrition(
+		nutrition.nutrients,
+		"Potassium",
+		amount,
+	).amount;
+	const vitaminD = getNutrition(
+		nutrition.nutrients,
+		"Vitamin D",
+		amount,
+	).amount;
+	const vitaminA = getNutrition(
+		nutrition.nutrients,
+		"Vitamin A",
+		amount,
+	).amount;
+	const vitaminC = getNutrition(
+		nutrition.nutrients,
+		"Vitamin C",
+		amount,
+	).amount;
+	const calcium = getNutrition(nutrition.nutrients, "Calcium", amount).amount;
+	const iron = getNutrition(nutrition.nutrients, "Iron", amount).amount;
+	const transFat = getNutrition(
+		nutrition.nutrients,
+		"Trans Fat",
+		amount,
+	).amount;
+	const cholesterol = getNutrition(
+		nutrition.nutrients,
+		"Cholesterol",
+		amount,
+	).amount;
+	const saturatedFat = getNutrition(
+		nutrition.nutrients,
+		"Saturated Fat",
+		amount,
+	).amount;
+	const polyunsaturatedFat = getNutrition(
+		nutrition.nutrients,
+		"Poly Unsaturated Fat",
+		amount,
+	).amount;
+	const monounsaturatedFat = getNutrition(
+		nutrition.nutrients,
+		"Mono Unsaturated Fat",
+		amount,
+	).amount;
 
 	return {
 		type: "ingredient",
+		food_type: "Generic",
 		name: spoonacularIngredient.name,
 		original_name: spoonacularIngredient.original,
 		meta:
@@ -238,7 +289,7 @@ export const convertSpoonacularToIngredient = (
 			? `${THUMBNAIL_BASE_URL}${spoonacularIngredient.image}`
 			: undefined,
 		aisle: spoonacularIngredient.aisle,
-		spoonacular_id: spoonacularIngredient.id, // Add spoonacular food ID
+		spoonacular_id: spoonacularIngredient.id,
 		serving: {
 			measurement_description:
 				spoonacularIngredient.unitLong || spoonacularIngredient.unit,
@@ -252,6 +303,20 @@ export const convertSpoonacularToIngredient = (
 			carbohydrate_grams: carbs,
 			fat_grams: fat,
 			protein_grams: protein,
+			sugar_grams: sugar || undefined,
+			sodium_mg: sodium || undefined,
+			fiber_grams: fiber || undefined,
+			potassium_mg: potassium || undefined,
+			vitamin_d_mcg: vitaminD || undefined,
+			vitamin_a_mcg: vitaminA || undefined,
+			vitamin_c_mg: vitaminC || undefined,
+			calcium_mg: calcium || undefined,
+			iron_mg: iron || undefined,
+			trans_fat_grams: transFat || undefined,
+			cholesterol_mg: cholesterol || undefined,
+			saturated_fat_grams: saturatedFat || undefined,
+			polyunsaturated_fat_grams: polyunsaturatedFat || undefined,
+			monounsaturated_fat_grams: monounsaturatedFat || undefined,
 		},
 	};
 };
@@ -284,9 +349,62 @@ export const convertSpoonacularExtendedIngredientToIngredient = (
 	const protein = ingredientNutrition
 		? getNutrition(ingredientNutrition.nutrients, "Protein", divideBy).amount
 		: 0;
+	const sugar = ingredientNutrition
+		? getNutrition(ingredientNutrition.nutrients, "Sugar", divideBy).amount
+		: 0;
+	const sodium = ingredientNutrition
+		? getNutrition(ingredientNutrition.nutrients, "Sodium", divideBy).amount
+		: 0;
+	const fiber = ingredientNutrition
+		? getNutrition(ingredientNutrition.nutrients, "Fiber", divideBy).amount
+		: 0;
+	const potassium = ingredientNutrition
+		? getNutrition(ingredientNutrition.nutrients, "Potassium", divideBy).amount
+		: 0;
+	const vitaminD = ingredientNutrition
+		? getNutrition(ingredientNutrition.nutrients, "Vitamin D", divideBy).amount
+		: 0;
+	const vitaminA = ingredientNutrition
+		? getNutrition(ingredientNutrition.nutrients, "Vitamin A", divideBy).amount
+		: 0;
+	const vitaminC = ingredientNutrition
+		? getNutrition(ingredientNutrition.nutrients, "Vitamin C", divideBy).amount
+		: 0;
+	const calcium = ingredientNutrition
+		? getNutrition(ingredientNutrition.nutrients, "Calcium", divideBy).amount
+		: 0;
+	const iron = ingredientNutrition
+		? getNutrition(ingredientNutrition.nutrients, "Iron", divideBy).amount
+		: 0;
+	const transFat = ingredientNutrition
+		? getNutrition(ingredientNutrition.nutrients, "Trans Fat", divideBy).amount
+		: 0;
+	const cholesterol = ingredientNutrition
+		? getNutrition(ingredientNutrition.nutrients, "Cholesterol", divideBy)
+				.amount
+		: 0;
+	const saturatedFat = ingredientNutrition
+		? getNutrition(ingredientNutrition.nutrients, "Saturated Fat", divideBy)
+				.amount
+		: 0;
+	const polyunsaturatedFat = ingredientNutrition
+		? getNutrition(
+				ingredientNutrition.nutrients,
+				"Poly Unsaturated Fat",
+				divideBy,
+			).amount
+		: 0;
+	const monounsaturatedFat = ingredientNutrition
+		? getNutrition(
+				ingredientNutrition.nutrients,
+				"Mono Unsaturated Fat",
+				divideBy,
+			).amount
+		: 0;
 
 	return {
 		type: "ingredient",
+		food_type: "Generic",
 		name: extendedIngredient.nameClean || extendedIngredient.name,
 		original_name: extendedIngredient.original,
 		meta:
@@ -316,6 +434,20 @@ export const convertSpoonacularExtendedIngredientToIngredient = (
 			carbohydrate_grams: carbs,
 			fat_grams: fat,
 			protein_grams: protein,
+			sugar_grams: sugar || undefined,
+			sodium_mg: sodium || undefined,
+			fiber_grams: fiber || undefined,
+			potassium_mg: potassium || undefined,
+			vitamin_d_mcg: vitaminD || undefined,
+			vitamin_a_mcg: vitaminA || undefined,
+			vitamin_c_mg: vitaminC || undefined,
+			calcium_mg: calcium || undefined,
+			iron_mg: iron || undefined,
+			trans_fat_grams: transFat || undefined,
+			cholesterol_mg: cholesterol || undefined,
+			saturated_fat_grams: saturatedFat || undefined,
+			polyunsaturated_fat_grams: polyunsaturatedFat || undefined,
+			monounsaturated_fat_grams: monounsaturatedFat || undefined,
 		},
 	};
 };
