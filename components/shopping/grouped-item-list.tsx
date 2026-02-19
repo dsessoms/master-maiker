@@ -8,11 +8,11 @@ export const GroupedItemsList = ({
 	listId,
 	onItemClick,
 }: {
-	groups: Array<{
+	groups: {
 		key: string;
 		name: string;
 		items: ConsolidatedItemType[];
-	}>;
+	}[];
 	listId: string;
 	onItemClick: (item: ConsolidatedItemType) => void;
 }) => {
