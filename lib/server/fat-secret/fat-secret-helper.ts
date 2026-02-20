@@ -38,6 +38,15 @@ interface FatSecretResults {
 	food: FatSecretFood[];
 }
 
+interface FatSecretFoodImage {
+	image_url: string;
+	image_type: string;
+}
+
+interface FatSecretFoodImages {
+	food_image: FatSecretFoodImage[];
+}
+
 interface FatSecretFood {
 	brand_name: string | null;
 	food_id: string;
@@ -45,6 +54,7 @@ interface FatSecretFood {
 	food_sub_categories?: FatSecretFoodSubCategories;
 	food_type: FatSecretFoodType;
 	food_url?: string;
+	food_images?: FatSecretFoodImages;
 	servings: FatSecretServings;
 }
 
@@ -170,6 +180,7 @@ export async function searchFoodV3(
 		search_expression: query,
 		include_sub_categories: true,
 		flag_default_serving: true,
+		include_food_images: true,
 		page_number,
 	};
 	const response = await makeApiCall(methodParams);
@@ -183,9 +194,15 @@ export async function searchFoodV3(
 			results: {
 				food:
 					data.foods_search.results?.food.map((food) => {
+						// Extract the 72x72 thumbnail URL
+						const thumbnailUrl = food.food_images?.food_image?.find((img) =>
+							img.image_url.includes("72x72"),
+						)?.image_url;
+
 						return {
 							...food,
 							food_id: Number(food.food_id),
+							thumbnail_image_url: thumbnailUrl,
 							servings: {
 								serving: food.servings.serving.map((serving) =>
 									getNumericFatSecretServing(serving),
@@ -217,10 +234,17 @@ export async function getFoodItem(id: string | number) {
 	};
 	const response = await makeApiCall(methodParams);
 	const data = response.data as FatsecretGetResponse;
+
+	// Extract the 72x72 thumbnail URL
+	const thumbnailUrl = data.food.food_images?.food_image?.find((img) =>
+		img.image_url.includes("72x72"),
+	)?.image_url;
+
 	const parsedData: ParsedFatsecretGetResponse = {
 		food: {
 			...data.food,
 			food_id: Number(data.food.food_id),
+			thumbnail_image_url: thumbnailUrl,
 			servings: {
 				serving: data.food.servings.serving.map((serving) =>
 					getNumericFatSecretServing(serving),

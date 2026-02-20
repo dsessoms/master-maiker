@@ -14,6 +14,15 @@ export interface FatSecretResults {
 	food: FatSecretFood[];
 }
 
+export interface FatSecretFoodImage {
+	image_url: string;
+	image_type: string;
+}
+
+export interface FatSecretFoodImages {
+	food_image: FatSecretFoodImage[];
+}
+
 export interface FatSecretFood {
 	brand_name: string | null;
 	food_id: number;
@@ -21,6 +30,8 @@ export interface FatSecretFood {
 	food_sub_categories?: FatSecretFoodSubCategories;
 	food_type: FatSecretFoodType;
 	food_url?: string;
+	food_images?: FatSecretFoodImages;
+	thumbnail_image_url?: string;
 	servings: FatSecretServings;
 }
 

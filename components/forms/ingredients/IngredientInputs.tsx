@@ -419,7 +419,7 @@ export function IngredientInputs({
 								foodData.originalName !== foodData.food.food_name
 									? foodData.originalName
 									: undefined,
-							image_url: undefined,
+							image_url: foodData.food.thumbnail_image_url,
 							fat_secret_id: foodData.fat_secret_id,
 							serving: {
 								measurement_description:

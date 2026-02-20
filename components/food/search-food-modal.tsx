@@ -7,6 +7,7 @@ import React, { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { FoodServingEditor } from "./food-serving-editor";
+import { Image } from "@/components/image";
 import { Input } from "@/components/ui/input";
 import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import { Search } from "@/lib/icons/search";
@@ -57,22 +58,35 @@ const FoodItemRow: React.FC<FoodItemRowProps> = ({ food, onAdd }) => {
 
 	return (
 		<View className="border-b border-border p-4">
-			<View className="flex-1 mb-2">
-				<Text className="text-lg font-semibold mb-1">{foodName}</Text>
-			</View>
+			<View className="flex-row gap-3">
+				{/* Thumbnail Column */}
+				<View className="w-5 items-center justify-center">
+					{food.thumbnail_image_url && (
+						<View className="w-5 h-5 rounded-lg bg-muted">
+							<Image
+								source={{ uri: food.thumbnail_image_url }}
+								className="w-full h-full"
+								contentFit="contain"
+							/>
+						</View>
+					)}
+				</View>
 
-			<View className="mb-3">
-				<FoodServingEditor
-					food={food}
-					initialServing={food.servings.serving[0]}
-					initialAmount={1}
-					onServingChange={handleServingChange}
-					showMacros={true}
-				>
-					<Button onPress={handleAdd} size="sm" className="h-10">
-						<Text>Add</Text>
-					</Button>
-				</FoodServingEditor>
+				{/* Details Column */}
+				<View className="flex-1">
+					<Text className="text-lg font-semibold mb-2">{foodName}</Text>
+					<FoodServingEditor
+						food={food}
+						initialServing={food.servings.serving[0]}
+						initialAmount={1}
+						onServingChange={handleServingChange}
+						showMacros={true}
+					>
+						<Button onPress={handleAdd} size="sm" className="h-10">
+							<Text>Add</Text>
+						</Button>
+					</FoodServingEditor>
+				</View>
 			</View>
 		</View>
 	);
