@@ -20,14 +20,41 @@ export interface NutrientInformation {
 	percentOfDailyNeeds: number;
 }
 
-export interface SpoonacularIngredient {
+interface WeightPerServingInformation {
+	amount: number;
+	unit: "g";
+}
+
+export interface BaseNutrition {
+	nutrients: NutrientInformation[];
+	properties?: {
+		name: string;
+		amount: number;
+		unit: string;
+	}[];
+	caloricBreakdown?: {
+		percentProtein: number;
+		percentFat: number;
+		percentCarbs: number;
+	};
+	weightPerServing?: WeightPerServingInformation;
+}
+
+export interface BaseSpoonacularIngredient {
 	id: number;
-	original: string;
-	originalName: string;
+	aisle: string;
+	image: string;
+	consistency: string;
 	name: string;
 	nameClean: string;
+	original: string;
+	originalName: string;
 	amount: number;
 	unit: string;
+	meta: string[];
+}
+
+export interface SpoonacularIngredient extends BaseSpoonacularIngredient {
 	unitShort: string;
 	unitLong: string;
 	possibleUnits: string[];
@@ -35,10 +62,6 @@ export interface SpoonacularIngredient {
 		value: number;
 		unit: string;
 	};
-	consistency: string;
-	aisle: string;
-	image: string;
-	meta: string[];
 	nutrition: {
 		nutrients: NutrientInformation[];
 		properties: {
@@ -71,33 +94,12 @@ export interface SpoonacularMeasures {
 	};
 }
 
-export interface SpoonacularExtendedIngredient {
-	id: number;
-	aisle: string;
-	image: string;
-	consistency: string;
-	name: string;
-	nameClean: string;
-	original: string;
-	originalName: string;
-	amount: number;
-	unit: string;
-	meta: string[];
+export interface SpoonacularExtendedIngredient
+	extends BaseSpoonacularIngredient {
 	measures: SpoonacularMeasures;
 }
 
-export interface SpoonacularNutrition {
-	nutrients: NutrientInformation[];
-	properties: {
-		name: string;
-		amount: number;
-		unit: string;
-	}[];
-	flavonoids: {
-		name: string;
-		amount: number;
-		unit: string;
-	}[];
+export interface SpoonacularRecipeNutrition extends BaseNutrition {
 	ingredients: {
 		id: number;
 		name: string;
@@ -105,15 +107,6 @@ export interface SpoonacularNutrition {
 		unit: string;
 		nutrients: NutrientInformation[];
 	}[];
-	caloricBreakdown: {
-		percentProtein: number;
-		percentFat: number;
-		percentCarbs: number;
-	};
-	weightPerServing: {
-		amount: number;
-		unit: string;
-	};
 }
 
 export interface SpoonacularInstructionStep {
@@ -174,7 +167,7 @@ export interface SpoonacularRecipeResponse {
 	sourceName: string;
 	pricePerServing: number;
 	extendedIngredients: SpoonacularExtendedIngredient[];
-	nutrition: SpoonacularNutrition;
+	nutrition: SpoonacularRecipeNutrition;
 	summary: string;
 	cuisines: string[];
 	dishTypes: string[];
@@ -209,56 +202,103 @@ export const getNutrition = (
 	return result;
 };
 
-export const convertSpoonacularToIngredient = (
-	spoonacularIngredient: SpoonacularIngredient,
+const convertToIngredient = (
+	spoonacularIngredient: BaseSpoonacularIngredient,
+	nutrients: NutrientInformation[],
+	weightPerServing: WeightPerServingInformation | undefined,
+	divideBy: number,
 ): Ingredient => {
-	const { nutrition } = spoonacularIngredient;
-	const amount = spoonacularIngredient.amount;
-
 	// Nutrition values are for the total amount, so divide by amount to get per unit
-	const calories = getNutrition(nutrition.nutrients, "Calories", amount).amount;
-	const carbs = getNutrition(
-		nutrition.nutrients,
-		"Carbohydrates",
-		amount,
+	const calories = getNutrition(nutrients, "Calories", divideBy).amount;
+	const carbs = getNutrition(nutrients, "Carbohydrates", divideBy).amount;
+	const fat = getNutrition(nutrients, "Fat", divideBy).amount;
+	const protein = getNutrition(nutrients, "Protein", divideBy).amount;
+	const sugar = getNutrition(nutrients, "Sugar", divideBy).amount;
+	const sodium = getNutrition(nutrients, "Sodium", divideBy).amount;
+	const fiber = getNutrition(nutrients, "Fiber", divideBy).amount;
+	const potassium = getNutrition(nutrients, "Potassium", divideBy).amount;
+	const vitaminD = getNutrition(nutrients, "Vitamin D", divideBy).amount;
+	const vitaminA = getNutrition(nutrients, "Vitamin A", divideBy).amount;
+	const vitaminC = getNutrition(nutrients, "Vitamin C", divideBy).amount;
+	const calcium = getNutrition(nutrients, "Calcium", divideBy).amount;
+	const iron = getNutrition(nutrients, "Iron", divideBy).amount;
+	const transFat = getNutrition(nutrients, "Trans Fat", divideBy).amount;
+	const cholesterol = getNutrition(nutrients, "Cholesterol", divideBy).amount;
+	const saturatedFat = getNutrition(
+		nutrients,
+		"Saturated Fat",
+		divideBy,
 	).amount;
-	const fat = getNutrition(nutrition.nutrients, "Fat", amount).amount;
-	const protein = getNutrition(nutrition.nutrients, "Protein", amount).amount;
+	const polyunsaturatedFat = getNutrition(
+		nutrients,
+		"Poly Unsaturated Fat",
+		divideBy,
+	).amount;
+	const monounsaturatedFat = getNutrition(
+		nutrients,
+		"Mono Unsaturated Fat",
+		divideBy,
+	).amount;
 
 	return {
 		type: "ingredient",
+		food_type: "Generic",
 		name: spoonacularIngredient.name,
 		original_name: spoonacularIngredient.original,
 		meta:
 			spoonacularIngredient.meta.length > 0
 				? spoonacularIngredient.meta.join(", ")
 				: null,
-		number_of_servings: amount,
+		number_of_servings: spoonacularIngredient.amount,
 		image_url: spoonacularIngredient.image
 			? `${THUMBNAIL_BASE_URL}${spoonacularIngredient.image}`
 			: undefined,
 		aisle: spoonacularIngredient.aisle,
-		spoonacular_id: spoonacularIngredient.id, // Add spoonacular food ID
+		spoonacular_id: spoonacularIngredient.id,
 		serving: {
-			measurement_description:
-				spoonacularIngredient.unitLong || spoonacularIngredient.unit,
-			serving_description: `1 ${spoonacularIngredient.unitLong || spoonacularIngredient.unit}`,
-			metric_serving_amount:
-				spoonacularIngredient.nutrition.weightPerServing.amount / amount,
-			metric_serving_unit:
-				spoonacularIngredient.nutrition.weightPerServing.unit,
+			measurement_description: spoonacularIngredient.unit,
+			serving_description: `1 ${spoonacularIngredient.unit}`,
+			metric_serving_amount: weightPerServing
+				? weightPerServing.amount / divideBy
+				: undefined,
+			metric_serving_unit: weightPerServing ? weightPerServing.unit : undefined,
 			number_of_units: 1,
 			calories,
 			carbohydrate_grams: carbs,
 			fat_grams: fat,
 			protein_grams: protein,
+			sugar_grams: sugar || undefined,
+			sodium_mg: sodium || undefined,
+			fiber_grams: fiber || undefined,
+			potassium_mg: potassium || undefined,
+			vitamin_d_mcg: vitaminD || undefined,
+			vitamin_a_mcg: vitaminA || undefined,
+			vitamin_c_mg: vitaminC || undefined,
+			calcium_mg: calcium || undefined,
+			iron_mg: iron || undefined,
+			trans_fat_grams: transFat || undefined,
+			cholesterol_mg: cholesterol || undefined,
+			saturated_fat_grams: saturatedFat || undefined,
+			polyunsaturated_fat_grams: polyunsaturatedFat || undefined,
+			monounsaturated_fat_grams: monounsaturatedFat || undefined,
 		},
 	};
 };
 
+export const convertSpoonacularToIngredient = (
+	spoonacularIngredient: SpoonacularIngredient,
+): Ingredient => {
+	return convertToIngredient(
+		spoonacularIngredient,
+		spoonacularIngredient.nutrition.nutrients,
+		spoonacularIngredient.nutrition.weightPerServing,
+		spoonacularIngredient.amount,
+	);
+};
+
 export const convertSpoonacularExtendedIngredientToIngredient = (
 	extendedIngredient: SpoonacularExtendedIngredient,
-	nutrition: SpoonacularNutrition,
+	nutrition: SpoonacularRecipeNutrition,
 	recipeServings: number,
 ): Ingredient => {
 	// Find nutrition info for this specific ingredient
@@ -266,58 +306,22 @@ export const convertSpoonacularExtendedIngredientToIngredient = (
 		(ing) => ing.id === extendedIngredient.id,
 	);
 
+	if (!ingredientNutrition) {
+		throw new Error("Invalid ingredient found");
+	}
+
 	const amount = extendedIngredient.amount;
 
 	// Nutrition values are per serving, multiply by recipe servings to get total,
 	// then divide by ingredient amount to get per unit
 	const divideBy = amount / recipeServings;
-	const calories = ingredientNutrition
-		? getNutrition(ingredientNutrition.nutrients, "Calories", divideBy).amount
-		: 0;
-	const carbs = ingredientNutrition
-		? getNutrition(ingredientNutrition.nutrients, "Carbohydrates", divideBy)
-				.amount
-		: 0;
-	const fat = ingredientNutrition
-		? getNutrition(ingredientNutrition.nutrients, "Fat", divideBy).amount
-		: 0;
-	const protein = ingredientNutrition
-		? getNutrition(ingredientNutrition.nutrients, "Protein", divideBy).amount
-		: 0;
 
-	return {
-		type: "ingredient",
-		name: extendedIngredient.nameClean || extendedIngredient.name,
-		original_name: extendedIngredient.original,
-		meta:
-			extendedIngredient.meta.length > 0
-				? extendedIngredient.meta.join(", ")
-				: null,
-		number_of_servings: extendedIngredient.amount,
-		image_url: extendedIngredient.image
-			? `${THUMBNAIL_BASE_URL}${extendedIngredient.image}`
-			: undefined,
-		aisle: extendedIngredient.aisle,
-		spoonacular_id: extendedIngredient.id,
-		serving: {
-			measurement_description:
-				extendedIngredient.measures.us.unitLong ||
-				extendedIngredient.measures.us.unitShort ||
-				extendedIngredient.unit,
-			serving_description: `1 ${
-				extendedIngredient.measures.us.unitLong ||
-				extendedIngredient.measures.us.unitShort ||
-				extendedIngredient.unit
-			}`,
-			metric_serving_amount: extendedIngredient.measures.metric.amount / amount,
-			metric_serving_unit: extendedIngredient.measures.metric.unitShort,
-			number_of_units: 1,
-			calories,
-			carbohydrate_grams: carbs,
-			fat_grams: fat,
-			protein_grams: protein,
-		},
-	};
+	return convertToIngredient(
+		extendedIngredient,
+		ingredientNutrition.nutrients,
+		undefined, // weights aren't provided to recipe ingredients
+		divideBy,
+	);
 };
 
 export const convertSpoonacularRecipeToRecipe = (

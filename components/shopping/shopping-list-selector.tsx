@@ -18,9 +18,7 @@ export const ShoppingListSelector = ({
 	onCreateNew,
 }: {
 	currentListId: string;
-	lists:
-		| Array<{ id: string; name: string; is_default: boolean | null }>
-		| undefined;
+	lists: { id: string; name: string; is_default: boolean | null }[] | undefined;
 	onCreateNew: () => void;
 }) => {
 	const currentList = lists?.find((list) => list.id === currentListId);

@@ -410,6 +410,7 @@ export function IngredientInputs({
 						// Convert FoodData to Ingredient format
 						const ingredient: Ingredient = {
 							type: "ingredient",
+							food_type: foodData.food.food_type,
 							name: foodData.food.food_name,
 							original_name: foodData.originalName,
 							number_of_servings: foodData.amount,
@@ -431,6 +432,23 @@ export function IngredientInputs({
 								carbohydrate_grams: foodData.serving.carbohydrate,
 								fat_grams: foodData.serving.fat,
 								protein_grams: foodData.serving.protein,
+								sugar_grams: foodData.serving.sugar || undefined,
+								sodium_mg: foodData.serving.sodium || undefined,
+								fiber_grams: foodData.serving.fiber || undefined,
+								potassium_mg: foodData.serving.potassium || undefined,
+								vitamin_d_mcg: foodData.serving.vitamin_d || undefined,
+								vitamin_a_mcg: foodData.serving.vitamin_a || undefined,
+								vitamin_c_mg: foodData.serving.vitamin_c || undefined,
+								calcium_mg: foodData.serving.calcium || undefined,
+								iron_mg: foodData.serving.iron || undefined,
+								trans_fat_grams: foodData.serving.trans_fat || undefined,
+								cholesterol_mg: foodData.serving.cholesterol || undefined,
+								saturated_fat_grams:
+									foodData.serving.saturated_fat || undefined,
+								polyunsaturated_fat_grams:
+									foodData.serving.polyunsaturated_fat || undefined,
+								monounsaturated_fat_grams:
+									foodData.serving.monounsaturated_fat || undefined,
 								fat_secret_id: foodData.serving.serving_id,
 							},
 						};

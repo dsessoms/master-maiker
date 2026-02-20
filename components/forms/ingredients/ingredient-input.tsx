@@ -74,10 +74,15 @@ export function IngredientInput({
 					const { name, number_of_servings, serving, image_url } = parsed;
 
 					// Use the getServingDescription function for displaying serving info
-					const servingDescription = getServingDescription(number_of_servings, {
-						measurement_description: serving.measurement_description,
-						number_of_units: serving.number_of_units,
-					});
+					const servingDescription = getServingDescription(
+						number_of_servings,
+						{
+							measurement_description: serving.measurement_description,
+							number_of_units: serving.number_of_units,
+							serving_description: serving.serving_description,
+						},
+						parsed,
+					);
 
 					// Calculate nutrition for the actual number of servings
 					const totalCalories = serving.calories * number_of_servings;
