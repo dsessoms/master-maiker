@@ -58,7 +58,7 @@ export const RecipeCheckList = ({
 				const scaledServings =
 					(ing.number_of_servings || 1) * recipeServingsMultiplier;
 				const servingDesc = ing.serving
-					? getServingDescription(scaledServings, ing.serving)
+					? getServingDescription(scaledServings, ing.serving, ing.food!)
 					: null;
 				return (
 					<View key={ing.id} className="flex-row items-center gap-2">
