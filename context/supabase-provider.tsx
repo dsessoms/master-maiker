@@ -20,6 +20,8 @@ const authRoutes = [
 	"/forgot-password",
 ];
 
+const publicRoutes = ["/public"];
+
 interface SignUpUserData {
 	isExistingAccount: boolean;
 }
@@ -249,12 +251,19 @@ export function AuthProvider({ children }: PropsWithChildren) {
 	useEffect(() => {
 		if (initialized) {
 			SplashScreen.hideAsync();
+
+			// Check if current route is a public route
+			const isPublicRoute = publicRoutes.some((route) =>
+				pathname.startsWith(route),
+			);
+
 			if (session) {
 				if (authRoutes.includes(pathname)) {
 					router.replace("/(tabs)/(meal-plan)/meal-plan");
 				}
 			} else {
-				if (!authRoutes.includes(pathname)) {
+				// Only redirect to welcome if not on auth routes or public routes
+				if (!authRoutes.includes(pathname) && !isPublicRoute) {
 					router.replace("/welcome");
 				}
 			}

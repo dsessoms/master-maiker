@@ -45,6 +45,7 @@ export default function AppLayout() {
 							>
 								<Stack.Screen name="(tabs)" />
 								<Stack.Screen name="welcome" />
+								<Stack.Screen name="public/recipes/[id]/index" />
 								<Stack.Screen
 									name="sign-up"
 									options={{

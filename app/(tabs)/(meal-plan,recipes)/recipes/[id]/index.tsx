@@ -2,14 +2,15 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
+	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ExpandedIngredient, InstructionRow } from "@/types";
 import {
-	Minus,
+	Globe,
+	Link,
+	Lock,
 	MoreHorizontalIcon,
 	PencilIcon,
-	Plus,
 	ShoppingCart,
 	Trash2Icon,
 } from "@/lib/icons";
@@ -21,36 +22,44 @@ import { AddShoppingItemsData } from "@/components/shopping/add-shopping-items-m
 import { AddShoppingItemsModal } from "@/components/shopping/add-shopping-items-modal";
 import { Button } from "@/components/ui/button";
 import { DeleteRecipeDialog } from "@/components/recipe/delete-recipe-dialog";
-import { Header } from "@/components/recipe/header";
-import { Image } from "@/components/image";
-import { Ingredient } from "@/components/recipe/ingredient";
-import { Instruction } from "@/components/recipe/instruction";
-import { Macros } from "@/components/recipe/macros";
+import { RecipeDetailsContent } from "@/components/recipe/recipe-details-content";
 import { RecipeDetailsSkeleton } from "@/components/recipe/recipe-details-skeleton";
+import { Switch } from "@/components/ui/switch";
 import { Text } from "@/components/ui/text";
+import { convertDatabaseRecipeToSchema } from "@/lib/utils/convert-database-recipe-to-schema";
+import { useAuth } from "@/context/supabase-provider";
+import { useCopyRecipeMutation } from "@/hooks/recipes/use-copy-recipe-mutation";
 import { useDeleteRecipeMutation } from "@/hooks/recipes/use-delete-recipe-mutation";
+import { usePatchRecipeMutation } from "@/hooks/recipes/use-patch-recipe-mutation";
 import { useRecipe } from "@/hooks/recipes/use-recipe";
 import { useRecipeImage } from "@/hooks/recipes/use-recipe-image";
+import { useRecipes } from "@/hooks/recipes/use-recipes";
 
 export default function RecipeDetails() {
 	const { id } = useLocalSearchParams<{ id: string }>();
 	const router = useRouter();
+	const { session } = useAuth();
 	const { recipe, isLoading, isError } = useRecipe(id!);
 	const imageUrl = useRecipeImage(recipe?.image_id);
 	const { deleteRecipe, isPending: isDeleting } = useDeleteRecipeMutation();
+	const { mutate: patchRecipe, isPending: isPatching } =
+		usePatchRecipeMutation();
+	const { mutate: copyRecipe, isPending: isCopying } = useCopyRecipeMutation();
 	const [recipeServings, setRecipeServings] = useState<number>(1);
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 	const [showAddToShoppingListModal, setShowAddToShoppingListModal] =
 		useState(false);
+
+	// Check if current user is the owner
+	const isOwner = recipe && session?.user?.id === recipe.user_id;
+	// Check if recipe is public
+	const isPublic = recipe?.visibility === "public";
 
 	useEffect(() => {
 		if (recipe) {
 			setRecipeServings(recipe.number_of_servings);
 		}
 	}, [recipe]);
-
-	const recipeServingsMultiplier =
-		recipeServings / (recipe?.number_of_servings || 1);
 
 	// Prepare data for shopping list modal
 	const shoppingItemsData: AddShoppingItemsData = useMemo(() => {
@@ -64,17 +73,6 @@ export default function RecipeDetails() {
 			],
 		};
 	}, [recipe?.id, recipeServings]);
-
-	const addRecipeServing = () => {
-		setRecipeServings((servings) => servings + 1);
-	};
-
-	const removeRecipeServing = () => {
-		if (recipeServings === 1) {
-			return;
-		}
-		setRecipeServings((servings) => servings - 1);
-	};
 
 	const handleEditRecipe = () => {
 		if (!recipe) return;
@@ -109,6 +107,50 @@ export default function RecipeDetails() {
 		setDeleteDialogOpen(false);
 	};
 
+	const handleToggleVisibility = async () => {
+		if (!recipe || !isOwner) return;
+
+		const newVisibility = isPublic ? "owner" : "public";
+		patchRecipe({
+			recipeId: recipe.id,
+			updates: { visibility: newVisibility },
+		});
+	};
+
+	const handleCopyPublicLink = async () => {
+		if (!recipe) return;
+
+		const publicUrl = `${window.location.origin}/public/recipes/${recipe.id}`;
+
+		// Try to use the Clipboard API
+		if (navigator.clipboard) {
+			try {
+				await navigator.clipboard.writeText(publicUrl);
+			} catch (err) {
+				console.error("Failed to copy link:", err);
+			}
+		}
+	};
+
+	const handleSaveRecipe = async () => {
+		if (!recipe || isOwner || !session?.user) return;
+
+		const recipeCopy = convertDatabaseRecipeToSchema(recipe);
+
+		copyRecipe(recipeCopy, {
+			onSuccess: () => {
+				router.push("/recipes");
+			},
+			onError: (error) => {
+				console.error("Failed to save recipe:", error);
+			},
+		});
+	};
+
+	const handleSignUp = () => {
+		router.push("/sign-up");
+	};
+
 	if (isLoading) {
 		return (
 			<View className="flex flex-1 bg-background">
@@ -141,6 +183,77 @@ export default function RecipeDetails() {
 		);
 	}
 
+	const ownerMenuActions = isOwner && (
+		<DropdownMenu>
+			<DropdownMenuTrigger asChild>
+				<Button
+					variant="outline"
+					size="icon"
+					className="w-8 h-8 rounded-full bg-background/80 backdrop-blur-sm border-border/50"
+				>
+					<MoreHorizontalIcon className="text-foreground" size={16} />
+				</Button>
+			</DropdownMenuTrigger>
+			<DropdownMenuContent side="bottom" align="end" className="w-48">
+				<DropdownMenuItem onPress={handleEditRecipe}>
+					<PencilIcon className="text-foreground mr-2" size={16} />
+					<Text>Edit</Text>
+				</DropdownMenuItem>
+				<DropdownMenuItem onPress={handleAddToShoppingList}>
+					<ShoppingCart className="text-foreground mr-2" size={16} />
+					<Text>Add to List</Text>
+				</DropdownMenuItem>
+				<DropdownMenuSeparator />
+				<View className="px-2 py-2">
+					<View className="flex-row items-center justify-between">
+						<View className="flex-row items-center gap-2">
+							{isPublic ? (
+								<Globe className="text-foreground" size={16} />
+							) : (
+								<Lock className="text-foreground" size={16} />
+							)}
+							<Text className="text-sm">{isPublic ? "Public" : "Private"}</Text>
+						</View>
+						<Switch
+							checked={isPublic}
+							onCheckedChange={handleToggleVisibility}
+							disabled={isPatching}
+						/>
+					</View>
+				</View>
+				{isPublic && (
+					<DropdownMenuItem onPress={handleCopyPublicLink}>
+						<Link className="text-foreground mr-2" size={16} />
+						<Text>Copy Link</Text>
+					</DropdownMenuItem>
+				)}
+				<DropdownMenuSeparator />
+				<DropdownMenuItem onPress={handleDeleteRecipe}>
+					<Trash2Icon className="text-destructive mr-2" size={16} />
+					<Text className="text-destructive">Delete</Text>
+				</DropdownMenuItem>
+			</DropdownMenuContent>
+		</DropdownMenu>
+	);
+
+	const saveActions = !isOwner && (
+		<View className="mt-4">
+			{session?.user ? (
+				<Button
+					onPress={handleSaveRecipe}
+					disabled={isCopying}
+					className="w-full"
+				>
+					<Text>{isCopying ? "Saving..." : "Save to My Recipes"}</Text>
+				</Button>
+			) : (
+				<Button onPress={handleSignUp} className="w-full">
+					<Text>Sign Up to Save This Recipe</Text>
+				</Button>
+			)}
+		</View>
+	);
+
 	return (
 		<View className="flex flex-1 bg-background">
 			<Stack.Screen
@@ -148,169 +261,13 @@ export default function RecipeDetails() {
 					title: recipe.name,
 				}}
 			/>
-			<ScrollView className="flex-1">
-				<View className="p-4 w-full max-w-3xl mx-auto">
-					{/* Recipe Image */}
-					<View className="mb-6 relative">
-						{!!imageUrl ? (
-							<Image
-								source={{ uri: imageUrl }}
-								className="h-64 w-full rounded-lg"
-								contentFit="cover"
-							/>
-						) : (
-							<View className="h-64 w-full bg-muted rounded-lg flex items-center justify-center overflow-hidden">
-								<Text className="text-6xl font-bold text-muted-foreground opacity-20">
-									{recipe.name.toUpperCase()}
-								</Text>
-							</View>
-						)}
-						{/* Dropdown Menu over Image */}
-						<View className="absolute top-2 right-2">
-							<DropdownMenu>
-								<DropdownMenuTrigger asChild>
-									<Button
-										variant="outline"
-										size="icon"
-										className="w-8 h-8 rounded-full bg-background/80 backdrop-blur-sm border-border/50"
-									>
-										<MoreHorizontalIcon className="text-foreground" size={16} />
-									</Button>
-								</DropdownMenuTrigger>
-								<DropdownMenuContent side="bottom" align="end" className="w-32">
-									<DropdownMenuItem onPress={handleEditRecipe}>
-										<PencilIcon className="text-foreground mr-2" size={16} />
-										<Text>Edit</Text>
-									</DropdownMenuItem>
-									<DropdownMenuItem onPress={handleAddToShoppingList}>
-										<ShoppingCart className="text-foreground mr-2" size={16} />
-										<Text>Add to List</Text>
-									</DropdownMenuItem>
-									<DropdownMenuItem onPress={handleDeleteRecipe}>
-										<Trash2Icon className="text-destructive mr-2" size={16} />
-										<Text className="text-destructive">Delete</Text>
-									</DropdownMenuItem>
-								</DropdownMenuContent>
-							</DropdownMenu>
-						</View>
-					</View>
-
-					{/* Header Section */}
-					<View className="mb-6">
-						{/* Recipe Title and Description */}
-						<View>
-							<Text className="text-2xl font-bold mb-2">{recipe.name}</Text>
-							{!!recipe.description && (
-								<Text className="text-base text-muted-foreground">
-									{recipe.description}
-								</Text>
-							)}
-						</View>
-					</View>
-
-					{/* Nutrition Section */}
-					<View className="mb-6">
-						<Macros recipe={recipe} />
-					</View>
-
-					{/* Ingredients Section */}
-					<View className="mb-6">
-						<View className="flex flex-row justify-between items-center mb-4">
-							<Text className="text-xl font-semibold">Ingredients</Text>
-							<View className="flex flex-row items-center gap-2">
-								<Button
-									size="icon"
-									variant="outline"
-									className="rounded-full"
-									onPress={removeRecipeServing}
-									disabled={recipeServings === 1}
-								>
-									<Minus className="h-4 w-4" />
-								</Button>
-								<Text className="text-base font-medium min-w-[80px] text-center">
-									{recipeServings} serving{recipeServings !== 1 ? "s" : ""}
-								</Text>
-								<Button
-									size="icon"
-									variant="outline"
-									className="rounded-full"
-									onPress={addRecipeServing}
-								>
-									<Plus className="h-4 w-4" />
-								</Button>
-							</View>
-						</View>
-						<View className="space-y-2">
-							{recipe.ingredient
-								.sort(
-									(a: ExpandedIngredient, b: ExpandedIngredient) =>
-										a.order - b.order,
-								)
-								.map((ingredient: ExpandedIngredient) => {
-									// Check if this is a header
-									if (ingredient.type === "header") {
-										return (
-											<Header
-												key={ingredient.id}
-												name={ingredient.name || ""}
-											/>
-										);
-									}
-
-									// Render regular ingredient
-									return (
-										<Ingredient
-											key={ingredient.id}
-											ingredient={ingredient}
-											recipeServingsMultiplier={recipeServingsMultiplier}
-										/>
-									);
-								})}
-						</View>
-					</View>
-
-					{/* Instructions Section */}
-					<View className="mb-6">
-						<Text className="text-xl font-semibold mb-4">Instructions</Text>
-						<View>
-							{recipe.instruction
-								?.sort(
-									(a: InstructionRow, b: InstructionRow) => a.order - b.order,
-								)
-								.map((instruction: InstructionRow, index: number) => {
-									// Check if this is a header
-									if (instruction.type === "header") {
-										return (
-											<Header
-												key={instruction.id}
-												name={instruction.name || ""}
-											/>
-										);
-									}
-
-									// Calculate the step number by counting only non-header instructions before this one
-									const sortedInstructions =
-										recipe.instruction?.sort(
-											(a: InstructionRow, b: InstructionRow) =>
-												a.order - b.order,
-										) || [];
-
-									const stepNumber = sortedInstructions
-										.slice(0, index)
-										.filter((inst) => inst.type !== "header").length;
-
-									return (
-										<Instruction
-											key={instruction.id}
-											index={stepNumber}
-											value={instruction.value || ""}
-										/>
-									);
-								})}
-						</View>
-					</View>
-				</View>
-			</ScrollView>
+			<RecipeDetailsContent
+				recipe={recipe}
+				imageUrl={imageUrl}
+				headerActions={ownerMenuActions}
+				topActions={saveActions}
+				onServingsChange={setRecipeServings}
+			/>
 
 			{/* Delete Recipe Dialog */}
 			<DeleteRecipeDialog

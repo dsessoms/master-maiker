@@ -4,12 +4,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { ChatTab } from "@/components/recipe/chat-tab";
 import { FormTab } from "@/components/recipe/form-tab";
-import { RecipePreview } from "@/app/api/recipes/generate/chat/index+api";
 import { Text } from "@/components/ui/text";
 import { router } from "expo-router";
 import { useCreateRecipeMutation } from "@/hooks/recipes/use-create-recipe-mutation";
 import { useGenerateRecipeMutation } from "@/hooks/recipes/use-generate-recipe-mutation";
 import { useParseRecipeMutation } from "@/hooks/recipes/use-parse-recipe-mutation";
+import { RecipePreview } from "@/lib/schemas/recipes/generate/chat-schema";
 
 export default function GenerateRecipe() {
 	const [activeTab, setActiveTab] = useState("chat");
