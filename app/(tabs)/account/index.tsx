@@ -1,4 +1,4 @@
-import { ChevronRight, Settings, User, Users } from "@/lib/icons";
+import { ChevronRight, Settings, User, Users, BugIcon } from "@/lib/icons";
 import { ScrollView, TouchableOpacity, View } from "react-native";
 
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,13 @@ import { Text } from "@/components/ui/text";
 import { useAuth } from "@/context/supabase-provider";
 import { useColorScheme } from "@/lib/useColorScheme";
 import { useRouter } from "expo-router";
+import * as Sentry from "@sentry/react-native";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function Account() {
 	const { signOut, session } = useAuth();
@@ -19,19 +26,33 @@ export default function Account() {
 	return (
 		<ScrollView className="flex-1 bg-background">
 			<View className="p-4 w-full max-w-3xl mx-auto gap-y-6">
-				<View>
-					<Card className="p-6 relative">
-						<View className="items-center gap-y-3">
-							<View className="w-16 h-16 bg-primary rounded-full items-center justify-center">
-								<User size={28} color="white" />
-							</View>
-							<View className="items-center">
-								<Text className="text-lg font-semibold text-center">
-									{session?.user?.email || "User"}
-								</Text>
-							</View>
+				<View className="p-6 relative">
+					<View className="items-center gap-y-3">
+						<View className="w-16 h-16 bg-primary rounded-full items-center justify-center">
+							<User size={28} color="white" />
 						</View>
-					</Card>
+						<View className="items-center">
+							<Text className="text-lg font-semibold text-center">
+								{session?.user?.email || "User"}
+							</Text>
+						</View>
+					</View>
+					<DropdownMenu className="absolute top-6 right-6 ">
+						<DropdownMenuTrigger asChild>
+							<Button variant="ghost" className="p-2">
+								<Settings size={20} color={iconColor} />
+							</Button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align="end" className="w-48 native:w-64">
+							<DropdownMenuItem
+								onPress={async () => {
+									await signOut();
+								}}
+							>
+								<Text>Sign Out</Text>
+							</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
 				</View>
 
 				<View>
@@ -52,16 +73,19 @@ export default function Account() {
 					</Card>
 				</View>
 
-				<View>
+				<View className="gap-2">
 					<Button
 						className="w-full"
 						size="default"
 						variant="secondary"
 						onPress={async () => {
-							await signOut();
+							Sentry.showFeedbackWidget();
 						}}
 					>
-						<Text>Sign Out</Text>
+						<View className="flex-row items-center gap-2">
+							<BugIcon size={16} color={iconColor} />
+							<Text>Report Bug</Text>
+						</View>
 					</Button>
 				</View>
 			</View>
