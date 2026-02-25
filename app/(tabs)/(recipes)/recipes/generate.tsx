@@ -5,11 +5,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChatTab } from "@/components/recipe/chat-tab";
 import { FormTab } from "@/components/recipe/form-tab";
 import { Text } from "@/components/ui/text";
-import { router } from "expo-router";
+import { Redirect, router } from "expo-router";
 import { useCreateRecipeMutation } from "@/hooks/recipes/use-create-recipe-mutation";
 import { useGenerateRecipeMutation } from "@/hooks/recipes/use-generate-recipe-mutation";
 import { useParseRecipeMutation } from "@/hooks/recipes/use-parse-recipe-mutation";
 import { RecipePreview } from "@/lib/schemas/recipes/generate/chat-schema";
+import { useFeatureFlag } from "@/hooks/feature-flags/useFeatureFlag";
 
 export default function GenerateRecipe() {
 	const [activeTab, setActiveTab] = useState("chat");
@@ -17,6 +18,11 @@ export default function GenerateRecipe() {
 		useGenerateRecipeMutation();
 	const { createRecipe } = useCreateRecipeMutation();
 	const { parseRecipe, isPending: isParsing } = useParseRecipeMutation();
+
+	const {
+		enabled: premiumFeaturesEnabled,
+		loading: loadingPremiumFeaturesEnabled,
+	} = useFeatureFlag("premium-features");
 
 	const handleFormGenerate = async (options: any) => {
 		try {
@@ -58,6 +64,10 @@ export default function GenerateRecipe() {
 			// TODO: You might want to show an error toast here
 		}
 	};
+
+	if (!loadingPremiumFeaturesEnabled && !premiumFeaturesEnabled) {
+		return <Redirect href={"/(tabs)/(recipes)/recipes"} withAnchor />;
+	}
 
 	return (
 		<View className="flex-1 bg-background">

@@ -33,6 +33,7 @@ import { Text } from "@/components/ui/text";
 import { View } from "react-native";
 import { WeekSelector } from "@/components//week-selector";
 import { useClearMealPlan } from "@/hooks/meal-plans/use-clear-meal-plan";
+import { useFeatureFlag } from "@/hooks/feature-flags/useFeatureFlag";
 
 export default function MealPlanScreen() {
 	const router = useRouter();
@@ -57,6 +58,9 @@ export default function MealPlanScreen() {
 	const [showClearDialog, setShowClearDialog] = useState(false);
 	const [showAddToShoppingListModal, setShowAddToShoppingListModal] =
 		useState(false);
+
+	const { enabled: premiumFeaturesEnabled } =
+		useFeatureFlag("premium-features");
 
 	const weekDates = useMemo(
 		() =>
@@ -210,10 +214,12 @@ export default function MealPlanScreen() {
 						<MustrdButton />
 					</DropdownMenuTrigger>
 					<DropdownMenuContent side="top" align="end" className="w-64 mb-2">
-						<DropdownMenuItem onPress={openGenerateMealPlanModal}>
-							<WandSparkles className="text-foreground mr-2" size={16} />
-							<Text>Generate meal plan</Text>
-						</DropdownMenuItem>
+						{premiumFeaturesEnabled && (
+							<DropdownMenuItem onPress={openGenerateMealPlanModal}>
+								<WandSparkles className="text-foreground mr-2" size={16} />
+								<Text>Generate meal plan</Text>
+							</DropdownMenuItem>
+						)}
 						<DropdownMenuItem
 							onPress={() => setShowAddToShoppingListModal(true)}
 						>

@@ -29,6 +29,7 @@ import { Text } from "@/components/ui/text";
 import { useDeleteRecipeMutation } from "@/hooks/recipes/use-delete-recipe-mutation";
 import { useRecipes } from "@/hooks/recipes/use-recipes";
 import { useState } from "react";
+import { useFeatureFlag } from "@/hooks/feature-flags/useFeatureFlag";
 
 export default function Recipes() {
 	const [searchQuery, setSearchQuery] = useState("");
@@ -36,6 +37,9 @@ export default function Recipes() {
 	const [recipeToDelete, setRecipeToDelete] = useState<string | null>(null);
 	const { recipes, isLoading, isError } = useRecipes();
 	const { deleteRecipe, isPending: isDeleting } = useDeleteRecipeMutation();
+
+	const { enabled: premiumFeaturesEnabled } =
+		useFeatureFlag("premium-features");
 
 	// Filter recipes based on search query
 	const filteredRecipes =
@@ -223,10 +227,12 @@ export default function Recipes() {
 							<Plus className="text-foreground mr-2" size={16} />
 							<Text>Create new recipe</Text>
 						</DropdownMenuItem>
-						<DropdownMenuItem onPress={handleGenerateRecipe}>
-							<WandSparkles className="text-foreground mr-2" size={16} />
-							<Text>Generate recipe</Text>
-						</DropdownMenuItem>
+						{premiumFeaturesEnabled && (
+							<DropdownMenuItem onPress={handleGenerateRecipe}>
+								<WandSparkles className="text-foreground mr-2" size={16} />
+								<Text>Generate recipe</Text>
+							</DropdownMenuItem>
+						)}
 						<DropdownMenuItem onPress={handleImportRecipe}>
 							<Link className="text-foreground mr-2" size={16} />
 							<Text>Import recipe from URL</Text>
