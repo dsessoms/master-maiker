@@ -60,7 +60,15 @@
 					"origin": "http://localhost:8081"
 				}
 			],
-			"expo-secure-store"
+			"expo-secure-store",
+			[
+				"@sentry/react-native/expo",
+				{
+					"url": "https://sentry.io/",
+					"project": "mustrd",
+					"organization": "mustrd"
+				}
+			]
 		],
 		"extra": {
 			"router": {

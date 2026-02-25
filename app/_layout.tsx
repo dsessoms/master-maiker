@@ -17,6 +17,43 @@ import { colors } from "@/constants/colors";
 import { useAppState } from "@/hooks/useAppStateChange";
 import { useColorScheme } from "@/lib/useColorScheme";
 import { useOnlineManager } from "@/hooks/useOnlineManager";
+import * as Sentry from "@sentry/react-native";
+import * as ImagePicker from "expo-image-picker";
+
+Sentry.init({
+	dsn: "https://a2ddd05ab1b215f90bab7b2ebe213037@o4510944951861248.ingest.us.sentry.io/4510944990658560",
+
+	// Adds more context data to events (IP address, cookies, user, etc.)
+	// For more information, visit: https://docs.sentry.io/platforms/react-native/data-management/data-collected/
+	sendDefaultPii: true,
+
+	// Enable Logs
+	enableLogs: true,
+
+	// Configure Session Replay
+	replaysSessionSampleRate: 0.1,
+	replaysOnErrorSampleRate: 1,
+	integrations: [
+		Sentry.mobileReplayIntegration(),
+		Sentry.feedbackIntegration({
+			// Additional SDK configuration goes in here, for example:
+			enableScreenshot: true,
+			imagePicker: ImagePicker as any,
+			showBranding: false,
+			styles: {
+				submitButton: {
+					backgroundColor: "hsl(39, 99%, 63%)",
+				},
+				submitText: {
+					color: "hsl(20, 14.3%, 4.1%)",
+				},
+			},
+		}),
+	],
+
+	// uncomment the line below to enable Spotlight (https://spotlightjs.com)
+	// spotlight: __DEV__,
+});
 
 export const queryClient = new QueryClient();
 
@@ -27,7 +64,7 @@ function onAppStateChange(status: AppStateStatus) {
 	}
 }
 
-export default function AppLayout() {
+export default Sentry.wrap(function AppLayout() {
 	const { colorScheme } = useColorScheme();
 
 	useOnlineManager();
@@ -130,4 +167,4 @@ export default function AppLayout() {
 			<PortalHost />
 		</GestureHandlerRootView>
 	);
-}
+});
