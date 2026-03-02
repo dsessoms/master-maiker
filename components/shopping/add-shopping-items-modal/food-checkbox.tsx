@@ -4,28 +4,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ExpandedFood } from "./types";
 import { Text } from "@/components/ui/text";
 import { View } from "react-native";
-
-const getServingDescription = (
-	numberOfServings: number,
-	serving: {
-		measurement_description: string | null;
-		number_of_units: number | null;
-	},
-	foodType: string | null,
-) => {
-	if (!serving.number_of_units) {
-		return {
-			countString: numberOfServings.toString(),
-			description: serving.measurement_description || "serving",
-		};
-	}
-
-	const totalUnits = numberOfServings * serving.number_of_units;
-	return {
-		countString: totalUnits.toString(),
-		description: serving.measurement_description,
-	};
-};
+import { getServingDescription } from "@/lib/utils/serving-description";
 
 export const FoodCheckbox = ({
 	food,
@@ -41,8 +20,8 @@ export const FoodCheckbox = ({
 	updateIncluded: (newValue: boolean) => void;
 }) => {
 	const serving = food.serving.find((s) => s.id === servingId);
-	const servingDetails = serving
-		? getServingDescription(numberOfServings, serving, food.food_type)
+	const servingDescription = serving
+		? getServingDescription(numberOfServings, serving, food)
 		: null;
 
 	return (
@@ -52,13 +31,8 @@ export const FoodCheckbox = ({
 				onCheckedChange={() => updateIncluded(!included)}
 			/>
 			<View className="flex-1 flex-row flex-wrap gap-1">
-				{servingDetails && (
-					<>
-						<Text className="font-bold">{servingDetails.countString}</Text>
-						{servingDetails.description && (
-							<Text className="font-bold">{servingDetails.description}</Text>
-						)}
-					</>
+				{servingDescription && (
+					<Text className="font-bold">{servingDescription}</Text>
 				)}
 				<Text>{food.food_name}</Text>
 			</View>

@@ -23,7 +23,11 @@ export const ListItem = ({
 	const displayName = item.name || item.food?.food_name || "Unknown item";
 	const servingInfo =
 		item.serving && item.number_of_servings
-			? getServingDescription(item.number_of_servings, item.serving)
+			? getServingDescription(
+					item.number_of_servings,
+					item.serving,
+					item.food ?? {},
+				)
 			: null;
 
 	// Handle checkbox for consolidated items - update all consolidated IDs

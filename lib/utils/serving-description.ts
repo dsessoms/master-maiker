@@ -211,7 +211,7 @@ export function getServingDescription(
 		totalUnitsFractionString = "0";
 	}
 
-	return serving.measurement_description
-		? `${totalUnitsFractionString} ${serving.measurement_description}`
+	return description
+		? `${totalUnitsFractionString} ${description}`
 		: totalUnitsFractionString;
 }

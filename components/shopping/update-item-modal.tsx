@@ -20,23 +20,7 @@ import { router } from "expo-router";
 import { useDeleteShoppingListItemMutation } from "@/hooks/shopping-lists/use-delete-shopping-list-item-mutation";
 import { useRecipeImage } from "@/hooks/recipes/use-recipe-image";
 import { useShoppingListItems } from "@/hooks/shopping-lists/use-shopping-list-items";
-
-const getServingDescription = (
-	numberOfServings: number,
-	serving: {
-		measurement_description: string | null;
-		number_of_units: number | null;
-	},
-) => {
-	if (!serving.number_of_units) {
-		return `${numberOfServings} ${serving.measurement_description || "serving"}`;
-	}
-
-	const totalUnits = numberOfServings * serving.number_of_units;
-	return serving.measurement_description
-		? `${totalUnits} ${serving.measurement_description}`
-		: totalUnits.toString();
-};
+import { getServingDescription } from "@/lib/utils/serving-description";
 
 const RecipeRow = ({
 	recipe,
@@ -87,7 +71,11 @@ export const UpdateItemModal = ({
 		item.consolidatedIds && item.consolidatedIds.length > 1;
 	const servingInfo =
 		item.serving && item.number_of_servings
-			? getServingDescription(item.number_of_servings, item.serving)
+			? getServingDescription(
+					item.number_of_servings,
+					item.serving,
+					item.food ?? {},
+				)
 			: null;
 	const foodName = item.food?.food_name || "";
 	const displayName =
@@ -129,7 +117,11 @@ export const UpdateItemModal = ({
 	React.useEffect(() => {
 		const newServingInfo =
 			item.serving && item.number_of_servings
-				? getServingDescription(item.number_of_servings, item.serving)
+				? getServingDescription(
+						item.number_of_servings,
+						item.serving,
+						item.food ?? {},
+					)
 				: null;
 		const newFoodName = item.food?.food_name || "";
 		const newDisplayName =
