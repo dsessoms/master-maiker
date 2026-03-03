@@ -21,6 +21,7 @@ export function StatefulInput<ParsedType>({
 	renderParsed,
 	renderCustomEditor,
 	placeholder,
+	variant = "input",
 }: StatefulInputProps<ParsedType>) {
 	if (value.state === StatefulInputState.Load) {
 		return <ModeLoading />;
@@ -48,6 +49,7 @@ export function StatefulInput<ParsedType>({
 			state={value.state}
 			raw={value.raw}
 			placeholder={placeholder}
+			variant={variant}
 			onChange={onChange}
 			onMultiplePaste={onMultiplePaste}
 			onSave={onSave}

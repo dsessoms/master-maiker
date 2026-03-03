@@ -1,15 +1,20 @@
 import { Pressable, TextInput, View } from "react-native";
 import React, { useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Search } from "@/lib/icons";
 import { X } from "@/lib/icons/x";
 import { cn } from "@/lib/utils";
-import { StatefulInputState } from "@/components/forms/stateful-input/types";
+import {
+	StatefulInputState,
+	StatefulInputVariant,
+} from "@/components/forms/stateful-input/types";
 
 interface ModeEditorProps {
 	state: StatefulInputState;
 	raw: string;
 	placeholder?: string;
+	variant?: StatefulInputVariant;
 	onChange: (value: string) => void;
 	onMultiplePaste?: (lines: string[]) => void;
 	onSave: () => void;
@@ -23,6 +28,7 @@ export function ModeEditor({
 	state,
 	raw,
 	placeholder,
+	variant = "input",
 	onChange,
 	onMultiplePaste,
 	onSave,
@@ -62,14 +68,17 @@ export function ModeEditor({
 		}
 	}, [onFocus]);
 
+	const InputComponent = variant === "textarea" ? Textarea : Input;
+	const isMultiline = variant === "textarea";
+
 	return (
 		<View className="relative w-full">
-			<Input
+			<InputComponent
 				// autoFocus={state === StatefulInputState.Edit}
 				ref={inputRef}
 				placeholder={placeholder}
 				value={raw}
-				multiline
+				{...(isMultiline && { multiline: true })}
 				onChange={(e) => {
 					const inputType = (e.nativeEvent as any)?.inputType;
 					const newText = e.nativeEvent.text;
@@ -111,7 +120,7 @@ export function ModeEditor({
 					shouldSaveOnBlur.current = false;
 				}}
 				onBlur={handleBlur}
-				className="overflow-hidden ios:pt-3"
+				className="overflow-hidden ios:pt-3 pr-10"
 			/>
 			{!!raw && !!onClear && (
 				<Pressable
@@ -126,8 +135,10 @@ export function ModeEditor({
 						onClear();
 					}}
 					className={cn({
-						"absolute top-0 bottom-0 w-8 justify-center items-center z-10":
-							true,
+						"absolute w-5 z-10": true,
+						"top-0 bottom-0 justify-center items-center":
+							variant !== "textarea",
+						"top-2 items-start": variant === "textarea",
 						"right-10": !!onSearch,
 						"right-2": !onSearch,
 					})}
@@ -147,7 +158,12 @@ export function ModeEditor({
 					}}
 					onBlur={handleBlur}
 					onPress={onSearch}
-					className="absolute right-2 top-0 bottom-0 w-8 justify-center items-center z-10"
+					className={cn({
+						"absolute right-2 w-8 z-10": true,
+						"top-0 bottom-0 justify-center items-center":
+							variant !== "textarea",
+						"top-2 items-start": variant === "textarea",
+					})}
 					hitSlop={{ top: 5, bottom: 5, left: 5, right: 5 }}
 				>
 					<Search size={16} className="text-muted-foreground" />

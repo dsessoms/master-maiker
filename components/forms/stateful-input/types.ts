@@ -22,6 +22,8 @@ export type StatefulInputValue<T> =
 			parsed: T;
 	  };
 
+export type StatefulInputVariant = "input" | "textarea";
+
 export interface StatefulInputProps<ParsedType> {
 	value: {
 		state: StatefulInputState;
@@ -29,6 +31,7 @@ export interface StatefulInputProps<ParsedType> {
 		parsed?: ParsedType;
 	};
 	placeholder?: string;
+	variant?: StatefulInputVariant;
 	onChange: (rawValue: string) => void;
 	onSave: () => void;
 	onEdit: () => void;

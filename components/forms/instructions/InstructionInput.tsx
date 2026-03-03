@@ -19,7 +19,7 @@ export function InstructionInput({
 }: StatefulInputProps<InstructionOrHeader>) {
 	return (
 		<View className="relative w-full">
-			<StatefulInput<InstructionOrHeader> {...props} />
+			<StatefulInput<InstructionOrHeader> {...props} variant="textarea" />
 			<KeyboardHint
 				keyLabel="enter"
 				actionText="to save"
