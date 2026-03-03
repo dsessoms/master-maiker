@@ -415,10 +415,11 @@ export function IngredientInputs({
 							original_name: foodData.originalName,
 							number_of_servings: foodData.amount,
 							meta:
-								foodData.originalName &&
+								foodData.meta ||
+								(foodData.originalName &&
 								foodData.originalName !== foodData.food.food_name
 									? foodData.originalName
-									: undefined,
+									: undefined),
 							image_url: foodData.food.thumbnail_image_url,
 							fat_secret_id: foodData.fat_secret_id,
 							serving: {

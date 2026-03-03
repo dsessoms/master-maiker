@@ -5,6 +5,7 @@ import { Button } from "../ui/button";
 import type { FatSecretServing } from "@/lib/server/fat-secret/types";
 import { FoodData } from "@/components/forms/ingredients/ingredient-input";
 import { FoodServingEditor } from "./food-serving-editor";
+import { Input } from "../ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "../ui/text";
 import { X } from "@/lib/icons/x";
@@ -14,6 +15,7 @@ interface EditableFatSecretFoodItemProps {
 	foodId: string;
 	servingId: string;
 	amount: number;
+	meta?: string;
 	onSave: (updatedFoodData: FoodData) => void;
 	onCancel: () => void;
 	onDelete?: () => void;
@@ -21,7 +23,7 @@ interface EditableFatSecretFoodItemProps {
 
 export const EditableFatSecretFoodItem: React.FC<
 	EditableFatSecretFoodItemProps
-> = ({ foodId, servingId, amount, onSave, onCancel, onDelete }) => {
+> = ({ foodId, servingId, amount, meta, onSave, onCancel, onDelete }) => {
 	const { food, isLoading, error } = useFatSecretFood(String(foodId));
 
 	// Find the matching serving by servingId or use the first one as default
@@ -38,6 +40,7 @@ export const EditableFatSecretFoodItem: React.FC<
 		null,
 	);
 	const [currentAmount, setCurrentAmount] = useState<number>(amount);
+	const [currentMeta, setCurrentMeta] = useState<string>(meta || "");
 
 	// Update serving when food loads
 	React.useEffect(() => {
@@ -62,6 +65,7 @@ export const EditableFatSecretFoodItem: React.FC<
 			serving: currentServing,
 			amount: currentAmount,
 			fat_secret_id: Number(foodId),
+			meta: currentMeta.trim() || undefined,
 		};
 
 		onSave(foodData);
@@ -107,6 +111,18 @@ export const EditableFatSecretFoodItem: React.FC<
 				onServingChange={handleServingChange}
 				showMacros={true}
 			/>
+
+			<View>
+				<Text className="text-sm text-muted-foreground mb-1">
+					Notes (optional)
+				</Text>
+				<Input
+					value={currentMeta}
+					onChangeText={setCurrentMeta}
+					placeholder="e.g., yellow or red, chopped, etc."
+					className="h-10"
+				/>
+			</View>
 
 			<View className="flex-row space-x-2">
 				<Button

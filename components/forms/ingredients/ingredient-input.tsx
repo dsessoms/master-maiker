@@ -24,6 +24,7 @@ export interface FoodData {
 	amount: number; // number of servings
 	originalName?: string; // the original text that was typed
 	fat_secret_id: number; // Fat Secret food ID for reloading
+	meta?: string; // additional description (e.g., "yellow or red")
 }
 
 export interface IngredientInputProps
@@ -155,6 +156,7 @@ export function IngredientInput({
 										foodId={String(parsed.fat_secret_id)}
 										servingId={String(parsed.serving.fat_secret_id)}
 										amount={parsed.number_of_servings}
+										meta={parsed.meta || undefined}
 										onSave={handleEditableFoodSave}
 										onCancel={handleEditableFoodCancel}
 										onDelete={props.onClear}
