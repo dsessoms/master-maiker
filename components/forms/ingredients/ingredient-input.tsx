@@ -157,6 +157,7 @@ export function IngredientInput({
 										amount={parsed.number_of_servings}
 										onSave={handleEditableFoodSave}
 										onCancel={handleEditableFoodCancel}
+										onDelete={props.onClear}
 									/>
 								);
 							}
