@@ -32,6 +32,10 @@
 
 1. Run `npx supabase migration up`
 
+### Apply new migrations to production database
+
+1. Run `npx supabase db push`
+
 ### Reset local database completely
 
 1. Run `npx supabase db reset`

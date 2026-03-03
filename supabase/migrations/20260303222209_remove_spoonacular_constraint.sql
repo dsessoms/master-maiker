@@ -1,6 +1,5 @@
--- Update add_recipe function to:
--- 1. Include all nutrition data fields (fiber, sugar, sodium, vitamins, etc.)
--- 2. Accept food_type parameter instead of defaulting to "Generic"
+-- Update add_recipe function to remove spoonacular_id and measurement_description checks
+-- Keep only fat_secret_id checks for deduplication
 CREATE OR REPLACE FUNCTION "public"."add_recipe"("name" character varying, "number_of_servings" double precision, "ingredients" "json"[], "instructions" "json"[] DEFAULT NULL::"json"[], "recipe_id" "uuid" DEFAULT "gen_random_uuid"(), "prep_time_hours" integer DEFAULT NULL::integer, "prep_time_minutes" integer DEFAULT NULL::integer, "cook_time_hours" integer DEFAULT NULL::integer, "cook_time_minutes" integer DEFAULT NULL::integer, "description" "text" DEFAULT NULL::"text", "image_id" "uuid" DEFAULT NULL::"uuid") RETURNS "uuid"
     LANGUAGE "plpgsql"
     AS $$
