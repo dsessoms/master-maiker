@@ -1,16 +1,19 @@
 import {
 	ActivityIndicator,
 	ScrollView,
-	View,
 	TouchableOpacity,
+	View,
 } from "react-native";
 import { Redirect, Stack, useLocalSearchParams, useRouter } from "expo-router";
 
 import { Button } from "@/components/ui/button";
 import { CircleCheck } from "@/lib/icons/circle-check";
+import { Input } from "@/components/ui/input";
+import { ProfileServingBadge } from "@/components/meal-plan/profile-serving-badge";
 import { RecipeCard } from "@/components/recipe/recipe-card";
 import { RecipeServingSelectorModal } from "@/components/meal-plan/recipe-serving-selector-modal";
 import { SafeAreaView } from "@/components/safe-area-view";
+import { Search } from "@/lib/icons";
 import { Text } from "@/components/ui/text";
 import { useAddFoodEntry } from "@/hooks/recipes/use-add-food-entry";
 import { useProfiles } from "@/hooks/profiles/useProfiles";
@@ -29,6 +32,7 @@ export default function AddRecipeScreen() {
 	const { profiles = [] } = useProfiles();
 	const addFoodEntryMutation = useAddFoodEntry();
 
+	const [searchQuery, setSearchQuery] = useState("");
 	const [selectedRecipes, setSelectedRecipes] = useState<RecipeSelection[]>([]);
 	const [openModals, setOpenModals] = useState<{ [recipeId: string]: boolean }>(
 		{},
@@ -37,6 +41,12 @@ export default function AddRecipeScreen() {
 	if (!mealType || !date) {
 		return <Redirect href="/(tabs)/(meal-plan)/meal-plan" />;
 	}
+
+	// Filter recipes based on search query
+	const filteredRecipes =
+		recipes?.filter((recipe) =>
+			recipe.name.toLowerCase().includes(searchQuery.toLowerCase()),
+		) || [];
 
 	const handleRecipeToggle = (recipeId: string) => {
 		setSelectedRecipes((prev) => {
@@ -97,19 +107,23 @@ export default function AddRecipeScreen() {
 		<SafeAreaView className="flex flex-1 bg-background">
 			<Stack.Screen
 				options={{
-					title: "Add Recipes",
+					title: `Add ${mealType} Recipes`,
 				}}
 			/>
 			<View className="flex flex-1 gap-4 p-4">
-				{/* Header */}
-				<View className="flex flex-col gap-2">
-					<Text className="text-2xl font-bold">Add Recipes</Text>
-					<Text className="text-sm text-muted-foreground">
-						{mealType} on {date}
-					</Text>
+				{/* Search Bar */}
+				<View className="relative">
+					<Input
+						placeholder="Search recipes"
+						value={searchQuery}
+						onChangeText={setSearchQuery}
+						className="pl-10"
+					/>
+					<View className="absolute left-3 top-1/2 -translate-y-1/2">
+						<Search className="text-muted-foreground" size={16} />
+					</View>
 				</View>
 
-				{/* Recipe list */}
 				{isLoading ? (
 					<View className="flex flex-1 items-center justify-center">
 						<ActivityIndicator size="large" />
@@ -121,9 +135,9 @@ export default function AddRecipeScreen() {
 						}}
 						className="flex-1 native:flex"
 					>
-						<View className="native:flex-row native:flex-wrap native:gap-2 web:grid web:grid-cols-2 md:web:grid-cols-3 web:gap-2">
-							{recipes && recipes.length > 0 ? (
-								recipes.map((recipe) => {
+						{filteredRecipes && filteredRecipes.length > 0 ? (
+							<View className="native:flex-row native:flex-wrap native:gap-2 web:grid web:grid-cols-2 md:web:grid-cols-3 web:gap-2">
+								{filteredRecipes.map((recipe) => {
 									const selection = selectedRecipes.find(
 										(r) => r.recipeId === recipe.id,
 									);
@@ -140,13 +154,6 @@ export default function AddRecipeScreen() {
 											profile_id: p.id,
 											servings: 1,
 										}));
-
-									const servingsText =
-										servings.length === 0
-											? "No profiles selected"
-											: servings.length === 1
-												? `${profiles.find((p) => p.id === servings[0].profile_id)?.name}: ${servings[0].servings} serving${servings[0].servings !== 1 ? "s" : ""}`
-												: `${servings.length} profiles selected`;
 
 									const checkboxOverlay = (
 										<View className="absolute inset-0">
@@ -165,9 +172,17 @@ export default function AddRecipeScreen() {
 
 									const servingsContent = !!selection && (
 										<TouchableOpacity onPress={() => setModalOpen(true)}>
-											<Text className="text-xs text-primary line-clamp-1 font-medium">
-												{servingsText}
-											</Text>
+											<View className="flex-row flex-wrap gap-1">
+												{servings
+													.filter((s) => s.servings > 0)
+													.map((s) => (
+														<ProfileServingBadge
+															key={s.profile_id}
+															profileId={s.profile_id}
+															servings={s.servings}
+														/>
+													))}
+											</View>
 										</TouchableOpacity>
 									);
 
@@ -195,15 +210,21 @@ export default function AddRecipeScreen() {
 											/>
 										</View>
 									);
-								})
-							) : (
-								<View className="flex items-center justify-center py-8 w-full">
-									<Text className="text-muted-foreground">
-										No recipes available
-									</Text>
-								</View>
-							)}
-						</View>
+								})}
+							</View>
+						) : recipes && recipes.length > 0 && searchQuery ? (
+							<View className="flex items-center justify-center py-8">
+								<Text className="text-muted-foreground">
+									No recipes match your search for &quot;{searchQuery}&quot;
+								</Text>
+							</View>
+						) : (
+							<View className="flex items-center justify-center py-8">
+								<Text className="text-muted-foreground">
+									No recipes available
+								</Text>
+							</View>
+						)}
 					</ScrollView>
 				)}
 
