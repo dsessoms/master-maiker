@@ -1,14 +1,15 @@
 import { Pressable, TextInput, View } from "react-native";
 import React, { useEffect, useRef } from "react";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Search } from "@/lib/icons";
-import { X } from "@/lib/icons/x";
-import { cn } from "@/lib/utils";
 import {
 	StatefulInputState,
 	StatefulInputVariant,
 } from "@/components/forms/stateful-input/types";
+
+import { Input } from "@/components/ui/input";
+import { Search } from "@/lib/icons";
+import { Textarea } from "@/components/ui/textarea";
+import { X } from "@/lib/icons/x";
+import { cn } from "@/lib/utils";
 
 interface ModeEditorProps {
 	state: StatefulInputState;
@@ -66,7 +67,7 @@ export function ModeEditor({
 			}, 100);
 			onFocus?.();
 		}
-	}, [onFocus]);
+	}, [onFocus, state]);
 
 	const InputComponent = variant === "textarea" ? Textarea : Input;
 	const isMultiline = variant === "textarea";

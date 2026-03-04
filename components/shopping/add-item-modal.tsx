@@ -5,15 +5,12 @@ import * as React from "react";
 import {
 	Dialog,
 	DialogContent,
-	DialogFooter,
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
 
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { KeyboardHint } from "@/components/ui/keyboard-hint";
-import { Plus } from "@/lib/icons";
 import { View } from "react-native";
 import { useCreateShoppingListItemMutation } from "@/hooks/shopping-lists/use-create-shopping-list-item-mutation";
 
@@ -27,7 +24,7 @@ export const AddItemModal = ({
 	onClose: () => void;
 }) => {
 	const [itemName, setItemName] = React.useState("");
-	const { createShoppingListItem, isPending } =
+	const { createShoppingListItem } =
 		useCreateShoppingListItemMutation(shoppingListId);
 
 	const handleAdd = async () => {

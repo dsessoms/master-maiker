@@ -16,8 +16,6 @@ import { AlertCircleIcon } from "@/lib/icons";
 import { AuthError } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { PasswordInput } from "@/components/ui/password-input";
-import { Separator } from "@/components/ui/separator";
-import { SocialConnections } from "@/components/social-connections";
 import { Text } from "@/components/ui/text";
 import { useAuth } from "@/context/supabase-provider";
 import { useForm } from "react-hook-form";

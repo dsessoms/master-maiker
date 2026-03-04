@@ -1,7 +1,6 @@
 import { ScrollView, View } from "react-native";
 
 import { ResetPasswordWithCodeForm } from "@/components/reset-password-with-code-form";
-import { SafeAreaView } from "@/components/safe-area-view";
 
 export default function ResetPasswordWithCodeScreen() {
 	return (

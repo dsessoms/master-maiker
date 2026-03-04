@@ -4,7 +4,6 @@ import {
 	GenderSelect,
 	WeightGoalSelect,
 } from "@/components/forms/ProfileSelectComponents";
-import { Calendar, MoreHorizontalIcon } from "@/lib/icons";
 import {
 	CreateProfileData,
 	useCreateProfile,
@@ -27,6 +26,7 @@ import {
 } from "@/hooks/profiles/useUpdateProfile";
 
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/lib/icons";
 import { Card } from "@/components/ui/card";
 import { ChipsInput } from "@/components/ui/chips-input";
 import { Database } from "@/database.types";
@@ -39,7 +39,6 @@ import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import { Text } from "@/components/ui/text";
 import { supabase } from "@/config/supabase";
 import { useAvatarImage } from "@/hooks/profiles/use-avatar-image";
-import { useTheme } from "@/context/theme-context";
 import { v4 as uuidv4 } from "uuid";
 
 type Profile = Database["public"]["Tables"]["profile"]["Row"];
@@ -307,41 +306,18 @@ export function ProfileForm({
 					1200,
 					adjustCaloriesForWeightGoal(tdee, calorieTargetType, goalLbsPerWeek),
 				);
-				const operation = calorieTargetType === "lose" ? "subtract" : "add";
 
 				breakdown += `\n\nWeight Goal Adjustment:\n${tdee} ${calorieTargetType === "lose" ? "−" : "+"} ${adjustment} calories (${goalLbsPerWeek} lbs/week) = ${finalCalories} calories/day`;
 			}
 
 			return breakdown;
-		} catch (error) {
+		} catch {
 			return "Error calculating breakdown. Please check your inputs.";
 		}
 	};
 
 	const updateField = (field: string, value: string | boolean | number) => {
 		setFormData((prev) => ({ ...prev, [field]: value }));
-	};
-
-	// Format date for display
-	const formatDate = (date: DateType): string => {
-		if (!date) return "";
-
-		// Handle different date types (Date, string, Dayjs)
-		let dateObj: Date;
-		if (date instanceof Date) {
-			dateObj = date;
-		} else if (typeof date === "string") {
-			dateObj = new Date(date);
-		} else {
-			// Assume it's a Dayjs object
-			dateObj = (date as any).toDate();
-		}
-
-		return dateObj.toLocaleDateString("en-US", {
-			year: "numeric",
-			month: "long",
-			day: "numeric",
-		});
 	};
 
 	// Handle date selection

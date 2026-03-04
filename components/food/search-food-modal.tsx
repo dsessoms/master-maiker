@@ -192,7 +192,7 @@ export const SearchFoodModal: React.FC<SearchFoodModalProps> = ({
 						!searchResults?.foods_search?.results?.food?.length && (
 							<View className="p-4 items-center">
 								<Text className="text-muted-foreground">
-									No foods found for "{debouncedQuery}"
+									No foods found for &quot;{debouncedQuery}&quot;
 								</Text>
 							</View>
 						)}

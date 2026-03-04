@@ -16,7 +16,6 @@ import {
 
 import { Input } from "../ui/input";
 import { Macros } from "@/components/meal-plan/macros";
-import { Text } from "../ui/text";
 import type { TriggerRef } from "@rn-primitives/select";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 

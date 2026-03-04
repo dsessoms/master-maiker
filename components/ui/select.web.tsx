@@ -93,7 +93,7 @@ interface SelectLabelProps extends React.HTMLAttributes<HTMLDivElement> {
 	children: React.ReactNode;
 }
 
-interface SelectSeparatorProps extends React.HTMLAttributes<HTMLHRElement> {}
+type SelectSeparatorProps = React.HTMLAttributes<HTMLHRElement>;
 
 interface SelectGroupProps extends React.HTMLAttributes<HTMLDivElement> {
 	children: React.ReactNode;

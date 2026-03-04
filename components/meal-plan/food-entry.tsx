@@ -11,7 +11,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
-import { MoreHorizontalIcon, PencilIcon, Trash2Icon } from "@/lib/icons";
+import { MoreHorizontalIcon, Trash2Icon } from "@/lib/icons";
 import { Pressable, View } from "react-native";
 import { useContext, useRef, useState } from "react";
 

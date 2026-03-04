@@ -3,7 +3,6 @@ import { ScrollView, View } from "react-native";
 import { ResetPasswordForm } from "@/components/reset-password-form";
 import { supabase } from "@/config/supabase";
 import { useEffect } from "react";
-import { useRouter } from "expo-router";
 
 function parseURLFragments(url: string): Record<string, string> {
 	const fragments: Record<string, string> = {};
@@ -22,8 +21,6 @@ function parseURLFragments(url: string): Record<string, string> {
 }
 
 export default function ResetPassword() {
-	const router = useRouter();
-
 	useEffect(() => {
 		// Parse URL fragments for auth tokens
 		const fragments = parseURLFragments(window?.location?.href || "");

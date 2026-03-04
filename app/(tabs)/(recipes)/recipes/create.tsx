@@ -1,9 +1,8 @@
-import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
+import { KeyboardAvoidingView, Platform, View } from "react-native";
 import { Stack, useRouter } from "expo-router";
 
 import { Recipe } from "@/lib/schemas";
 import { RecipeForm } from "@/components/forms/RecipeForm";
-import { SafeAreaView } from "@/components/safe-area-view";
 import { useAuth } from "@/context/supabase-provider";
 import { useCreateRecipeMutation } from "@/hooks/recipes/use-create-recipe-mutation";
 

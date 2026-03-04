@@ -9,10 +9,10 @@ import { useCreateNote, useDeleteNote, useUpdateNote } from "@/hooks/notes";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { MealPlanContext } from "@/context/meal-plan-context";
+import { Pressable } from "react-native-gesture-handler";
 import { Text } from "@/components/ui/text";
 import { X } from "@/lib/icons";
 import { cn } from "@/lib/utils";
-import { Pressable } from "react-native-gesture-handler";
 
 interface Note {
 	id: string;
@@ -161,7 +161,7 @@ export const NotesModal = ({
 	date,
 	mealType,
 }: NotesModalProps) => {
-	const [{ notes: noteEntities, focusedIndex }, dispatch] = useReducer(
+	const [{ notes: noteEntities }, dispatch] = useReducer(
 		notesReducer,
 		undefined,
 		getInitialState,

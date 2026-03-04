@@ -99,7 +99,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 			return;
 		}
 
-		const { data, error } = await supabase.auth.resend({
+		await supabase.auth.resend({
 			email: emailToVerify,
 			type: "signup",
 		});

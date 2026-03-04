@@ -1,20 +1,20 @@
+import { GripVertical, Plus } from "@/lib/icons";
 import { Header, Ingredient } from "@/lib/schemas";
+import { Pressable, View } from "react-native";
 import {
 	StatefulInput,
 	StatefulInputState,
 	StatefulInputValue,
 } from "@/components/forms/stateful-input/stateful-input";
 
+import { AnimatedRef } from "react-native-reanimated";
 import { Button } from "@/components/ui/button";
 import { IngredientInput } from "@/components/forms/ingredients/ingredient-input";
-import { GripVertical, Plus } from "@/lib/icons";
-import { Pressable, View } from "react-native";
 import React from "react";
+import Sortable from "react-native-sortables";
+import type { SortableGridRenderItem } from "react-native-sortables";
 import { Text } from "@/components/ui/text";
 import { useParseIngredients } from "../../../hooks/recipes/use-parse-ingredients";
-import Animated, { AnimatedRef } from "react-native-reanimated";
-import type { SortableGridRenderItem } from "react-native-sortables";
-import Sortable from "react-native-sortables";
 import { v4 as uuidv4 } from "uuid";
 
 // Union type for ingredients or headers

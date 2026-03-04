@@ -2,13 +2,10 @@ import { ScrollView, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { Card } from "@/components/ui/card";
-import { Database } from "@/database.types";
 import { ProfileForm } from "@/components/forms/ProfileForm";
 import React from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useProfiles } from "@/hooks/profiles/useProfiles";
-
-type Profile = Database["public"]["Tables"]["profile"]["Row"];
 
 export default function ProfileFormPage() {
 	const router = useRouter();

@@ -1,5 +1,5 @@
 import { Pressable, View } from "react-native";
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 
 import { Button } from "../ui/button";
 import type { FatSecretServing } from "@/lib/server/fat-secret/types";
@@ -27,14 +27,14 @@ export const EditableFatSecretFoodItem: React.FC<
 	const { food, isLoading, error } = useFatSecretFood(String(foodId));
 
 	// Find the matching serving by servingId or use the first one as default
-	const getInitialServing = (): FatSecretServing | null => {
+	const getInitialServing = useCallback((): FatSecretServing | null => {
 		if (!food?.servings?.serving) return null;
 		return (
 			food.servings.serving.find(
 				(serving: FatSecretServing) => serving.serving_id === Number(servingId),
 			) || food.servings.serving[0]
 		);
-	};
+	}, [food?.servings.serving, servingId]);
 
 	const [currentServing, setCurrentServing] = useState<FatSecretServing | null>(
 		null,
@@ -47,7 +47,7 @@ export const EditableFatSecretFoodItem: React.FC<
 		if (food && !currentServing) {
 			setCurrentServing(getInitialServing());
 		}
-	}, [food, currentServing]);
+	}, [food, currentServing, getInitialServing]);
 
 	const handleServingChange = (
 		serving: FatSecretServing,
@@ -78,7 +78,9 @@ export const EditableFatSecretFoodItem: React.FC<
 	if (error || !food) {
 		return (
 			<View className="p-4 border border-destructive rounded-lg">
-				<Text className="text-destructive">"Failed to load food data"</Text>
+				<Text className="text-destructive">
+					&quot;Failed to load food data&quot;
+				</Text>
 			</View>
 		);
 	}

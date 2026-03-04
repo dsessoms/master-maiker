@@ -27,9 +27,9 @@ import { RecipeCardSkeleton } from "@/components/recipe/recipe-card-skeleton";
 import { SafeAreaView } from "@/components/safe-area-view";
 import { Text } from "@/components/ui/text";
 import { useDeleteRecipeMutation } from "@/hooks/recipes/use-delete-recipe-mutation";
+import { useFeatureFlag } from "@/hooks/feature-flags/useFeatureFlag";
 import { useRecipes } from "@/hooks/recipes/use-recipes";
 import { useState } from "react";
-import { useFeatureFlag } from "@/hooks/feature-flags/useFeatureFlag";
 
 export default function Recipes() {
 	const [searchQuery, setSearchQuery] = useState("");
@@ -138,7 +138,9 @@ export default function Recipes() {
 						recipes.length > 0 &&
 						filteredRecipes.length === 0 &&
 						searchQuery && (
-							<Text>No recipes match your search for "{searchQuery}".</Text>
+							<Text>
+								No recipes match your search for &quot;{searchQuery}&quot;.
+							</Text>
 						)}
 					{!!filteredRecipes && filteredRecipes.length > 0 && (
 						<View className="native:flex-row native:flex-wrap native:gap-2 web:grid web:grid-cols-2 md:web:grid-cols-3 web:gap-2">

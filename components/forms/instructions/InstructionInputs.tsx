@@ -1,19 +1,18 @@
+import { GripVertical, Plus } from "@/lib/icons";
 import {
 	InstructionInput,
 	InstructionInputValue,
 	InstructionOrHeader,
 } from "./InstructionInput";
+import { Pressable, View } from "react-native";
 import React, { useEffect, useReducer } from "react";
-import { AnimatedRef } from "react-native-reanimated";
 import Sortable, { SortableGridRenderItem } from "react-native-sortables";
-import { v4 as uuidv4 } from "uuid";
 
+import { AnimatedRef } from "react-native-reanimated";
 import { Button } from "@/components/ui/button";
-import { GripVertical, Plus } from "@/lib/icons";
 import { StatefulInputState } from "../stateful-input/stateful-input";
 import { Text } from "@/components/ui/text";
-import { Pressable, View } from "react-native";
-import { cn } from "@/lib/utils";
+import { v4 as uuidv4 } from "uuid";
 
 interface InstructionInputsProps {
 	onInstructionsChange: (instructions: InstructionOrHeader[]) => void;
@@ -138,9 +137,6 @@ function instructionsReducer(
 				parsed: undefined,
 				id: uuidv4(),
 			});
-
-			// Focus the new instruction at the end
-			const focusedIndex = action.index + action.instructionLines.length;
 
 			return {
 				instructions: newInstructions,

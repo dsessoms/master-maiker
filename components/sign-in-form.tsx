@@ -1,7 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { SocialConnections } from "@/components/social-connections";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -10,7 +9,6 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Text } from "@/components/ui/text";
 import { Form, FormField, FormInput } from "@/components/ui/form";
 import { PasswordInput } from "@/components/ui/password-input";

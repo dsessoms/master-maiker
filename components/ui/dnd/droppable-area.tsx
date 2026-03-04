@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, View } from "react-native";
-import { runOnJS, runOnUI } from "react-native-reanimated";
 
 import { useDnD } from "@/components/ui/dnd/dnd-context";
 
@@ -21,7 +20,7 @@ export const DroppableArea: React.FC<DroppableAreaProps> = ({
 }) => {
 	const { isDragging, registerDropZone, unregisterDropZone } = useDnD();
 	const dropRef = useRef<View>(null);
-	const [isOver, setIsOver] = useState(false);
+	const [, setIsOver] = useState(false);
 	const hasRegistered = useRef(false);
 	const isOverRef = useRef(false); // Track hover state without causing re-renders
 

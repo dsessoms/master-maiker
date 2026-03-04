@@ -11,14 +11,12 @@ import { useAuth } from "@/context/supabase-provider";
 import { useCopyRecipeMutation } from "@/hooks/recipes/use-copy-recipe-mutation";
 import { useRecipe } from "@/hooks/recipes/use-recipe";
 import { useRecipeImage } from "@/hooks/recipes/use-recipe-image";
-import { useRecipes } from "@/hooks/recipes/use-recipes";
 
 export default function PublicRecipeDetails() {
 	const { id } = useLocalSearchParams<{ id: string }>();
 	const router = useRouter();
 	const { session } = useAuth();
 	const { recipe, isLoading, isError } = useRecipe(id!);
-	const { recipes: userRecipes } = useRecipes();
 	const imageUrl = useRecipeImage(recipe?.image_id);
 	const { mutate: copyRecipe, isPending: isCopying } = useCopyRecipeMutation();
 
@@ -73,7 +71,7 @@ export default function PublicRecipeDetails() {
 				<View className="flex-1 justify-center items-center p-4">
 					<Text className="text-lg font-semibold mb-2">Recipe not found</Text>
 					<Text className="text-center text-muted-foreground mb-4">
-						This recipe doesn't exist or is no longer public.
+						This recipe doesn&apos;t exist or is no longer public.
 					</Text>
 					<Button onPress={() => router.back()}>
 						<Text>Go Back</Text>

@@ -99,7 +99,7 @@ const ModalContent = ({
 
 	const recipeIds = React.useMemo(
 		() => itemsToAdd.recipes?.map(({ recipeId }) => recipeId),
-		[],
+		[itemsToAdd.recipes],
 	);
 
 	const { recipes, isLoading: isLoadingRecipes } =
@@ -137,7 +137,7 @@ const ModalContent = ({
 		});
 
 		dispatch({ type: "loadRecipes", recipeMap });
-	}, [recipes?.length]);
+	}, [itemsToAdd.recipes, recipes, recipes?.length]);
 
 	const updateIngredient = useCallback(
 		(recipeId: string, ingredientId: string, include: boolean) => {
@@ -270,7 +270,7 @@ export const AddShoppingItemsModal = ({
 		if (defaultList?.id) {
 			setSelectedListId(defaultList.id);
 		}
-	}, [lists]);
+	}, [lists, selectedListId]);
 
 	return (
 		<Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>

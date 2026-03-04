@@ -33,7 +33,7 @@ export const ThemeContextProvider: React.FC<PropsWithChildren> = ({
 			setTheme("light");
 			setColorScheme("light");
 		}
-	}, [theme]);
+	}, [setColorScheme, theme]);
 
 	return (
 		<ThemeContext.Provider

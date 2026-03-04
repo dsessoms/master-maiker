@@ -33,7 +33,6 @@ import { useDeleteRecipeMutation } from "@/hooks/recipes/use-delete-recipe-mutat
 import { usePatchRecipeMutation } from "@/hooks/recipes/use-patch-recipe-mutation";
 import { useRecipe } from "@/hooks/recipes/use-recipe";
 import { useRecipeImage } from "@/hooks/recipes/use-recipe-image";
-import { useRecipes } from "@/hooks/recipes/use-recipes";
 
 export default function RecipeDetails() {
 	const { id } = useLocalSearchParams<{ id: string }>();
@@ -64,6 +63,7 @@ export default function RecipeDetails() {
 	// Prepare data for shopping list modal
 	const shoppingItemsData: AddShoppingItemsData = useMemo(() => {
 		if (!recipe) return { recipes: [] };
+
 		return {
 			recipes: [
 				{
@@ -72,7 +72,7 @@ export default function RecipeDetails() {
 				},
 			],
 		};
-	}, [recipe?.id, recipeServings]);
+	}, [recipe, recipeServings]);
 
 	const handleEditRecipe = () => {
 		if (!recipe) return;
@@ -173,8 +173,8 @@ export default function RecipeDetails() {
 			<View className="flex flex-1 bg-background justify-center items-center p-4">
 				<Text className="text-lg font-semibold mb-2">Recipe not found</Text>
 				<Text className="text-center text-muted-foreground mb-4">
-					The recipe you're looking for doesn't exist or you don't have
-					permission to view it.
+					The recipe you&apos;re looking for doesn&apos;t exist or you
+					don&apos;t have permission to view it.
 				</Text>
 				<Button onPress={() => router.back()}>
 					<Text>Go Back</Text>

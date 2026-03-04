@@ -1,12 +1,13 @@
-import { ChevronRight, Settings, User, Users, BugIcon } from "@/lib/icons";
-import { Pressable, ScrollView, TouchableOpacity, View } from "react-native";
+import * as Sentry from "@sentry/react-native";
 
-import { Text } from "@/components/ui/text";
+import { BugIcon, ChevronRight, Settings, User, Users } from "@/lib/icons";
+import { Pressable, ScrollView, View } from "react-native";
+
 import { Separator } from "@/components/ui/separator";
+import { Text } from "@/components/ui/text";
 import { useAuth } from "@/context/supabase-provider";
 import { useColorScheme } from "@/lib/useColorScheme";
 import { useRouter } from "expo-router";
-import * as Sentry from "@sentry/react-native";
 
 export default function Account() {
 	const { session } = useAuth();

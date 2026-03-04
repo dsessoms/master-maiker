@@ -1,8 +1,6 @@
 import Animated, {
 	runOnJS,
-	useAnimatedReaction,
 	useAnimatedStyle,
-	useDerivedValue,
 	useSharedValue,
 	withSpring,
 	type SharedValue,
@@ -15,7 +13,6 @@ import React, {
 	useRef,
 	useState,
 } from "react";
-import { StyleSheet, View } from "react-native";
 
 interface DragPosition {
 	x: number;
@@ -107,6 +104,7 @@ export const DnDProvider: React.FC<DnDProviderProps> = ({ children }) => {
 			scale.value = withSpring(1.05);
 			opacity.value = withSpring(0.9);
 		},
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 		[scrollOffset],
 	);
 
@@ -181,6 +179,7 @@ export const DnDProvider: React.FC<DnDProviderProps> = ({ children }) => {
 				absoluteY,
 			);
 		},
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 		[checkCollisionDetection],
 	);
 

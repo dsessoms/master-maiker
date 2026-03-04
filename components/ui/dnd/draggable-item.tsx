@@ -3,7 +3,6 @@ import Animated, {
 	runOnUI,
 	useAnimatedStyle,
 	useSharedValue,
-	withSpring,
 } from "react-native-reanimated";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import React, { useRef } from "react";
@@ -22,12 +21,7 @@ export const DraggableItem: React.FC<DraggableItemProps> = ({
 	data,
 	onDragStateChange,
 }) => {
-	const {
-		startDrag,
-		updateDragPosition,
-		endDrag,
-		isDragging: globalIsDragging,
-	} = useDnD();
+	const { startDrag, updateDragPosition, endDrag } = useDnD();
 	const itemRef = useRef<View>(null);
 	const isCurrentlyDragging = useSharedValue(false);
 	const hasDragged = useRef(false);

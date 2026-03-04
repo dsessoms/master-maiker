@@ -854,7 +854,7 @@ export const GenerateMealPlanModal = ({
 									/>
 									{filteredRecipes.length === 0 && (
 										<Text className="text-muted-foreground text-center mb-4">
-											No recipes found matching "{recipeSearchQuery}"
+											No recipes found matching &quot;{recipeSearchQuery}&quot;
 										</Text>
 									)}
 									<Button onPress={saveRecipes}>
