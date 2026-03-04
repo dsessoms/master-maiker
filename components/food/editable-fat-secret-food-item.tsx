@@ -75,12 +75,10 @@ export const EditableFatSecretFoodItem: React.FC<
 		return <Skeleton className="h-[120px] w-full rounded-lg" />;
 	}
 
-	if (error) {
+	if (error || !food) {
 		return (
 			<View className="p-4 border border-destructive rounded-lg">
-				<Text className="text-destructive">
-					{error ? "Failed to load food data" : "Loading food data..."}
-				</Text>
+				<Text className="text-destructive">"Failed to load food data"</Text>
 			</View>
 		);
 	}

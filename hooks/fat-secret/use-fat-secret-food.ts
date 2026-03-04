@@ -9,7 +9,9 @@ export const useFatSecretFood = (fatSecretId: string) => {
 			const response = await axiosWithAuth.get<GetFoodResponse>(
 				`/api/fat-secret/food?fatSecretId=${fatSecretId}`,
 			);
-			return response.data.food;
+			if ("food" in response.data) {
+				return response.data.food;
+			}
 		},
 		enabled: !!fatSecretId,
 	});
