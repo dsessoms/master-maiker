@@ -1,5 +1,8 @@
 import "../global.css";
 
+import * as ImagePicker from "expo-image-picker";
+import * as Sentry from "@sentry/react-native";
+
 import { AppStateStatus, Platform } from "react-native";
 import {
 	QueryClient,
@@ -17,8 +20,6 @@ import { colors } from "@/constants/colors";
 import { useAppState } from "@/hooks/useAppStateChange";
 import { useColorScheme } from "@/lib/useColorScheme";
 import { useOnlineManager } from "@/hooks/useOnlineManager";
-import * as Sentry from "@sentry/react-native";
-import * as ImagePicker from "expo-image-picker";
 
 Sentry.init({
 	dsn: "https://a2ddd05ab1b215f90bab7b2ebe213037@o4510944951861248.ingest.us.sentry.io/4510944990658560",
@@ -83,6 +84,7 @@ export default Sentry.wrap(function AppLayout() {
 								<Stack.Screen name="(tabs)" />
 								<Stack.Screen name="welcome" />
 								<Stack.Screen name="public/recipes/[id]/index" />
+								<Stack.Screen name="(social-landing)/tiktok" />
 								<Stack.Screen
 									name="sign-up"
 									options={{

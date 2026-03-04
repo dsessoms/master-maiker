@@ -20,7 +20,7 @@ const authRoutes = [
 	"/forgot-password",
 ];
 
-const publicRoutes = ["/public"];
+const publicRoutes = ["/public", "/tiktok"];
 
 interface SignUpUserData {
 	isExistingAccount: boolean;

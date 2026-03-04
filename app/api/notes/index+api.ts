@@ -8,8 +8,6 @@ import { jsonResponse } from "@/lib/server/json-response";
 import { supabase } from "@/config/supabase-server";
 import { validateSession } from "@/lib/server/validate-session";
 
-export const dynamic = "force-dynamic";
-
 export type GetNotesResponseType = Awaited<ReturnType<typeof GET>>;
 export type PostNoteResponseType = Awaited<ReturnType<typeof POST>>;
 export type PatchNoteResponseType = Awaited<ReturnType<typeof PATCH>>;

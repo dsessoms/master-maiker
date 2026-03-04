@@ -2,8 +2,6 @@ import { jsonResponse } from "@/lib/server/json-response";
 import { supabase } from "@/config/supabase-server";
 import { validateSession } from "@/lib/server/validate-session";
 
-export const dynamic = "force-dynamic";
-
 export type GetFoodEntriesResponse = Awaited<ReturnType<typeof GET>>;
 export type PostAddFoodEntryResponse = Awaited<ReturnType<typeof POST>>;
 
