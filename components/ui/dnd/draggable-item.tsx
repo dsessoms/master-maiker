@@ -14,12 +14,14 @@ interface DraggableItemProps {
 	children: React.ReactNode;
 	data?: any; // Optional data to pass when dropped
 	onDragStateChange?: (isDragging: boolean) => void; // Callback when drag state changes
+	disabled?: boolean; // Disable dragging
 }
 
 export const DraggableItem: React.FC<DraggableItemProps> = ({
 	children,
 	data,
 	onDragStateChange,
+	disabled = false,
 }) => {
 	const { startDrag, updateDragPosition, endDrag } = useDnD();
 	const itemRef = useRef<View>(null);
@@ -79,7 +81,8 @@ export const DraggableItem: React.FC<DraggableItemProps> = ({
 			// End drag in context
 			runOnJS(handleDragEnd)();
 		})
-		.activateAfterLongPress(200);
+		.activateAfterLongPress(200)
+		.enabled(!disabled);
 
 	// Hide the original item when dragging
 	const itemStyle = useAnimatedStyle(() => {

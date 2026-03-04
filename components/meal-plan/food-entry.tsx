@@ -57,8 +57,22 @@ export const FoodEntry = ({ entry }: { entry: FoodEntryType }) => {
 	const profileMap = new Map(selectableProfiles.map((p) => [p.id, p]));
 
 	// Calculate nutrition for selected profiles
+	// If editing, create a temporary entry with the editing servings
+	const nutritionEntry = isEditing
+		? {
+				...entry,
+				profile_food_entry: entry.profile_food_entry.map((pfe) => ({
+					...pfe,
+					number_of_servings:
+						editingServings[pfe.profile_id] !== undefined
+							? parseFloat(editingServings[pfe.profile_id]) || 0
+							: pfe.number_of_servings,
+				})),
+			}
+		: entry;
+
 	const nutrition = calculateFoodEntryNutritionForSelectedProfiles(
-		entry,
+		nutritionEntry,
 		selectedProfileIds,
 	);
 
@@ -86,7 +100,7 @@ export const FoodEntry = ({ entry }: { entry: FoodEntryType }) => {
 		const profileServings = Object.entries(editingServings).map(
 			([profileId, servings]) => ({
 				profile_id: profileId,
-				servings: parseInt(servings, 10),
+				servings: parseFloat(servings) || 0,
 			}),
 		);
 
@@ -98,7 +112,17 @@ export const FoodEntry = ({ entry }: { entry: FoodEntryType }) => {
 		setIsEditing(false);
 	};
 
+	const handleCancelEdit = () => {
+		setIsEditing(false);
+		setEditingServings({});
+	};
+
 	const handleNavigateToRecipe = () => {
+		// Don't navigate if we're in editing mode
+		if (isEditing) {
+			return;
+		}
+
 		// Don't navigate if we just finished dragging
 		if (isDraggingRef.current) {
 			return;
@@ -122,8 +146,9 @@ export const FoodEntry = ({ entry }: { entry: FoodEntryType }) => {
 		<DraggableItem
 			data={{ entry, mealType: entry.meal_type }}
 			onDragStateChange={handleDragStateChange}
+			disabled={isEditing}
 		>
-			<Pressable onPress={handleNavigateToRecipe}>
+			<Pressable onPress={handleNavigateToRecipe} disabled={isEditing}>
 				<View className="flex-1 flex-row gap-2 mb-2 p-2 bg-background rounded-md">
 					<View className="w-20 h-20 rounded-md overflow-hidden flex-shrink-0">
 						{!!imageUrl ? (
@@ -159,23 +184,90 @@ export const FoodEntry = ({ entry }: { entry: FoodEntryType }) => {
 						</View>
 						{entry.profile_food_entry &&
 							entry.profile_food_entry.length > 0 && (
-								<View className="mt-1 gap-1 flex-row flex-wrap">
-									{entry.profile_food_entry
-										.filter(
-											(pfe) =>
-												pfe.number_of_servings > 0 &&
-												selectedProfileIds.has(pfe.profile_id),
-										)
-										.map((pfe) => {
-											return (
-												<Pressable key={pfe.id} onPress={handleEdit}>
-													<ProfileServingBadge
-														profileId={pfe.profile_id}
-														servings={pfe.number_of_servings}
-													/>
-												</Pressable>
-											);
-										})}
+								<View className="mt-1 gap-1">
+									{isEditing ? (
+										<Pressable
+											onPress={(e) => {
+												e.stopPropagation();
+											}}
+										>
+											<View className="gap-2">
+												{entry.profile_food_entry
+													.filter((pfe) =>
+														selectedProfileIds.has(pfe.profile_id),
+													)
+													.map((pfe) => {
+														const profile = profileMap.get(pfe.profile_id);
+														return (
+															<View
+																key={pfe.id}
+																className="flex-row items-center gap-1"
+															>
+																<View className="w-16">
+																	<Text className="text-sm font-medium">
+																		{profile?.name || "Unknown"}
+																	</Text>
+																</View>
+																<View className="flex-1">
+																	<Input
+																		value={
+																			editingServings[pfe.profile_id] || ""
+																		}
+																		onChangeText={(value) =>
+																			setEditingServings((prev) => ({
+																				...prev,
+																				[pfe.profile_id]: value,
+																			}))
+																		}
+																		placeholder="0"
+																		keyboardType="decimal-pad"
+																		className="h-8 text-sm"
+																	/>
+																</View>
+															</View>
+														);
+													})}
+												<View className="flex-row gap-2 mt-2">
+													<Button
+														variant="outline"
+														size="sm"
+														onPress={handleCancelEdit}
+														disabled={isUpdating}
+														className="flex-1"
+													>
+														<Text>Cancel</Text>
+													</Button>
+													<Button
+														size="sm"
+														onPress={handleSaveServings}
+														disabled={isUpdating}
+														className="flex-1"
+													>
+														<Text>{isUpdating ? "Saving..." : "Save"}</Text>
+													</Button>
+												</View>
+											</View>
+										</Pressable>
+									) : (
+										<View className="flex-row flex-wrap gap-1">
+											{entry.profile_food_entry
+												.filter(
+													(pfe) =>
+														pfe.number_of_servings > 0 &&
+														selectedProfileIds.has(pfe.profile_id),
+												)
+												.map((pfe) => {
+													return (
+														<Pressable key={pfe.id} onPress={handleEdit}>
+															<ProfileServingBadge
+																profileId={pfe.profile_id}
+																servings={pfe.number_of_servings}
+															/>
+														</Pressable>
+													);
+												})}
+										</View>
+									)}
 								</View>
 							)}
 						<MacroDisplay
@@ -185,55 +277,6 @@ export const FoodEntry = ({ entry }: { entry: FoodEntryType }) => {
 							className="mt-2"
 						/>
 					</View>
-
-					{/* Edit Servings Dialog */}
-					<Dialog open={isEditing} onOpenChange={setIsEditing}>
-						<DialogContent>
-							<DialogHeader>
-								<DialogTitle>Edit Servings</DialogTitle>
-								<DialogDescription>
-									Update the number of servings for each person
-								</DialogDescription>
-							</DialogHeader>
-							<View className="gap-4">
-								{entry.profile_food_entry
-									.filter((pfe) => selectedProfileIds.has(pfe.profile_id))
-									.map((pfe) => {
-										const profile = profileMap.get(pfe.profile_id);
-										return (
-											<View key={pfe.profile_id} className="gap-2">
-												<Text className="text-sm font-medium">
-													{profile?.name || "Unknown"}
-												</Text>
-												<Input
-													value={editingServings[pfe.profile_id] || ""}
-													onChangeText={(value) =>
-														setEditingServings((prev) => ({
-															...prev,
-															[pfe.profile_id]: value,
-														}))
-													}
-													placeholder="Enter servings"
-													keyboardType="decimal-pad"
-												/>
-											</View>
-										);
-									})}
-								<View className="flex-row gap-2 justify-end mt-4">
-									<Button
-										variant="outline"
-										onPress={() => setIsEditing(false)}
-										disabled={isUpdating}
-									>
-										<Text>Cancel</Text>
-									</Button>
-									<Button onPress={handleSaveServings} disabled={isUpdating}>
-										<Text>{isUpdating ? "Saving..." : "Save"}</Text>
-									</Button>
-								</View>
-							</View>
-						</DialogContent>
-					</Dialog>
 
 					{/* Delete Confirmation Dialog */}
 					<Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
