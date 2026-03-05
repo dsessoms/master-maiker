@@ -1,8 +1,6 @@
 import { searchFoodV3 } from "@/lib/server/fat-secret/fat-secret-helper";
 import { validateSession } from "@/lib/server/validate-session";
 
-export const dynamic = "force-dynamic";
-
 export async function GET(req: Request) {
 	const session = await validateSession(req);
 

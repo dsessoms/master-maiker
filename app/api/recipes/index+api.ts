@@ -4,8 +4,6 @@ import { supabase } from "@/config/supabase-server";
 import { upsertRecipe } from "@/lib/server/recipe-helpers";
 import { validateSession } from "@/lib/server/validate-session";
 
-export const dynamic = "force-dynamic";
-
 export type GetRecipesResponse = Awaited<ReturnType<typeof GET>>;
 export type PostRecipesResponse = Awaited<ReturnType<typeof POST>>;
 
