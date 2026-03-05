@@ -3,10 +3,23 @@ import { TouchableOpacity, View } from "react-native";
 import { Button } from "@/components/ui/button";
 import { Image } from "@/components/image";
 import { Text } from "@/components/ui/text";
+import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/supabase-provider";
 import { useRouter } from "expo-router";
 
-export const MustrdHeader = () => {
+interface MustrdHeaderProps {
+	maxWidth?: string;
+	buttonText?: string;
+	buttonRoute?: string;
+	buttonVariant?: "default" | "secondary";
+}
+
+export const MustrdHeader = ({
+	maxWidth = "max-w-3xl",
+	buttonText = "Sign Up",
+	buttonRoute = "/sign-up",
+	buttonVariant = "default",
+}: MustrdHeaderProps) => {
 	const router = useRouter();
 	const { session } = useAuth();
 
@@ -19,8 +32,13 @@ export const MustrdHeader = () => {
 	};
 
 	return (
-		<View className="bg-background border-b border-border">
-			<View className="w-full max-w-3xl mx-auto px-4 py-3 flex-row items-center justify-between">
+		<View className="bg-background">
+			<View
+				className={cn(
+					"w-full mx-auto px-4 py-3 flex-row items-center justify-between",
+					maxWidth,
+				)}
+			>
 				<TouchableOpacity
 					onPress={handleLogoPress}
 					activeOpacity={0.7}
@@ -34,8 +52,11 @@ export const MustrdHeader = () => {
 					<Text className="text-2xl font-bold">Mustrd</Text>
 				</TouchableOpacity>
 				{!session?.user && (
-					<Button onPress={() => router.push("/sign-up")}>
-						<Text className="text-primary-foreground">Sign Up</Text>
+					<Button
+						variant={buttonVariant}
+						onPress={() => router.push(buttonRoute as any)}
+					>
+						<Text className="text-primary-foreground">{buttonText}</Text>
 					</Button>
 				)}
 			</View>

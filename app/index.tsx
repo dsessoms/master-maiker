@@ -1,10 +1,11 @@
-import { H1, Large, Muted } from "@/components/ui/typography";
 import { Platform, ScrollView, View } from "react-native";
 import { Redirect, useRouter } from "expo-router";
 
 import { Button } from "@/components/ui/button";
 import { Image } from "@/components/image";
+import { Large } from "@/components/ui/typography";
 import { LinearGradient } from "expo-linear-gradient";
+import { MustrdHeader } from "@/components/mustrd-header";
 import { Text } from "@/components/ui/text";
 import { useColorScheme } from "@/lib/useColorScheme";
 
@@ -20,44 +21,47 @@ export default function LandingPage() {
 
 	return (
 		<ScrollView className="flex-1 bg-background">
+			<MustrdHeader
+				maxWidth="max-w-7xl"
+				buttonText="Sign In"
+				buttonRoute="/sign-in"
+				buttonVariant="secondary"
+			/>
 			<View className="flex-1 min-h-screen">
 				{/* Hero Section */}
 				<View className="flex-1 flex-row items-center justify-center px-8 py-16 web:px-16 web:py-24 gap-12 flex-wrap">
 					{/* Left Content */}
 					<View className="flex-1 min-w-[300px] max-w-[600px] gap-6">
 						<View className="gap-4">
-							<View className="flex-row items-center gap-2">
-								<Text className="text-3xl md:text-4xl lg:text-5xl font-normal text-primary">
-									mustrd
-								</Text>
-							</View>
-
 							<View>
-								<H1 className="text-4xl md:text-5xl lg:text-7xl font-bold leading-tight">
-									Delightful
-								</H1>
-								<H1 className="text-4xl md:text-5xl lg:text-7xl font-bold leading-tight">
-									meal planning
-								</H1>
-								<Text className="text-4xl md:text-5xl lg:text-7xl font-bold text-primary">
-									starts here.
+								<View className="flex-row items-baseline flex-wrap">
+									<Text className="text-4xl md:text-5xl lg:text-7xl font-bold text-primary">
+										Mustrd:{" "}
+									</Text>
+									<Text className="text-4xl md:text-5xl lg:text-7xl font-bold">
+										A Modern
+									</Text>
+								</View>
+								<Text className="text-4xl md:text-5xl lg:text-7xl font-bold leading-tight">
+									Kitchen Assistant
 								</Text>
 							</View>
 						</View>
 
 						<Large className="text-muted-foreground max-w-[500px]">
 							Plan your weekly meals, organize your recipes, and create smart
-							shopping lists. Make meal planning effortless today.
+							shopping lists. Focus on the fun parts of cooking. Let Mustrd
+							handle the rest.
 						</Large>
 
 						<Button
 							size="lg"
-							className="w-fit px-8 py-6 bg-foreground self-start"
+							className="w-fit px-8 py-6 self-start"
 							onPress={() => {
 								router.push("/sign-up");
 							}}
 						>
-							<Text className="text-background font-semibold text-lg">
+							<Text className="font-semibold text-lg">
 								Create Your First Meal Plan
 							</Text>
 						</Button>
@@ -119,19 +123,6 @@ export default function LandingPage() {
 							/>
 						</View>
 					</View>
-				</View>
-
-				{/* Footer */}
-				<View className="py-8 px-8 border-t border-border">
-					<Muted className="text-center">
-						Already have an account?{" "}
-						<Text
-							className="text-primary font-semibold"
-							onPress={() => router.push("/sign-in")}
-						>
-							Sign In
-						</Text>
-					</Muted>
 				</View>
 			</View>
 		</ScrollView>
