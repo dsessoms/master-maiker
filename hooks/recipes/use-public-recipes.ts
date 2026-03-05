@@ -6,8 +6,9 @@ export const usePublicRecipes = () => {
 	const { data, ...rest } = useQuery({
 		queryKey: ["public-recipes"],
 		queryFn: async () => {
-			const response =
-				await axios.get<GetPublicRecipesResponse>(`/api/recipes/public`);
+			const response = await axios.get<GetPublicRecipesResponse>(
+				"/api/recipes/public",
+			);
 			return response.data.recipes;
 		},
 	});
