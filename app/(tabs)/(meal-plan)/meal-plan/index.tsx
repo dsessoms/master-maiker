@@ -208,7 +208,7 @@ export default function MealPlanScreen() {
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
-			<View className="absolute bottom-6 right-6">
+			<View className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full max-w-3xl px-4 flex-row justify-end">
 				<DropdownMenu>
 					<DropdownMenuTrigger asChild>
 						<MustrdButton />

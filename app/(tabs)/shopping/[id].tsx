@@ -205,44 +205,46 @@ export default function ShoppingListDetail() {
 				</ScrollView>
 			</Tabs>
 
-			<View className="flex flex-col justify-center items-center gap-2 absolute bottom-6 right-6">
-				<Button
-					onPress={toggleAddModal}
-					variant="outline"
-					size="icon"
-					className="h-10 w-10 rounded-full shadow-sm"
-				>
-					<Plus />
-				</Button>
-				<DropdownMenu>
-					<DropdownMenuTrigger asChild>
-						<MustrdButton />
-					</DropdownMenuTrigger>
-					<DropdownMenuContent side="top" align="end" className="w-64 mb-2">
-						<DropdownMenuItem onPress={toggleAddModal}>
-							<Plus className="text-foreground mr-2" size={16} />
-							<Text>Add item</Text>
-						</DropdownMenuItem>
-						<DropdownMenuItem onPress={() => setShowClearDialog(true)}>
-							<X className="text-foreground mr-2" size={16} />
-							<Text>Clear all</Text>
-						</DropdownMenuItem>
-						{selectedList && !selectedList.is_default && (
-							<DropdownMenuItem
-								onPress={() => updateShoppingList({ is_default: true })}
-							>
-								<Star className="text-foreground mr-2" size={16} />
-								<Text>Set as default</Text>
+			<View className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full max-w-3xl px-4 flex-row justify-end">
+				<View className="flex flex-col justify-center items-center gap-2">
+					<Button
+						onPress={toggleAddModal}
+						variant="outline"
+						size="icon"
+						className="h-10 w-10 rounded-full shadow-sm"
+					>
+						<Plus />
+					</Button>
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<MustrdButton />
+						</DropdownMenuTrigger>
+						<DropdownMenuContent side="top" align="end" className="w-64 mb-2">
+							<DropdownMenuItem onPress={toggleAddModal}>
+								<Plus className="text-foreground mr-2" size={16} />
+								<Text>Add item</Text>
 							</DropdownMenuItem>
-						)}
-						{selectedList && !selectedList.is_default && (
-							<DropdownMenuItem onPress={() => setShowDeleteDialog(true)}>
-								<Trash2Icon className="text-destructive mr-2" size={16} />
-								<Text className="text-destructive">Delete list</Text>
+							<DropdownMenuItem onPress={() => setShowClearDialog(true)}>
+								<X className="text-foreground mr-2" size={16} />
+								<Text>Clear all</Text>
 							</DropdownMenuItem>
-						)}
-					</DropdownMenuContent>
-				</DropdownMenu>
+							{selectedList && !selectedList.is_default && (
+								<DropdownMenuItem
+									onPress={() => updateShoppingList({ is_default: true })}
+								>
+									<Star className="text-foreground mr-2" size={16} />
+									<Text>Set as default</Text>
+								</DropdownMenuItem>
+							)}
+							{selectedList && !selectedList.is_default && (
+								<DropdownMenuItem onPress={() => setShowDeleteDialog(true)}>
+									<Trash2Icon className="text-destructive mr-2" size={16} />
+									<Text className="text-destructive">Delete list</Text>
+								</DropdownMenuItem>
+							)}
+						</DropdownMenuContent>
+					</DropdownMenu>
+				</View>
 			</View>
 
 			<AddItemModal
