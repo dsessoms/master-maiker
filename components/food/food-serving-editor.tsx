@@ -15,7 +15,7 @@ import {
 } from "../ui/select";
 
 import { Input } from "../ui/input";
-import { Macros } from "@/components/meal-plan/macros";
+import { MacroDisplay } from "@/components/meal-plan/macro-display";
 import type { TriggerRef } from "@rn-primitives/select";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -89,7 +89,7 @@ export const FoodServingEditor: React.FC<FoodServingEditorProps> = ({
 	};
 
 	return (
-		<>
+		<View className="flex-col space-y-2">
 			<View className="flex-row items-center space-x-2">
 				<View className="w-24">
 					<Input
@@ -144,15 +144,16 @@ export const FoodServingEditor: React.FC<FoodServingEditorProps> = ({
 				{children}
 			</View>
 
-			{showMacros && (
-				<Macros
-					calories={selectedServing.calories}
-					carbohydrate={selectedServing.carbohydrate}
-					protein={selectedServing.protein}
-					fat={selectedServing.fat}
-					scale={numberOfServings}
-				/>
-			)}
-		</>
+			<MacroDisplay
+				show={showMacros}
+				nutrition={{
+					calories: (selectedServing.calories || 0) * numberOfServings,
+					carbohydrate: (selectedServing.carbohydrate || 0) * numberOfServings,
+					protein: (selectedServing.protein || 0) * numberOfServings,
+					fat: (selectedServing.fat || 0) * numberOfServings,
+				}}
+				size="sm"
+			/>
+		</View>
 	);
 };

@@ -1,4 +1,6 @@
 import { FatSecretFood, FatSecretServing } from "@/lib/server/fat-secret/types";
+import { GripVertical, ShoppingBasket } from "@/lib/icons";
+import { Pressable, View } from "react-native";
 import React, { useState } from "react";
 import {
 	StatefulInput,
@@ -10,13 +12,11 @@ import { EditableFatSecretFoodItem } from "@/components/food/editable-fat-secret
 import { Image } from "@/components/image";
 import { Ingredient } from "@/lib/schemas";
 import { KeyboardHint } from "@/components/ui/keyboard-hint";
-import { Macros } from "@/components/meal-plan/macros";
+import { MacroDisplay } from "@/components/meal-plan/macro-display";
 import { SearchFoodModal } from "@/components/food/search-food-modal";
-import { GripVertical, ShoppingBasket } from "@/lib/icons";
-import { Text } from "@/components/ui/text";
-import { Pressable, View } from "react-native";
-import { getServingDescription } from "@/lib/utils/serving-description";
 import Sortable from "react-native-sortables";
+import { Text } from "@/components/ui/text";
+import { getServingDescription } from "@/lib/utils/serving-description";
 
 export interface FoodData {
 	food: FatSecretFood;
@@ -130,11 +130,14 @@ export function IngredientInput({
 												</Text>
 											)}
 											<View>
-												<Macros
-													calories={caloriesPerServing}
-													carbohydrate={carbsPerServing}
-													protein={proteinPerServing}
-													fat={fatPerServing}
+												<MacroDisplay
+													nutrition={{
+														calories: caloriesPerServing,
+														carbohydrate: carbsPerServing,
+														protein: proteinPerServing,
+														fat: fatPerServing,
+													}}
+													size="sm"
 												/>
 											</View>
 										</View>
