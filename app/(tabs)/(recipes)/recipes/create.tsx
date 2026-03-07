@@ -14,8 +14,16 @@ export default function CreateRecipePage() {
 	const handleCreate = async (data: Partial<Recipe>) => {
 		if (!session) return;
 		try {
-			await createRecipe(data as Recipe);
-			router.back();
+			const { id } = await createRecipe(data as Recipe);
+
+			if (id) {
+				router.replace({
+					pathname: "/(tabs)/(recipes)/recipes/[id]",
+					params: { id },
+				});
+			} else {
+				router.back();
+			}
 		} catch (e) {
 			console.error("Error creating recipe:", e);
 		}
