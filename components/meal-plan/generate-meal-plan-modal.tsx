@@ -666,7 +666,7 @@ export const GenerateMealPlanModal = ({
 
 	return (
 		<Modal animationType="slide" visible={isVisible} onRequestClose={onClose}>
-			<View className="flex-1 bg-background mt-safe mb-safe">
+			<View className="flex-1 bg-background mt-safe mb-safe w-full max-w-3xl mx-auto">
 				{/* Header */}
 				<View className="flex-row items-center justify-between p-4 border-b border-border">
 					<Text className="text-lg font-semibold">Generate Meal Plan</Text>

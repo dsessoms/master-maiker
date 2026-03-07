@@ -1,16 +1,16 @@
 import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 import React, { useState } from "react";
+import { Redirect, router } from "expo-router";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { ChatTab } from "@/components/recipe/chat-tab";
 import { FormTab } from "@/components/recipe/form-tab";
+import { RecipePreview } from "@/lib/schemas/recipes/generate/chat-schema";
 import { Text } from "@/components/ui/text";
-import { Redirect, router } from "expo-router";
 import { useCreateRecipeMutation } from "@/hooks/recipes/use-create-recipe-mutation";
+import { useFeatureFlag } from "@/hooks/feature-flags/useFeatureFlag";
 import { useGenerateRecipeMutation } from "@/hooks/recipes/use-generate-recipe-mutation";
 import { useParseRecipeMutation } from "@/hooks/recipes/use-parse-recipe-mutation";
-import { RecipePreview } from "@/lib/schemas/recipes/generate/chat-schema";
-import { useFeatureFlag } from "@/hooks/feature-flags/useFeatureFlag";
 
 export default function GenerateRecipe() {
 	const [activeTab, setActiveTab] = useState("chat");
@@ -76,7 +76,7 @@ export default function GenerateRecipe() {
 				behavior={Platform.OS === "ios" ? "padding" : "height"}
 				keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
 			>
-				<View className="flex-1 p-4">
+				<View className="flex-1 p-4 w-full max-w-3xl mx-auto">
 					<Tabs
 						value={activeTab}
 						onValueChange={setActiveTab}

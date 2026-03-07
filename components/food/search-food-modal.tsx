@@ -125,7 +125,10 @@ export const SearchFoodModal: React.FC<SearchFoodModalProps> = ({
 			presentationStyle={Platform.OS === "ios" ? "pageSheet" : "fullScreen"}
 			onRequestClose={onClose}
 		>
-			<View className="flex-1 bg-background" nativeID="modal-content">
+			<View
+				className="flex-1 bg-background w-full max-w-3xl mx-auto"
+				nativeID="modal-content"
+			>
 				{/* Header */}
 				<View className="flex-row items-center justify-between p-4 border-b border-border">
 					<Text className="text-xl font-semibold">Search Foods</Text>
