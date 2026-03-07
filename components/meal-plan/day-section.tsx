@@ -1,5 +1,7 @@
+import { format, isToday } from "date-fns";
 import { useContext, useMemo } from "react";
 
+import { Dot } from "@/lib/icons";
 import { FoodEntry } from "@/app/api/food-entries/index+api";
 import { MacroDisplay } from "./macro-display";
 import { MealPlanContext } from "@/context/meal-plan-context";
@@ -7,7 +9,6 @@ import { MealSection } from "./meal-section";
 import { Text } from "../ui/text";
 import { View } from "react-native";
 import { calculateFoodEntriesNutrition } from "@/lib/utils/nutrition-calculator";
-import { format } from "date-fns";
 
 export const DaySection = ({
 	date,
@@ -42,12 +43,18 @@ export const DaySection = ({
 	const dateString = format(date, "yyyy-MM-dd");
 
 	const isSingleProfile = selectedProfileIds.size === 1;
+	const isCurrentDay = isToday(date);
 
 	return (
 		<View>
 			<View className="mb-4 mt-8">
 				<View className="flex flex-row items-center justify-between">
-					<Text className="text-2xl mr-2">{format(date, "EEEE")}</Text>
+					<View className="relative flex flex-row items-center">
+						<Text className="text-2xl">{format(date, "EEEE")}</Text>
+						{isCurrentDay && (
+							<Dot size={40} className="absolute top-[-16] right-[-24]" />
+						)}
+					</View>
 					<MacroDisplay
 						show={isSingleProfile}
 						nutrition={dayNutrition}
