@@ -24,6 +24,7 @@ export function convertDatabaseRecipeToSchema(
 		cook_time_hours: recipe.cook_time_hours || 0,
 		cook_time_minutes: recipe.cook_time_minutes || 0,
 		image_id: recipe.image_id || undefined,
+		source_url: recipe.source_url || undefined,
 		ingredients:
 			recipe.ingredient?.map((ing) => {
 				if (ing.type === "header") {

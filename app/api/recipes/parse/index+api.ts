@@ -51,6 +51,7 @@ export async function GET(req: Request) {
 		const finalRecipe: Recipe = {
 			...recipe,
 			image_id: imageId,
+			source_url: recipeUrl,
 		};
 
 		return jsonResponse({ recipe: finalRecipe });

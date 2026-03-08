@@ -34,6 +34,65 @@ export type Database = {
 	};
 	public: {
 		Tables: {
+			feature_flag_users: {
+				Row: {
+					created_at: string;
+					enabled: boolean;
+					feature_flag_id: string;
+					id: string;
+					user_id: string;
+				};
+				Insert: {
+					created_at?: string;
+					enabled?: boolean;
+					feature_flag_id: string;
+					id?: string;
+					user_id: string;
+				};
+				Update: {
+					created_at?: string;
+					enabled?: boolean;
+					feature_flag_id?: string;
+					id?: string;
+					user_id?: string;
+				};
+				Relationships: [
+					{
+						foreignKeyName: "feature_flag_users_feature_flag_id_fkey";
+						columns: ["feature_flag_id"];
+						isOneToOne: false;
+						referencedRelation: "feature_flags";
+						referencedColumns: ["id"];
+					},
+				];
+			};
+			feature_flags: {
+				Row: {
+					created_at: string;
+					description: string | null;
+					enabled: boolean;
+					id: string;
+					name: string;
+					updated_at: string;
+				};
+				Insert: {
+					created_at?: string;
+					description?: string | null;
+					enabled?: boolean;
+					id?: string;
+					name: string;
+					updated_at?: string;
+				};
+				Update: {
+					created_at?: string;
+					description?: string | null;
+					enabled?: boolean;
+					id?: string;
+					name?: string;
+					updated_at?: string;
+				};
+				Relationships: [];
+			};
 			food: {
 				Row: {
 					aisle: string | null;
@@ -424,6 +483,7 @@ export type Database = {
 					number_of_servings: number;
 					prep_time_hours: number | null;
 					prep_time_minutes: number | null;
+					source_url: string | null;
 					user_id: string;
 					visibility: Database["public"]["Enums"]["recipe_visibility"];
 				};
@@ -438,6 +498,7 @@ export type Database = {
 					number_of_servings: number;
 					prep_time_hours?: number | null;
 					prep_time_minutes?: number | null;
+					source_url?: string | null;
 					user_id: string;
 					visibility?: Database["public"]["Enums"]["recipe_visibility"];
 				};
@@ -452,6 +513,7 @@ export type Database = {
 					number_of_servings?: number;
 					prep_time_hours?: number | null;
 					prep_time_minutes?: number | null;
+					source_url?: string | null;
 					user_id?: string;
 					visibility?: Database["public"]["Enums"]["recipe_visibility"];
 				};
@@ -707,6 +769,7 @@ export type Database = {
 					prep_time_hours?: number;
 					prep_time_minutes?: number;
 					recipe_id?: string;
+					source_url?: string;
 				};
 				Returns: string;
 			};

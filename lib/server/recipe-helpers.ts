@@ -23,6 +23,7 @@ export function mapRecipeToRpcParams(recipe: Recipe, recipeId?: string) {
 		image_id: recipe.image_id ?? undefined,
 		instructions: recipe.instructions ?? [],
 		ingredients: recipe.ingredients as Json[],
+		source_url: recipe.source_url ?? undefined,
 	};
 }
 
