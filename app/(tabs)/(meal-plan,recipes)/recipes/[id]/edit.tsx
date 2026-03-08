@@ -5,9 +5,9 @@ import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import { Recipe } from "@/lib/schemas";
 import { RecipeForm } from "@/components/forms/RecipeForm";
 import { Text } from "@/components/ui/text";
+import { convertDatabaseRecipeToSchema } from "@/lib/utils/convert-database-recipe-to-schema";
 import { useRecipe } from "@/hooks/recipes/use-recipe";
 import { useUpdateRecipeMutation } from "@/hooks/recipes/use-update-recipe-mutation";
-import { convertDatabaseRecipeToSchema } from "@/lib/utils/convert-database-recipe-to-schema";
 
 export default function EditRecipe() {
 	const { id } = useLocalSearchParams<{ id: string }>();
@@ -34,7 +34,7 @@ export default function EditRecipe() {
 		return (
 			<View className="flex flex-1 bg-background">
 				<View className="flex-1 justify-center items-center">
-					<LoadingIndicator size="large" />
+					<LoadingIndicator className="text-primary" />
 					<Text className="mt-4">Loading recipe...</Text>
 				</View>
 			</View>

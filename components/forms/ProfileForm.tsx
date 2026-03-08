@@ -746,9 +746,7 @@ export function ProfileForm({
 							onPress={onSubmit}
 							disabled={isLoading}
 						>
-							{isLoading && (
-								<LoadingIndicator size="small" themeColor="primaryForeground" />
-							)}
+							{isLoading && <LoadingIndicator />}
 							<Text>{isEditing ? "Update Profile" : "Create Profile"}</Text>
 						</Button>
 					</View>

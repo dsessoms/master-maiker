@@ -1,7 +1,6 @@
-import { ActivityIndicator, View } from "react-native";
+import Animated, { useAnimatedRef } from "react-native-reanimated";
 import { Form, FormField, FormInput, FormTextarea } from "../ui/form";
 import { Ingredient, Recipe, RecipeSchema } from "../../lib/schemas";
-import Animated, { useAnimatedRef } from "react-native-reanimated";
 
 import { Button } from "../ui/button";
 import { ImageUploader } from "./ImageUploader";
@@ -9,7 +8,9 @@ import { IngredientInputs } from "./ingredients/IngredientInputs";
 import { InstructionInputs } from "./instructions/InstructionInputs";
 import { InstructionOrHeader } from "@/components/forms/instructions/InstructionInput";
 import { Label } from "../ui/label";
+import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import { Text } from "@/components/ui/text";
+import { View } from "react-native";
 import { supabase } from "@/config/supabase";
 import { useForm } from "react-hook-form";
 import { useRecipeImage } from "@/hooks/recipes/use-recipe-image";
@@ -286,13 +287,11 @@ export function RecipeForm({
 							console.error("Form submission errors:", formErrors);
 						})}
 						disabled={form.formState.isSubmitting || isUploadingImage}
-						className="my-4"
+						className="my-4 flex-row gap-2"
 					>
-						{form.formState.isSubmitting || isUploadingImage ? (
-							<ActivityIndicator size="small" />
-						) : (
-							<Text>{isEdit ? "Save Changes" : "Create Recipe"}</Text>
-						)}
+						{form.formState.isSubmitting ||
+							(isUploadingImage && <LoadingIndicator />)}
+						<Text>{isEdit ? "Save Changes" : "Create Recipe"}</Text>
 					</Button>
 				</View>
 			</View>

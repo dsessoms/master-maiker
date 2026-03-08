@@ -1,14 +1,10 @@
-import {
-	ActivityIndicator,
-	ScrollView,
-	TouchableOpacity,
-	View,
-} from "react-native";
 import { Redirect, Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { ScrollView, TouchableOpacity, View } from "react-native";
 
 import { Button } from "@/components/ui/button";
 import { CircleCheck } from "@/lib/icons/circle-check";
 import { Input } from "@/components/ui/input";
+import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import { ProfileServingBadge } from "@/components/meal-plan/profile-serving-badge";
 import { RecipeCard } from "@/components/recipe/recipe-card";
 import { RecipeServingSelectorModal } from "@/components/meal-plan/recipe-serving-selector-modal";
@@ -126,7 +122,7 @@ export default function AddRecipeScreen() {
 
 				{isLoading ? (
 					<View className="flex flex-1 items-center justify-center">
-						<ActivityIndicator size="large" />
+						<LoadingIndicator className="text-primary" />
 					</View>
 				) : (
 					<ScrollView

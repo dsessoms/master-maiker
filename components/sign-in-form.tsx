@@ -14,14 +14,10 @@ import { Form, FormField, FormInput } from "@/components/ui/form";
 import { PasswordInput } from "@/components/ui/password-input";
 import { useAuth } from "@/context/supabase-provider";
 import * as React from "react";
-import {
-	ActivityIndicator,
-	Pressable,
-	type TextInput,
-	View,
-} from "react-native";
+import { Pressable, type TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Label } from "@/components/ui/label";
+import { LoadingIndicator } from "@/components/ui/loading-indicator";
 
 const formSchema = z.object({
 	email: z.string().email("Please enter a valid email address."),
@@ -120,15 +116,12 @@ export function SignInForm() {
 								/>
 							</View>
 							<Button
-								className="w-full"
+								className="w-full flex-row gap-2"
 								onPress={form.handleSubmit(onSubmit)}
 								disabled={form.formState.isSubmitting}
 							>
-								{form.formState.isSubmitting ? (
-									<ActivityIndicator size="small" />
-								) : (
-									<Text>Continue</Text>
-								)}
+								{form.formState.isSubmitting && <LoadingIndicator />}
+								<Text>Continue</Text>
 							</Button>
 						</View>
 					</Form>

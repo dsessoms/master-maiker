@@ -1,7 +1,7 @@
 import * as React from "react";
 import * as z from "zod";
 
-import { ActivityIndicator, type TextStyle, View } from "react-native";
+import { type TextStyle, View } from "react-native";
 import { Alert, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,6 +19,7 @@ import { useForm } from "react-hook-form";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { LoadingIndicator } from "@/components/ui/loading-indicator";
 
 const RESEND_CODE_INTERVAL_SECONDS = 30;
 
@@ -142,15 +143,12 @@ export function VerifyEmailForm() {
 							</Button>
 							<View className="gap-3">
 								<Button
-									className="w-full"
+									className="w-full flex-row gap-2"
 									onPress={form.handleSubmit(onSubmit)}
 									disabled={form.formState.isSubmitting}
 								>
-									{form.formState.isSubmitting ? (
-										<ActivityIndicator size="small" />
-									) : (
-										<Text>Continue</Text>
-									)}
+									{form.formState.isSubmitting && <LoadingIndicator />}
+									<Text>Continue</Text>
 								</Button>
 								<Button
 									variant="link"

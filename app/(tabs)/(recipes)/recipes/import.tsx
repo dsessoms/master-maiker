@@ -1,8 +1,9 @@
-import { ActivityIndicator, Alert, View } from "react-native";
+import { Alert, View } from "react-native";
 import { Form, FormField, FormInput } from "@/components/ui/form";
 
 import { Button } from "@/components/ui/button";
 import { GetParsedRecipeResponse } from "@/app/api/recipes/parse/index+api";
+import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import { SafeAreaView } from "@/components/safe-area-view";
 import { Text } from "@/components/ui/text";
 import axiosWithAuth from "@/lib/axiosWithAuth";
@@ -101,7 +102,7 @@ export default function ImportRecipe() {
 					>
 						{isLoading ? (
 							<View className="flex-row items-center gap-2">
-								<ActivityIndicator size="small" color="white" />
+								<LoadingIndicator className="h-4 w-4" />
 								<Text className="text-primary-foreground">Importing...</Text>
 							</View>
 						) : (

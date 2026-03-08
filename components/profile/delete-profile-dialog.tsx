@@ -1,4 +1,3 @@
-import { ActivityIndicator, View } from "react-native";
 import {
 	Dialog,
 	DialogContent,
@@ -9,7 +8,9 @@ import {
 } from "@/components/ui/dialog";
 
 import { Button } from "@/components/ui/button";
+import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import { Text } from "@/components/ui/text";
+import { View } from "react-native";
 
 interface DeleteProfileDialogProps {
 	open: boolean;
@@ -45,7 +46,7 @@ export const DeleteProfileDialog = ({
 					</Button>
 					<Button onPress={onConfirm} disabled={isDeleting}>
 						<View className="flex flex-row gap-2">
-							{!!isDeleting && <ActivityIndicator size="small" color="white" />}
+							{!!isDeleting && <LoadingIndicator />}
 							<Text>Delete</Text>
 						</View>
 					</Button>

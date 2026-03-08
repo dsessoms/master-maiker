@@ -1,7 +1,6 @@
 import * as React from "react";
 import * as z from "zod";
 
-import { ActivityIndicator, Pressable, TextInput, View } from "react-native";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
 	Card,
@@ -11,10 +10,12 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { Form, FormField, FormInput } from "@/components/ui/form";
+import { Pressable, TextInput, View } from "react-native";
 
 import { AlertCircleIcon } from "@/lib/icons";
 import { AuthError } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
+import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Text } from "@/components/ui/text";
 import { useAuth } from "@/context/supabase-provider";
@@ -168,15 +169,12 @@ export function SignUpForm() {
 								)}
 							/>
 							<Button
-								className="w-full"
+								className="w-full flex-row gap-2"
 								onPress={form.handleSubmit(onSubmit)}
 								disabled={form.formState.isSubmitting}
 							>
-								{form.formState.isSubmitting ? (
-									<ActivityIndicator size="small" />
-								) : (
-									<Text>Continue</Text>
-								)}
+								{form.formState.isSubmitting && <LoadingIndicator />}
+								<Text>Continue</Text>
 							</Button>
 						</View>
 					</Form>

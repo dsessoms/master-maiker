@@ -1,17 +1,11 @@
-import { ActivityIndicator } from "react-native";
-import type { ActivityIndicatorProps } from "react-native";
-import { colors } from "@/constants/colors";
-import { useTheme } from "@/context/theme-context";
+import { Loader2 } from "@/lib/icons";
+import { View } from "react-native";
+import { cn } from "@/lib/utils";
 
-export const LoadingIndicator = ({
-	themeColor = "primary",
-	...props
-}: ActivityIndicatorProps & {
-	themeColor?: keyof (typeof colors)["light"];
-}) => {
-	const { colors } = useTheme();
-
+export const LoadingIndicator = ({ className }: { className?: string }) => {
 	return (
-		<ActivityIndicator size="large" color={colors[themeColor]} {...props} />
+		<View className="pointer-events-none animate-spin">
+			<Loader2 className={cn("text-primary-foreground h-4 w-4", className)} />
+		</View>
 	);
 };

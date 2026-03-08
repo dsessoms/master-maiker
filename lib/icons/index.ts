@@ -38,3 +38,4 @@ export * from "./send";
 export * from "./grip-vertical";
 export * from "./bug";
 export * from "./dot";
+export * from "./loader-2";

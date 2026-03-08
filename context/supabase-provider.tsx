@@ -18,6 +18,8 @@ const authRoutes = [
 	"/sign-in",
 	"/sign-up",
 	"/forgot-password",
+	"/reset-password",
+	"/verify-email",
 ];
 
 const publicRoutes = ["/public", "/tiktok"];

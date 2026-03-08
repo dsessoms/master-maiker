@@ -156,10 +156,9 @@ export const SearchFoodModal: React.FC<SearchFoodModalProps> = ({
 						{/* Right Element (Clear Button or Loading) */}
 						<View className="absolute right-3 top-0 bottom-0 flex items-center justify-center z-10">
 							{isLoading && !!debouncedQuery && (
-								<LoadingIndicator
-									size="small"
-									className="text-muted-foreground"
-								/>
+								<View className="p-1">
+									<LoadingIndicator className="text-muted-foreground" />
+								</View>
 							)}
 							{!isLoading && searchQuery && (
 								<Pressable

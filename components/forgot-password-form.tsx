@@ -1,7 +1,6 @@
 import * as React from "react";
 import * as z from "zod";
 
-import { ActivityIndicator, Pressable, View } from "react-native";
 import {
 	Card,
 	CardContent,
@@ -10,8 +9,10 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { Form, FormField, FormInput } from "@/components/ui/form";
+import { Pressable, View } from "react-native";
 
 import { Button } from "@/components/ui/button";
+import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import { Text } from "@/components/ui/text";
 import { useAuth } from "@/context/supabase-provider";
 import { useForm } from "react-hook-form";
@@ -83,7 +84,7 @@ export function ForgotPasswordForm() {
 								disabled={form.formState.isSubmitting}
 							>
 								{form.formState.isSubmitting ? (
-									<ActivityIndicator size="small" />
+									<LoadingIndicator />
 								) : (
 									<Text>Reset your password</Text>
 								)}
