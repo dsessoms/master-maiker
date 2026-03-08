@@ -8,6 +8,7 @@ import { IngredientInputs } from "./ingredients/IngredientInputs";
 import { InstructionInputs } from "./instructions/InstructionInputs";
 import { InstructionOrHeader } from "@/components/forms/instructions/InstructionInput";
 import { Label } from "../ui/label";
+import { Link } from "@/lib/icons";
 import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import { Text } from "@/components/ui/text";
 import { View } from "react-native";
@@ -53,6 +54,7 @@ export function RecipeForm({
 			prep_time_minutes: 0,
 			cook_time_hours: 0,
 			cook_time_minutes: 0,
+			source_url: "",
 		},
 	});
 
@@ -66,6 +68,9 @@ export function RecipeForm({
 		{ file: File; uri: string } | string | undefined
 	>(existingImageUrl);
 	const [isUploadingImage, setIsUploadingImage] = useState(false);
+	const [showSourceUrl, setShowSourceUrl] = useState(
+		!!initialValues?.source_url,
+	);
 
 	// Override the submit handler to include parsed ingredients and handle image upload
 	const handleSubmit = async (data: Partial<Recipe>) => {
@@ -166,6 +171,34 @@ export function RecipeForm({
 									/>
 								)}
 							/>
+							{!showSourceUrl ? (
+								<Button
+									variant="outline"
+									size="sm"
+									onPress={() => setShowSourceUrl(true)}
+									className="mb-2 flex-row gap-2 self-start"
+								>
+									<Link className="h-4 w-4" />
+									<Text>Add Source URL</Text>
+								</Button>
+							) : (
+								<FormField
+									control={form.control}
+									name="source_url"
+									render={({ field }) => (
+										<FormInput
+											label="Source URL (Optional)"
+											labelClassName="text-xl font-semibold"
+											placeholder="https://example.com/recipe"
+											autoCapitalize="none"
+											autoCorrect={false}
+											keyboardType="url"
+											{...field}
+											value={field.value ?? ""}
+										/>
+									)}
+								/>
+							)}
 							<FormField
 								control={form.control}
 								name="servings"

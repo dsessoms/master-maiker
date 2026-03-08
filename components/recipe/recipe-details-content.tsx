@@ -1,15 +1,30 @@
-import { ExpandedRecipe } from "@/types";
-import { Minus, Plus } from "@/lib/icons";
-import { ScrollView, View } from "react-native";
-import { useState, useEffect } from "react";
+import { Link, Minus, Plus } from "@/lib/icons";
+import { Linking, ScrollView, View } from "react-native";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { ExpandedRecipe } from "@/types";
 import { Header } from "@/components/recipe/header";
 import { Image } from "@/components/image";
 import { Ingredient } from "@/components/recipe/ingredient";
 import { Instruction } from "@/components/recipe/instruction";
 import { Macros } from "@/components/recipe/macros";
 import { Text } from "@/components/ui/text";
+import { cn } from "@/lib/utils";
+
+/**
+ * Safely extracts the domain name from a URL string
+ * @param url - The URL to parse
+ * @returns The domain name without 'www.' prefix, or 'View Recipe' as fallback
+ */
+function getDomainFromUrl(url: string): string {
+	try {
+		const hostname = new URL(url).hostname;
+		return hostname.replace(/^www\./, "");
+	} catch {
+		return "View Recipe";
+	}
+}
 
 interface RecipeDetailsContentProps {
 	recipe: ExpandedRecipe;
@@ -54,7 +69,9 @@ export function RecipeDetailsContent({
 		<ScrollView className="flex-1">
 			<View className="p-4 w-full max-w-3xl mx-auto">
 				{/* Recipe Image */}
-				<View className="mb-6 relative">
+				<View
+					className={cn({ "mb-6 relative": true, "mb-2": recipe.source_url })}
+				>
 					{!!imageUrl ? (
 						<Image
 							source={{ uri: imageUrl }}
@@ -67,6 +84,18 @@ export function RecipeDetailsContent({
 								{recipe.name.toUpperCase()}
 							</Text>
 						</View>
+					)}
+					{!!recipe.source_url && (
+						<Button
+							onPress={() => Linking.openURL(recipe.source_url!)}
+							variant="link"
+							className="flex-row gap-2 self-start p-0"
+						>
+							<Link className="h-4 w-4" />
+							<Text className="text-muted-foreground">
+								{getDomainFromUrl(recipe.source_url)}
+							</Text>
+						</Button>
 					)}
 					{headerActions && (
 						<View className="absolute top-2 right-2">{headerActions}</View>

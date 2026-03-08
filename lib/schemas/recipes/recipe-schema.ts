@@ -34,6 +34,12 @@ export const RecipeSchema = z.object({
 	prep_time_minutes: z.number().optional(),
 	cook_time_hours: z.number().optional(),
 	cook_time_minutes: z.number().optional(),
+	source_url: z
+		.string()
+		.url()
+		.optional()
+		.or(z.literal(""))
+		.transform((val) => (val === "" ? undefined : val)),
 });
 
 export type Recipe = z.infer<typeof RecipeSchema>;
