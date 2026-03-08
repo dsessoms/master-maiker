@@ -137,7 +137,7 @@ const ModalContent = ({
 		});
 
 		dispatch({ type: "loadRecipes", recipeMap });
-	}, [itemsToAdd.recipes, recipes, recipes?.length]);
+	}, [recipes.length, itemsToAdd.recipes, recipes]);
 
 	const updateIngredient = useCallback(
 		(recipeId: string, ingredientId: string, include: boolean) => {
