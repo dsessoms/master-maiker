@@ -165,7 +165,7 @@ export default function ShoppingListDetail() {
 					className="flex-1 bg-background"
 					contentContainerStyle={{ flexGrow: 1 }}
 				>
-					<View className="p-4 flex-1 w-full max-w-3xl mx-auto bg-muted-background">
+					<View className="p-4 pb-32 flex-1 w-full max-w-3xl mx-auto bg-muted-background">
 						<GroupedItemsList
 							groups={groupedUnchecked}
 							listId={id!}
