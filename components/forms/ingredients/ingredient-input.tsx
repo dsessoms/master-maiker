@@ -16,6 +16,7 @@ import { MacroDisplay } from "@/components/meal-plan/macro-display";
 import { SearchFoodModal } from "@/components/food/search-food-modal";
 import Sortable from "react-native-sortables";
 import { Text } from "@/components/ui/text";
+import { calculateNutritionTotal } from "@/lib/utils/nutrition-math";
 import { getServingDescription } from "@/lib/utils/serving-description";
 
 export interface FoodData {
@@ -86,16 +87,15 @@ export function IngredientInput({
 					);
 
 					// Calculate nutrition for the actual number of servings
-					const totalCalories = serving.calories * number_of_servings;
-					const totalCarbs = serving.carbohydrate_grams * number_of_servings;
-					const totalProtein = serving.protein_grams * number_of_servings;
-					const totalFat = serving.fat_grams * number_of_servings;
-
-					// Calculate nutrition per recipe serving
-					const caloriesPerServing = totalCalories / recipeServings;
-					const carbsPerServing = totalCarbs / recipeServings;
-					const proteinPerServing = totalProtein / recipeServings;
-					const fatPerServing = totalFat / recipeServings;
+					const totalNutrition = calculateNutritionTotal(
+						{
+							calories: serving.calories,
+							protein: serving.protein_grams,
+							carbohydrate: serving.carbohydrate_grams,
+							fat: serving.fat_grams,
+						},
+						number_of_servings / recipeServings,
+					);
 
 					return (
 						<View className="flex-1 min-h-[60px] bg-background rounded-md">
@@ -130,15 +130,7 @@ export function IngredientInput({
 												</Text>
 											)}
 											<View>
-												<MacroDisplay
-													nutrition={{
-														calories: caloriesPerServing,
-														carbohydrate: carbsPerServing,
-														protein: proteinPerServing,
-														fat: fatPerServing,
-													}}
-													size="sm"
-												/>
+												<MacroDisplay nutrition={totalNutrition} size="sm" />
 											</View>
 										</View>
 									</View>

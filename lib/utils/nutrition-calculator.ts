@@ -1,4 +1,5 @@
 import { FoodEntry } from "@/app/api/food-entries/index+api";
+import { calculateNutritionTotal } from "./nutrition-math";
 
 export interface NutritionTotals {
 	calories: number;
@@ -33,24 +34,20 @@ export function calculateFoodEntryNutrition(
 		}
 
 		// Recipe macros are already per serving, so just multiply by number of servings
-		return {
-			calories: Math.round((macros.calories || 0) * numberOfServings),
-			protein: Math.round((macros.protein || 0) * numberOfServings * 10) / 10,
-			carbohydrate:
-				Math.round((macros.carbohydrate || 0) * numberOfServings * 10) / 10,
-			fat: Math.round((macros.fat || 0) * numberOfServings * 10) / 10,
-		};
+		return calculateNutritionTotal(
+			{
+				calories: macros.calories || 0,
+				protein: macros.protein || 0,
+				carbohydrate: macros.carbohydrate || 0,
+				fat: macros.fat || 0,
+			},
+			numberOfServings,
+		);
 	}
 
 	// For Food type entries
 	if (entry.type === "Food" && entry.serving) {
-		return {
-			calories: Math.round(entry.serving.calories * numberOfServings),
-			protein: Math.round(entry.serving.protein * numberOfServings * 10) / 10,
-			carbohydrate:
-				Math.round(entry.serving.carbohydrate * numberOfServings * 10) / 10,
-			fat: Math.round(entry.serving.fat * numberOfServings * 10) / 10,
-		};
+		return calculateNutritionTotal(entry.serving, numberOfServings);
 	}
 
 	return { calories: 0, protein: 0, carbohydrate: 0, fat: 0 };
@@ -85,11 +82,7 @@ export function calculateFoodEntryNutritionForSelectedProfiles(
 	});
 
 	// Round final totals
-	totals.protein = Math.round(totals.protein * 10) / 10;
-	totals.carbohydrate = Math.round(totals.carbohydrate * 10) / 10;
-	totals.fat = Math.round(totals.fat * 10) / 10;
-
-	return totals;
+	return calculateNutritionTotal(totals, 1);
 }
 
 /**
@@ -122,9 +115,5 @@ export function calculateFoodEntriesNutrition(
 	});
 
 	// Round final totals
-	totals.protein = Math.round(totals.protein * 10) / 10;
-	totals.carbohydrate = Math.round(totals.carbohydrate * 10) / 10;
-	totals.fat = Math.round(totals.fat * 10) / 10;
-
-	return totals;
+	return calculateNutritionTotal(totals, 1);
 }
