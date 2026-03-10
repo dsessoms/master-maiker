@@ -48,30 +48,22 @@ export const MacroDisplay = ({
 				</Text>
 			)}
 			<View className="flex-row items-center gap-3">
-				{nutrition.calories > 0 && (
-					<View className="flex-row items-center">
-						<Text className={cn(textClass)}>{nutrition.calories}</Text>
-						<Text className={cn(textClass, "text-muted-foreground")}>Cal</Text>
-					</View>
-				)}
-				{nutrition.protein > 0 && (
-					<View className="flex-row items-center">
-						<Text className={cn(textClass)}>{nutrition.protein}</Text>
-						<Text className={cn(textClass, "text-muted-foreground")}>P</Text>
-					</View>
-				)}
-				{nutrition.carbohydrate > 0 && (
-					<View className="flex-row items-center">
-						<Text className={cn(textClass)}>{nutrition.carbohydrate}</Text>
-						<Text className={cn(textClass, "text-muted-foreground")}>C</Text>
-					</View>
-				)}
-				{nutrition.fat > 0 && (
-					<View className="flex-row items-center">
-						<Text className={cn(textClass)}>{nutrition.fat}</Text>
-						<Text className={cn(textClass, "text-muted-foreground")}>F</Text>
-					</View>
-				)}
+				<View className="flex-row items-center">
+					<Text className={cn(textClass)}>{nutrition.calories}</Text>
+					<Text className={cn(textClass, "text-muted-foreground")}>Cal</Text>
+				</View>
+				<View className="flex-row items-center">
+					<Text className={cn(textClass)}>{nutrition.protein}</Text>
+					<Text className={cn(textClass, "text-muted-foreground")}>P</Text>
+				</View>
+				<View className="flex-row items-center">
+					<Text className={cn(textClass)}>{nutrition.carbohydrate}</Text>
+					<Text className={cn(textClass, "text-muted-foreground")}>C</Text>
+				</View>
+				<View className="flex-row items-center">
+					<Text className={cn(textClass)}>{nutrition.fat}</Text>
+					<Text className={cn(textClass, "text-muted-foreground")}>F</Text>
+				</View>
 			</View>
 		</View>
 	);
