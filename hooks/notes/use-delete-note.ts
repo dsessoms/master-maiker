@@ -1,6 +1,9 @@
+import {
+	DeleteNoteResponse,
+	FetchNotesResponse,
+} from "@/lib/schemas/note-schema";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { DeleteNoteResponse } from "@/lib/schemas/note-schema";
 import axiosWithAuth from "@/lib/axiosWithAuth";
 
 export const useDeleteNote = () => {
@@ -23,8 +26,41 @@ export const useDeleteNote = () => {
 
 			return response.data;
 		},
-		onSuccess: () => {
-			// Invalidate all notes queries to refetch the updated data
+		onMutate: async (id: string) => {
+			// Cancel any outgoing refetches to avoid overwriting our optimistic update
+			await queryClient.cancelQueries({
+				queryKey: ["notes"],
+			});
+
+			// Snapshot all the previous notes queries
+			const previousQueries = queryClient.getQueriesData<
+				FetchNotesResponse["notes"]
+			>({
+				queryKey: ["notes"],
+			});
+
+			// Optimistically remove the note from all matching queries
+			queryClient.setQueriesData<FetchNotesResponse["notes"]>(
+				{ queryKey: ["notes"] },
+				(oldData) => {
+					if (!oldData) return oldData;
+					return oldData.filter((note) => note.id !== id);
+				},
+			);
+
+			// Return context with the snapshotted value
+			return { previousQueries };
+		},
+		onError: (_err, _id, context) => {
+			// Rollback to the previous value if mutation fails
+			if (context?.previousQueries) {
+				context.previousQueries.forEach(([queryKey, data]) => {
+					queryClient.setQueryData(queryKey, data);
+				});
+			}
+		},
+		onSettled: () => {
+			// Always refetch after error or success to ensure we have the correct state
 			queryClient.invalidateQueries({
 				queryKey: ["notes"],
 			});

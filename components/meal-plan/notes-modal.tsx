@@ -282,42 +282,29 @@ export const NotesModal = ({
 
 											if (!note?.id) {
 												// Create new note in DB
-												createNote.mutate(
-													{
-														noteType: "day_meal",
-														value: trimmedValue,
-														isCheckbox: true,
-														date,
-														mealType,
-													},
-													{
-														onSuccess: () => {
-															// Note will be added via the notes query refetch
-															// The INITIALIZE action will handle updating the state
-														},
-													},
-												);
+												createNote.mutate({
+													noteType: "day_meal",
+													value: trimmedValue,
+													isCheckbox: true,
+													date,
+													mealType,
+												});
 											} else {
 												// Update existing note
-												updateNote.mutate(
-													{
-														id: note.id,
-														value: trimmedValue,
+												updateNote.mutate({
+													id: note.id,
+													value: trimmedValue,
+												});
+												// immediately switch to view state
+												dispatch({
+													type: "UPDATE",
+													index,
+													updates: {
+														state: StatefulInputState.View,
+														raw: trimmedValue,
+														parsed: { ...note, value: trimmedValue },
 													},
-													{
-														onSuccess: () => {
-															dispatch({
-																type: "UPDATE",
-																index,
-																updates: {
-																	state: StatefulInputState.View,
-																	raw: trimmedValue,
-																	parsed: { ...note, value: trimmedValue },
-																},
-															});
-														},
-													},
-												);
+												});
 											}
 										}}
 										onEdit={() => {
