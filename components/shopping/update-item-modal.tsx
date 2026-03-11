@@ -7,20 +7,21 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import { Pressable, View } from "react-native";
 
 import { Button } from "@/components/ui/button";
 import { ConsolidatedItemType } from "./types";
 import { Image } from "@/components/image";
 import { Input } from "@/components/ui/input";
-import { Pressable, View } from "react-native";
+import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import { Text } from "@/components/ui/text";
 import { Textarea } from "@/components/ui/textarea";
 import { Trash2Icon } from "@/lib/icons";
+import { getServingDescription } from "@/lib/utils/serving-description";
 import { router } from "expo-router";
 import { useDeleteShoppingListItemMutation } from "@/hooks/shopping-lists/use-delete-shopping-list-item-mutation";
 import { useRecipeImage } from "@/hooks/recipes/use-recipe-image";
 import { useShoppingListItems } from "@/hooks/shopping-lists/use-shopping-list-items";
-import { getServingDescription } from "@/lib/utils/serving-description";
 
 const RecipeRow = ({
 	recipe,
@@ -83,7 +84,8 @@ export const UpdateItemModal = ({
 
 	const [name, setName] = React.useState(displayName);
 	const [notes, setNotes] = React.useState(item.notes ?? "");
-	const { items, updateItem } = useShoppingListItems(shoppingListId);
+	const { items, updateItem, isUpdating } =
+		useShoppingListItems(shoppingListId);
 	const { deleteShoppingListItem, isPending: isDeleting } =
 		useDeleteShoppingListItemMutation(shoppingListId);
 
@@ -229,7 +231,12 @@ export const UpdateItemModal = ({
 					<Button variant="outline" onPress={onClose}>
 						<Text>Cancel</Text>
 					</Button>
-					<Button onPress={handleSave}>
+					<Button
+						disabled={isUpdating}
+						className="flex-row gap-2"
+						onPress={handleSave}
+					>
+						{isUpdating && <LoadingIndicator />}
 						<Text>Save</Text>
 					</Button>
 				</DialogFooter>
