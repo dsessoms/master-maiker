@@ -29,8 +29,74 @@ export const useUpdateFoodEntry = () => {
 
 			return response.data;
 		},
-		onSuccess: () => {
-			// Invalidate the food entries query to refetch the updated data
+		onMutate: async (payload: UpdateFoodEntryPayload) => {
+			// Cancel any outgoing refetches to avoid overwriting our optimistic update
+			await queryClient.cancelQueries({
+				queryKey: ["foodEntries"],
+			});
+
+			// Snapshot all the previous food entries queries
+			const previousQueries = queryClient.getQueriesData({
+				queryKey: ["foodEntries"],
+			});
+
+			// Optimistically update all food entries queries
+			queryClient.setQueriesData<any[]>(
+				{ queryKey: ["foodEntries"] },
+				(oldData) => {
+					if (!oldData) return oldData;
+
+					return oldData.map((entry) => {
+						if (entry.id === payload.foodEntryId) {
+							const updatedEntry = { ...entry };
+
+							// Update date if provided
+							if (payload.date) {
+								updatedEntry.date = payload.date;
+							}
+
+							// Update meal_type if provided
+							if (payload.mealType) {
+								updatedEntry.meal_type = payload.mealType;
+							}
+
+							// Update profile servings if provided
+							if (payload.profileServings) {
+								updatedEntry.profile_food_entry =
+									updatedEntry.profile_food_entry?.map((profileEntry: any) => {
+										const update = payload.profileServings?.find(
+											(ps) => ps.profile_id === profileEntry.profile_id,
+										);
+										if (update) {
+											return {
+												...profileEntry,
+												number_of_servings: update.servings,
+											};
+										}
+										return profileEntry;
+									});
+							}
+
+							return updatedEntry;
+						}
+						return entry;
+					});
+				},
+			);
+
+			// Return context with the snapshotted value
+			return { previousQueries };
+		},
+		onError: (_err, _payload, context) => {
+			// Rollback to the previous value if mutation fails
+			if (context?.previousQueries) {
+				context.previousQueries.forEach(([queryKey, data]) => {
+					queryClient.setQueryData(queryKey, data);
+				});
+			}
+		},
+		onSettled: () => {
+			// Always refetch after error or success to ensure we have the correct state
 			queryClient.invalidateQueries({
 				queryKey: ["foodEntries"],
 			});
