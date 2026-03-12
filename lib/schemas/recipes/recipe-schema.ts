@@ -40,6 +40,10 @@ export const RecipeSchema = z.object({
 		.optional()
 		.or(z.literal(""))
 		.transform((val) => (val === "" ? undefined : val)),
+	cuisine_ids: z.array(z.number()).optional(),
+	diet_ids: z.array(z.number()).optional(),
+	dish_type_ids: z.array(z.number()).optional(),
+	tag_names: z.array(z.string()).optional(),
 });
 
 export type Recipe = z.infer<typeof RecipeSchema>;

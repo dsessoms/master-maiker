@@ -1,8 +1,15 @@
 import Animated, { useAnimatedRef } from "react-native-reanimated";
 import { Form, FormField, FormInput, FormTextarea } from "../ui/form";
 import { Ingredient, Recipe, RecipeSchema } from "../../lib/schemas";
+import {
+	useCuisines,
+	useDiets,
+	useDishTypes,
+	useTags,
+} from "@/hooks/recipes/use-classifications";
 
 import { Button } from "../ui/button";
+import { ClassificationPills } from "./classifications/ClassificationPills";
 import { ImageUploader } from "./ImageUploader";
 import { IngredientInputs } from "./ingredients/IngredientInputs";
 import { InstructionInputs } from "./instructions/InstructionInputs";
@@ -10,6 +17,7 @@ import { InstructionOrHeader } from "@/components/forms/instructions/Instruction
 import { Label } from "../ui/label";
 import { Link } from "@/lib/icons";
 import { LoadingIndicator } from "@/components/ui/loading-indicator";
+import { TagPills } from "./classifications/TagPills";
 import { Text } from "@/components/ui/text";
 import { View } from "react-native";
 import { supabase } from "@/config/supabase";
@@ -42,6 +50,12 @@ export function RecipeForm({
 	const existingImageUrl = useRecipeImage(initialValues?.image_id);
 	const scrollableRef = useAnimatedRef<Animated.ScrollView>();
 
+	// Fetch classification data
+	const { data: cuisines, isLoading: cuisinesLoading } = useCuisines();
+	const { data: diets, isLoading: dietsLoading } = useDiets();
+	const { data: dishTypes, isLoading: dishTypesLoading } = useDishTypes();
+	const { data: tags, isLoading: tagsLoading } = useTags();
+
 	const form = useForm<Recipe>({
 		resolver: zodResolver(RecipeSchema),
 		defaultValues: initialValues ?? {
@@ -55,6 +69,10 @@ export function RecipeForm({
 			cook_time_hours: 0,
 			cook_time_minutes: 0,
 			source_url: "",
+			cuisine_ids: [],
+			diet_ids: [],
+			dish_type_ids: [],
+			tag_names: [],
 		},
 	});
 
@@ -218,6 +236,7 @@ export function RecipeForm({
 									/>
 								)}
 							/>
+
 							<Label className="text-xl font-semibold">Ingredients</Label>
 							<IngredientInputs
 								onIngredientsChange={setParsedIngredients}
@@ -311,6 +330,63 @@ export function RecipeForm({
 									/>
 								</View>
 							</View>
+
+							{/* Classification Fields */}
+							<FormField
+								control={form.control}
+								name="cuisine_ids"
+								render={({ field }) => (
+									<ClassificationPills
+										label="Cuisines"
+										items={cuisines ?? []}
+										selectedIds={field.value ?? []}
+										onSelectionChange={field.onChange}
+										isLoading={cuisinesLoading}
+									/>
+								)}
+							/>
+
+							<FormField
+								control={form.control}
+								name="diet_ids"
+								render={({ field }) => (
+									<ClassificationPills
+										label="Diets"
+										items={diets ?? []}
+										selectedIds={field.value ?? []}
+										onSelectionChange={field.onChange}
+										isLoading={dietsLoading}
+									/>
+								)}
+							/>
+
+							<FormField
+								control={form.control}
+								name="dish_type_ids"
+								render={({ field }) => (
+									<ClassificationPills
+										label="Dish Types"
+										items={dishTypes ?? []}
+										selectedIds={field.value ?? []}
+										onSelectionChange={field.onChange}
+										isLoading={dishTypesLoading}
+									/>
+								)}
+							/>
+
+							<FormField
+								control={form.control}
+								name="tag_names"
+								render={({ field }) => (
+									<TagPills
+										label="Tags"
+										existingTags={tags ?? []}
+										selectedTagNames={field.value ?? []}
+										onSelectionChange={field.onChange}
+										isLoading={tagsLoading}
+									/>
+								)}
+							/>
 						</View>
 					</Form>
 					<Button
