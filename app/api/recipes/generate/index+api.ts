@@ -103,8 +103,9 @@ export async function POST(req: Request) {
 			recipe: aiRecipe,
 		});
 
-		// Step 3: Convert to our Recipe format
-		const recipe: Recipe = convertSpoonacularRecipeToRecipe(spoonacularRecipe);
+		// Step 3: Convert to our Recipe format (now async)
+		const recipe: Recipe =
+			await convertSpoonacularRecipeToRecipe(spoonacularRecipe);
 
 		return jsonResponse({ recipe });
 	} catch (error) {

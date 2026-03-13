@@ -1,10 +1,10 @@
+import { Database } from "@/database.types";
 import { Recipe } from "@/lib/schemas";
 import { extractParamsFromRequest } from "@/lib/url-params";
 import { jsonResponse } from "@/lib/server/json-response";
 import { supabase } from "@/config/supabase-server";
 import { upsertRecipe } from "@/lib/server/recipe-helpers";
 import { validateSession } from "@/lib/server/validate-session";
-import { Database } from "@/database.types";
 
 export type GetRecipeResponse = NonNullable<Awaited<ReturnType<typeof GET>>>;
 export type PutRecipeResponse = Awaited<ReturnType<typeof PUT>>;
@@ -41,7 +41,13 @@ export async function GET(req: Request) {
         ),
         serving (serving_id:fat_secret_id, *)
       ),
-      instruction (*)
+      instruction (*),
+      recipe_cuisines (cuisine_id),
+      recipe_diets (diet_id),
+      recipe_dish_types (dish_type_id),
+      recipe_tags (
+        tags (name)
+      )
       `,
 		)
 		.eq("id", recipeId);

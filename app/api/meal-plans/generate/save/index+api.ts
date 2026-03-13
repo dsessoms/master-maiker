@@ -98,8 +98,9 @@ export async function POST(req: Request) {
 						);
 					}
 
-					// Convert to our Recipe format with nutrition data
-					analyzedRecipe = convertSpoonacularRecipeToRecipe(spoonacularRecipe);
+					// Convert to our Recipe format with nutrition data (now async)
+					analyzedRecipe =
+						await convertSpoonacularRecipeToRecipe(spoonacularRecipe);
 				} else {
 					// recipe.type === "generated"
 					// Analyze the generated recipe with Spoonacular to get nutrition info
@@ -115,12 +116,10 @@ export async function POST(req: Request) {
 						recipe: spoonacularRecipe,
 					});
 
-					// Convert to our Recipe format with nutrition data
+					// Convert to our Recipe format with nutrition data (now async)
 					analyzedRecipe =
-						convertSpoonacularRecipeToRecipe(spoonacularResponse);
-				}
-
-				// Create new recipe using the analyzed data
+						await convertSpoonacularRecipeToRecipe(spoonacularResponse);
+				} // Create new recipe using the analyzed data
 				const { data: newRecipeId, error: recipeError } = await supabase.rpc(
 					"add_recipe",
 					{

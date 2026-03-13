@@ -11,6 +11,7 @@ CREATE OR REPLACE FUNCTION "public"."add_recipe"(
   "cook_time_minutes" integer DEFAULT NULL::integer, 
   "description" "text" DEFAULT NULL::"text", 
   "image_id" "uuid" DEFAULT NULL::"uuid",
+  "source_url" character varying DEFAULT NULL::character varying,
   "cuisine_ids" integer[] DEFAULT NULL::integer[],
   "diet_ids" integer[] DEFAULT NULL::integer[],
   "dish_type_ids" integer[] DEFAULT NULL::integer[],
@@ -36,8 +37,8 @@ CREATE OR REPLACE FUNCTION "public"."add_recipe"(
     delete from recipe_dish_types where recipe_dish_types.recipe_id = add_recipe.recipe_id;
     delete from recipe_tags where recipe_tags.recipe_id = add_recipe.recipe_id;
     
-    insert into recipe(id, name, description, number_of_servings, prep_time_hours, prep_time_minutes, cook_time_hours, cook_time_minutes, image_id, user_id) 
-    values (add_recipe.recipe_id, add_recipe.recipe_name, add_recipe.description, add_recipe.number_of_servings, add_recipe.prep_time_hours, add_recipe.prep_time_minutes, add_recipe.cook_time_hours, add_recipe.cook_time_minutes, add_recipe.image_id, current_user_id) 
+    insert into recipe(id, name, description, number_of_servings, prep_time_hours, prep_time_minutes, cook_time_hours, cook_time_minutes, image_id, source_url, user_id) 
+    values (add_recipe.recipe_id, add_recipe.recipe_name, add_recipe.description, add_recipe.number_of_servings, add_recipe.prep_time_hours, add_recipe.prep_time_minutes, add_recipe.cook_time_hours, add_recipe.cook_time_minutes, add_recipe.image_id, add_recipe.source_url, current_user_id) 
     ON CONFLICT (id) DO UPDATE SET 
     name=excluded.name, 
     description=excluded.description, 
@@ -46,7 +47,8 @@ CREATE OR REPLACE FUNCTION "public"."add_recipe"(
     prep_time_minutes=excluded.prep_time_minutes, 
     cook_time_hours=excluded.cook_time_hours, 
     cook_time_minutes=excluded.cook_time_minutes, 
-    image_id=excluded.image_id;
+    image_id=excluded.image_id,
+    source_url=excluded.source_url;
 
     -- Handle cuisines
     if cuisine_ids is not null and array_length(cuisine_ids, 1) > 0 then

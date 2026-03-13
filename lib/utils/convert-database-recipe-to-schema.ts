@@ -13,6 +13,10 @@ export function convertDatabaseRecipeToSchema(
 			serving?: Tables<"serving"> | null;
 		})[];
 		instruction?: Tables<"instruction">[];
+		recipe_cuisines?: { cuisine_id: number }[];
+		recipe_diets?: { diet_id: number }[];
+		recipe_dish_types?: { dish_type_id: number }[];
+		recipe_tags?: { tags: { name: string } | null }[];
 	},
 ): Recipe {
 	return {
@@ -100,5 +104,13 @@ export function convertDatabaseRecipeToSchema(
 					value: inst.value || "",
 				};
 			}) || [],
+		cuisine_ids: recipe.recipe_cuisines?.map((rc) => rc.cuisine_id) || [],
+		diet_ids: recipe.recipe_diets?.map((rd) => rd.diet_id) || [],
+		dish_type_ids:
+			recipe.recipe_dish_types?.map((rdt) => rdt.dish_type_id) || [],
+		tag_names:
+			recipe.recipe_tags
+				?.map((rt) => rt.tags?.name)
+				.filter((name): name is string => !!name) || [],
 	};
 }

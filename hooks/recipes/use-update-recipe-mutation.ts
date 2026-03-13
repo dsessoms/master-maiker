@@ -21,6 +21,7 @@ export const useUpdateRecipeMutation = () => {
 			// Invalidate and refetch
 			queryClient.invalidateQueries({ queryKey: ["recipes"] });
 			queryClient.invalidateQueries({ queryKey: ["recipe", variables.id] });
+			queryClient.invalidateQueries({ queryKey: ["tags"] });
 		},
 	});
 
