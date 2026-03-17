@@ -34,6 +34,51 @@ export type Database = {
 	};
 	public: {
 		Tables: {
+			cuisines: {
+				Row: {
+					id: number;
+					name: string;
+				};
+				Insert: {
+					id?: number;
+					name: string;
+				};
+				Update: {
+					id?: number;
+					name?: string;
+				};
+				Relationships: [];
+			};
+			diets: {
+				Row: {
+					id: number;
+					name: string;
+				};
+				Insert: {
+					id?: number;
+					name: string;
+				};
+				Update: {
+					id?: number;
+					name?: string;
+				};
+				Relationships: [];
+			};
+			dish_types: {
+				Row: {
+					id: number;
+					name: string;
+				};
+				Insert: {
+					id?: number;
+					name: string;
+				};
+				Update: {
+					id?: number;
+					name?: string;
+				};
+				Relationships: [];
+			};
 			feature_flag_users: {
 				Row: {
 					created_at: string;
@@ -519,6 +564,126 @@ export type Database = {
 				};
 				Relationships: [];
 			};
+			recipe_cuisines: {
+				Row: {
+					cuisine_id: number;
+					recipe_id: string;
+				};
+				Insert: {
+					cuisine_id: number;
+					recipe_id: string;
+				};
+				Update: {
+					cuisine_id?: number;
+					recipe_id?: string;
+				};
+				Relationships: [
+					{
+						foreignKeyName: "recipe_cuisines_cuisine_id_fkey";
+						columns: ["cuisine_id"];
+						isOneToOne: false;
+						referencedRelation: "cuisines";
+						referencedColumns: ["id"];
+					},
+					{
+						foreignKeyName: "recipe_cuisines_recipe_id_fkey";
+						columns: ["recipe_id"];
+						isOneToOne: false;
+						referencedRelation: "recipe";
+						referencedColumns: ["id"];
+					},
+				];
+			};
+			recipe_diets: {
+				Row: {
+					diet_id: number;
+					recipe_id: string;
+				};
+				Insert: {
+					diet_id: number;
+					recipe_id: string;
+				};
+				Update: {
+					diet_id?: number;
+					recipe_id?: string;
+				};
+				Relationships: [
+					{
+						foreignKeyName: "recipe_diets_diet_id_fkey";
+						columns: ["diet_id"];
+						isOneToOne: false;
+						referencedRelation: "diets";
+						referencedColumns: ["id"];
+					},
+					{
+						foreignKeyName: "recipe_diets_recipe_id_fkey";
+						columns: ["recipe_id"];
+						isOneToOne: false;
+						referencedRelation: "recipe";
+						referencedColumns: ["id"];
+					},
+				];
+			};
+			recipe_dish_types: {
+				Row: {
+					dish_type_id: number;
+					recipe_id: string;
+				};
+				Insert: {
+					dish_type_id: number;
+					recipe_id: string;
+				};
+				Update: {
+					dish_type_id?: number;
+					recipe_id?: string;
+				};
+				Relationships: [
+					{
+						foreignKeyName: "recipe_dish_types_dish_type_id_fkey";
+						columns: ["dish_type_id"];
+						isOneToOne: false;
+						referencedRelation: "dish_types";
+						referencedColumns: ["id"];
+					},
+					{
+						foreignKeyName: "recipe_dish_types_recipe_id_fkey";
+						columns: ["recipe_id"];
+						isOneToOne: false;
+						referencedRelation: "recipe";
+						referencedColumns: ["id"];
+					},
+				];
+			};
+			recipe_tags: {
+				Row: {
+					recipe_id: string;
+					tag_id: number;
+				};
+				Insert: {
+					recipe_id: string;
+					tag_id: number;
+				};
+				Update: {
+					recipe_id?: string;
+					tag_id?: number;
+				};
+				Relationships: [
+					{
+						foreignKeyName: "recipe_tags_recipe_id_fkey";
+						columns: ["recipe_id"];
+						isOneToOne: false;
+						referencedRelation: "recipe";
+						referencedColumns: ["id"];
+					},
+					{
+						foreignKeyName: "recipe_tags_tag_id_fkey";
+						columns: ["tag_id"];
+						isOneToOne: false;
+						referencedRelation: "tags";
+						referencedColumns: ["id"];
+					},
+				];
+			};
 			serving: {
 				Row: {
 					calcium: number | null;
@@ -721,6 +886,21 @@ export type Database = {
 					},
 				];
 			};
+			tags: {
+				Row: {
+					id: number;
+					name: string;
+				};
+				Insert: {
+					id?: number;
+					name: string;
+				};
+				Update: {
+					id?: number;
+					name?: string;
+				};
+				Relationships: [];
+			};
 		};
 		Views: {
 			recipe_macros: {
@@ -756,23 +936,44 @@ export type Database = {
 			};
 		};
 		Functions: {
-			add_recipe: {
-				Args: {
-					cook_time_hours?: number;
-					cook_time_minutes?: number;
-					description?: string;
-					image_id?: string;
-					ingredients: Json[];
-					instructions?: Json[];
-					name: string;
-					number_of_servings: number;
-					prep_time_hours?: number;
-					prep_time_minutes?: number;
-					recipe_id?: string;
-					source_url?: string;
-				};
-				Returns: string;
-			};
+			add_recipe:
+				| {
+						Args: {
+							cook_time_hours?: number;
+							cook_time_minutes?: number;
+							description?: string;
+							image_id?: string;
+							ingredients: Json[];
+							instructions?: Json[];
+							name: string;
+							number_of_servings: number;
+							prep_time_hours?: number;
+							prep_time_minutes?: number;
+							recipe_id?: string;
+							source_url?: string;
+						};
+						Returns: string;
+				  }
+				| {
+						Args: {
+							cook_time_hours?: number;
+							cook_time_minutes?: number;
+							cuisine_ids?: number[];
+							description?: string;
+							diet_ids?: number[];
+							dish_type_ids?: number[];
+							image_id?: string;
+							ingredients: Json[];
+							instructions?: Json[];
+							number_of_servings: number;
+							prep_time_hours?: number;
+							prep_time_minutes?: number;
+							recipe_id?: string;
+							recipe_name: string;
+							tag_names?: string[];
+						};
+						Returns: string;
+				  };
 			create_food_entry_with_profiles: {
 				Args: {
 					entry_date: string;

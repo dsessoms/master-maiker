@@ -5,7 +5,7 @@ import { supabase } from "@/config/supabase-server";
 export function mapRecipeToRpcParams(recipe: Recipe, recipeId?: string) {
 	return {
 		...(recipeId && { recipe_id: recipeId }),
-		name: recipe.name,
+		recipe_name: recipe.name,
 		number_of_servings: Number(recipe.servings),
 		description: recipe.description ?? undefined,
 		prep_time_hours: recipe.prep_time_hours
@@ -24,6 +24,10 @@ export function mapRecipeToRpcParams(recipe: Recipe, recipeId?: string) {
 		instructions: recipe.instructions ?? [],
 		ingredients: recipe.ingredients as Json[],
 		source_url: recipe.source_url ?? undefined,
+		cuisine_ids: recipe.cuisine_ids ?? undefined,
+		diet_ids: recipe.diet_ids ?? undefined,
+		dish_type_ids: recipe.dish_type_ids ?? undefined,
+		tag_names: recipe.tag_names ?? undefined,
 	};
 }
 

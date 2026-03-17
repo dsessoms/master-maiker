@@ -36,8 +36,8 @@ export async function GET(req: Request) {
 			url: recipeUrl,
 		});
 
-		// Convert to our Recipe format
-		const recipe = convertSpoonacularRecipeToRecipe(spoonacularRecipe);
+		// Convert to our Recipe format (now async)
+		const recipe = await convertSpoonacularRecipeToRecipe(spoonacularRecipe);
 
 		let imageId: string | undefined;
 
@@ -88,8 +88,8 @@ export async function POST(req: Request) {
 			recipe: body,
 		});
 
-		// Convert to our Recipe format
-		const recipe = convertSpoonacularRecipeToRecipe(spoonacularRecipe);
+		// Convert to our Recipe format (now async)
+		const recipe = await convertSpoonacularRecipeToRecipe(spoonacularRecipe);
 
 		// Chat-generated recipes don't have images, so we don't need to process them
 		return jsonResponse({ recipe });

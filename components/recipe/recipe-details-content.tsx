@@ -203,6 +203,27 @@ export function RecipeDetailsContent({
 							})}
 					</View>
 				</View>
+
+				{/* Tags Section */}
+				{recipe.recipe_tags && recipe.recipe_tags.length > 0 && (
+					<View className="mb-6">
+						<Text className="text-xl font-semibold mb-4">Tags</Text>
+						<View className="flex-row flex-wrap gap-2">
+							{recipe.recipe_tags
+								.filter((rt) => rt.tags?.name)
+								.map((rt, index) => (
+									<View
+										key={index}
+										className="bg-muted flex-row items-center gap-1 rounded-md px-2 py-1"
+									>
+										<Text className="text-sm text-secondary-foreground">
+											{rt.tags!.name}
+										</Text>
+									</View>
+								))}
+						</View>
+					</View>
+				)}
 			</View>
 		</ScrollView>
 	);

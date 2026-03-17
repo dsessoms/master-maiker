@@ -1,6 +1,13 @@
 import Animated, { useAnimatedRef } from "react-native-reanimated";
 import { Form, FormField, FormInput, FormTextarea } from "../ui/form";
 import { Ingredient, Recipe, RecipeSchema } from "../../lib/schemas";
+import {
+	useCuisines,
+	useDiets,
+	useDishTypes,
+	useTags,
+	useDeleteTag,
+} from "@/hooks/recipes/use-classifications";
 
 import { Button } from "../ui/button";
 import { ImageUploader } from "./ImageUploader";
@@ -10,12 +17,16 @@ import { InstructionOrHeader } from "@/components/forms/instructions/Instruction
 import { Label } from "../ui/label";
 import { Link } from "@/lib/icons";
 import { LoadingIndicator } from "@/components/ui/loading-indicator";
+import {
+	MultiSelect,
+	type MultiSelectOption,
+} from "@/components/ui/multi-select";
 import { Text } from "@/components/ui/text";
 import { View } from "react-native";
 import { supabase } from "@/config/supabase";
 import { useForm } from "react-hook-form";
 import { useRecipeImage } from "@/hooks/recipes/use-recipe-image";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { zodResolver } from "@hookform/resolvers/zod";
 
@@ -42,6 +53,13 @@ export function RecipeForm({
 	const existingImageUrl = useRecipeImage(initialValues?.image_id);
 	const scrollableRef = useAnimatedRef<Animated.ScrollView>();
 
+	// Fetch classification data
+	const { data: cuisines, isLoading: cuisinesLoading } = useCuisines();
+	const { data: diets, isLoading: dietsLoading } = useDiets();
+	const { data: dishTypes, isLoading: dishTypesLoading } = useDishTypes();
+	const { data: tags, isLoading: tagsLoading } = useTags();
+	const deleteTagMutation = useDeleteTag();
+
 	const form = useForm<Recipe>({
 		resolver: zodResolver(RecipeSchema),
 		defaultValues: initialValues ?? {
@@ -55,6 +73,10 @@ export function RecipeForm({
 			cook_time_hours: 0,
 			cook_time_minutes: 0,
 			source_url: "",
+			cuisine_ids: [],
+			diet_ids: [],
+			dish_type_ids: [],
+			tag_names: [],
 		},
 	});
 
@@ -71,6 +93,52 @@ export function RecipeForm({
 	const [showSourceUrl, setShowSourceUrl] = useState(
 		!!initialValues?.source_url,
 	);
+
+	// Convert classification data to MultiSelect options
+	const cuisineOptions = useMemo<MultiSelectOption[]>(
+		() =>
+			cuisines?.map((c) => ({ label: c.name, value: c.id.toString() })) ?? [],
+		[cuisines],
+	);
+
+	const dietOptions = useMemo<MultiSelectOption[]>(
+		() => diets?.map((d) => ({ label: d.name, value: d.id.toString() })) ?? [],
+		[diets],
+	);
+
+	const dishTypeOptions = useMemo<MultiSelectOption[]>(
+		() =>
+			dishTypes?.map((dt) => ({ label: dt.name, value: dt.id.toString() })) ??
+			[],
+		[dishTypes],
+	);
+
+	// Track additional tags created locally (not yet persisted)
+	const [additionalTags, setAdditionalTags] = useState<MultiSelectOption[]>([]);
+
+	// Saved tags from the server
+	const savedTagOptions = useMemo<MultiSelectOption[]>(
+		() => tags?.map((t) => ({ label: t.name, value: t.name })) ?? [],
+		[tags],
+	);
+
+	// Combine saved and additional tags for the dropdown
+	const tagOptions = useMemo<MultiSelectOption[]>(
+		() => [...savedTagOptions, ...additionalTags],
+		[savedTagOptions, additionalTags],
+	);
+
+	// Handler for deleting tags
+	const handleDeleteTag = async (tagName: string) => {
+		const tag = tags?.find((t) => t.name === tagName);
+		if (tag) {
+			// This is a saved tag, delete it from the server
+			await deleteTagMutation.mutateAsync(tag.id);
+		} else {
+			// This is an additional tag, remove it from local state
+			setAdditionalTags((prev) => prev.filter((t) => t.value !== tagName));
+		}
+	};
 
 	// Override the submit handler to include parsed ingredients and handle image upload
 	const handleSubmit = async (data: Partial<Recipe>) => {
@@ -218,6 +286,7 @@ export function RecipeForm({
 									/>
 								)}
 							/>
+
 							<Label className="text-xl font-semibold">Ingredients</Label>
 							<IngredientInputs
 								onIngredientsChange={setParsedIngredients}
@@ -310,6 +379,103 @@ export function RecipeForm({
 										)}
 									/>
 								</View>
+							</View>
+
+							{/* Classification Fields */}
+							<View className="gap-1">
+								<Label className="text-xl font-semibold">Cuisines</Label>
+								<FormField
+									control={form.control}
+									name="cuisine_ids"
+									render={({ field }) => (
+										<MultiSelect
+											options={cuisineOptions}
+											selectedValues={
+												field.value?.map((id) => id.toString()) ?? []
+											}
+											onValuesChange={(values) =>
+												field.onChange(values.map((v) => Number(v)))
+											}
+											placeholder="Select"
+											emptyMessage="No cuisines found."
+											disabled={cuisinesLoading}
+										/>
+									)}
+								/>
+							</View>
+
+							<View className="gap-1">
+								<Label className="text-xl font-semibold">Diets</Label>
+								<FormField
+									control={form.control}
+									name="diet_ids"
+									render={({ field }) => (
+										<MultiSelect
+											options={dietOptions}
+											selectedValues={
+												field.value?.map((id) => id.toString()) ?? []
+											}
+											onValuesChange={(values) =>
+												field.onChange(values.map((v) => Number(v)))
+											}
+											placeholder="Select"
+											emptyMessage="No diets found."
+											disabled={dietsLoading}
+										/>
+									)}
+								/>
+							</View>
+
+							<View className="gap-1">
+								<Label className="text-xl font-semibold">Dish Types</Label>
+								<FormField
+									control={form.control}
+									name="dish_type_ids"
+									render={({ field }) => (
+										<MultiSelect
+											options={dishTypeOptions}
+											selectedValues={
+												field.value?.map((id) => id.toString()) ?? []
+											}
+											onValuesChange={(values) =>
+												field.onChange(values.map((v) => Number(v)))
+											}
+											placeholder="Select"
+											emptyMessage="No dish types found."
+											disabled={dishTypesLoading}
+										/>
+									)}
+								/>
+							</View>
+
+							<View className="gap-1">
+								<Label className="text-xl font-semibold">Tags</Label>
+								<FormField
+									control={form.control}
+									name="tag_names"
+									render={({ field }) => (
+										<MultiSelect
+											options={tagOptions}
+											selectedValues={field.value ?? []}
+											onValuesChange={field.onChange}
+											placeholder="Select or create"
+											emptyMessage="No tags found."
+											allowCreate={true}
+											onCreateOption={(newTag) => {
+												// Add the new tag to additionalTags
+												setAdditionalTags((prev) => [
+													...prev,
+													{ label: newTag, value: newTag },
+												]);
+												// Add to form values
+												const currentValues = form.getValues("tag_names") || [];
+												form.setValue("tag_names", [...currentValues, newTag]);
+											}}
+											onDeleteOption={handleDeleteTag}
+											disabled={tagsLoading}
+										/>
+									)}
+								/>
 							</View>
 						</View>
 					</Form>

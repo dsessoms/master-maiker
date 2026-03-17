@@ -11,6 +11,13 @@ import {
 	type SpoonacularRecipeNutrition,
 } from "../spoonacular-helper";
 
+// Mock the recipe classification mapper to avoid Supabase client initialization
+jest.mock("../recipe-classification-mapper", () => ({
+	mapCuisinesToIds: jest.fn().mockResolvedValue([1]),
+	mapDietsToIds: jest.fn().mockResolvedValue([]),
+	mapDishTypesToIds: jest.fn().mockResolvedValue([2]),
+}));
+
 describe("Spoonacular Helper", () => {
 	beforeEach(() => {
 		jest.clearAllMocks();
@@ -425,8 +432,10 @@ describe("Spoonacular Helper", () => {
 			spoonacularScore: 85,
 		};
 
-		it("should convert Spoonacular recipe to internal Recipe format", () => {
-			const result = convertSpoonacularRecipeToRecipe(mockSpoonacularRecipe);
+		it("should convert Spoonacular recipe to internal Recipe format", async () => {
+			const result = await convertSpoonacularRecipeToRecipe(
+				mockSpoonacularRecipe,
+			);
 
 			expect(result.name).toBe("Test Recipe");
 			expect(result.description).toBe("This is a test recipe with HTML tags.");
@@ -439,22 +448,22 @@ describe("Spoonacular Helper", () => {
 			expect(result.cook_time_minutes).toBe(30);
 		});
 
-		it("should handle time conversions correctly", () => {
+		it("should handle time conversions correctly", async () => {
 			const recipeWithLongTimes: SpoonacularRecipeResponse = {
 				...mockSpoonacularRecipe,
 				preparationMinutes: 90,
 				cookingMinutes: 125,
 			};
 
-			const result = convertSpoonacularRecipeToRecipe(recipeWithLongTimes);
+			const result =
+				await convertSpoonacularRecipeToRecipe(recipeWithLongTimes);
 
 			expect(result.prep_time_hours).toBe(1);
 			expect(result.prep_time_minutes).toBe(30);
 			expect(result.cook_time_hours).toBe(2);
 			expect(result.cook_time_minutes).toBe(5);
 		});
-
-		it("should include section headers in instructions", () => {
+		it("should include section headers in instructions", async () => {
 			const recipeWithSections: SpoonacularRecipeResponse = {
 				...mockSpoonacularRecipe,
 				analyzedInstructions: [
@@ -483,7 +492,7 @@ describe("Spoonacular Helper", () => {
 				],
 			};
 
-			const result = convertSpoonacularRecipeToRecipe(recipeWithSections);
+			const result = await convertSpoonacularRecipeToRecipe(recipeWithSections);
 
 			expect(result.instructions).toHaveLength(4);
 			expect(result.instructions![0]).toEqual({
@@ -504,11 +513,24 @@ describe("Spoonacular Helper", () => {
 			});
 		});
 
-		it("should not include empty section headers", () => {
-			const result = convertSpoonacularRecipeToRecipe(mockSpoonacularRecipe);
+		it("should not include empty section headers", async () => {
+			const result = await convertSpoonacularRecipeToRecipe(
+				mockSpoonacularRecipe,
+			);
 
 			// Should only have instructions, no header since section name is empty
 			expect(result.instructions![0].type).toBe("instruction");
+		});
+
+		it("should include cuisine_ids, diet_ids, and dish_type_ids", async () => {
+			const result = await convertSpoonacularRecipeToRecipe(
+				mockSpoonacularRecipe,
+			);
+
+			// Based on our mocked mapper functions
+			expect(result.cuisine_ids).toEqual([1]);
+			expect(result.diet_ids).toBeUndefined(); // Empty array becomes undefined
+			expect(result.dish_type_ids).toEqual([2]);
 		});
 	});
 });

@@ -1,4 +1,9 @@
 import { Ingredient, Recipe } from "../../schemas/recipes/recipe-schema";
+import {
+	mapCuisinesToIds,
+	mapDietsToIds,
+	mapDishTypesToIds,
+} from "./recipe-classification-mapper";
 
 import { SpoonacularAnalyzeRecipe } from "@/lib/schemas";
 import axios from "axios";
@@ -324,9 +329,9 @@ export const convertSpoonacularExtendedIngredientToIngredient = (
 	);
 };
 
-export const convertSpoonacularRecipeToRecipe = (
+export const convertSpoonacularRecipeToRecipe = async (
 	spoonacularRecipe: SpoonacularRecipeResponse,
-): Recipe => {
+): Promise<Recipe> => {
 	const ingredients = spoonacularRecipe.extendedIngredients.map((ingredient) =>
 		convertSpoonacularExtendedIngredientToIngredient(
 			ingredient,
@@ -362,6 +367,13 @@ export const convertSpoonacularRecipeToRecipe = (
 	const prepTimeMinutes = spoonacularRecipe.preparationMinutes || 0;
 	const cookTimeMinutes = spoonacularRecipe.cookingMinutes || 0;
 
+	// Map cuisines, diets, and dish types to database IDs
+	const [cuisine_ids, diet_ids, dish_type_ids] = await Promise.all([
+		mapCuisinesToIds(spoonacularRecipe.cuisines || []),
+		mapDietsToIds(spoonacularRecipe.diets || []),
+		mapDishTypesToIds(spoonacularRecipe.dishTypes || []),
+	]);
+
 	return {
 		name: spoonacularRecipe.title,
 		description: spoonacularRecipe.summary
@@ -374,6 +386,9 @@ export const convertSpoonacularRecipeToRecipe = (
 		prep_time_minutes: prepTimeMinutes % 60,
 		cook_time_hours: Math.floor(cookTimeMinutes / 60),
 		cook_time_minutes: cookTimeMinutes % 60,
+		cuisine_ids: cuisine_ids.length > 0 ? cuisine_ids : undefined,
+		diet_ids: diet_ids.length > 0 ? diet_ids : undefined,
+		dish_type_ids: dish_type_ids.length > 0 ? dish_type_ids : undefined,
 	};
 };
 

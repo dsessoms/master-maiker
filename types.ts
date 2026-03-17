@@ -29,6 +29,7 @@ export type ExpandedRecipe = Omit<RecipeRow, "user_id"> & {
 	ingredient: ExpandedIngredient[];
 	instruction: Omit<InstructionRow, "user_id">[];
 	macros: RecipeMacrosRow[];
+	recipe_tags?: { tags: { name: string } | null }[];
 };
 
 export type Profile = Database["public"]["Tables"]["profile"]["Row"];
