@@ -890,14 +890,17 @@ export type Database = {
 				Row: {
 					id: number;
 					name: string;
+					user_id: string;
 				};
 				Insert: {
 					id?: number;
 					name: string;
+					user_id: string;
 				};
 				Update: {
 					id?: number;
 					name?: string;
+					user_id?: string;
 				};
 				Relationships: [];
 			};
@@ -970,6 +973,7 @@ export type Database = {
 							prep_time_minutes?: number;
 							recipe_id?: string;
 							recipe_name: string;
+							source_url?: string;
 							tag_names?: string[];
 						};
 						Returns: string;
