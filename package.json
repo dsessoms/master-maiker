@@ -16,6 +16,7 @@
 		"gen-types": "npx supabase gen types typescript --project-id uanqajnerisjegeiindj > database.types.ts",
 		"gen-types:local": "npx supabase gen types typescript --local > database.types.ts",
 		"build-deploy": "eas env:pull && npx expo export --platform web && eas deploy --alias dev",
+		"import-catalog": "npx tsx scripts/node/supabase-import.ts",
 		"prepare": "husky"
 	},
 	"dependencies": {

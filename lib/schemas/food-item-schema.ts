@@ -27,6 +27,8 @@ export const ServingSchema = z.object({
 	fat_secret_id: z.number().optional(), // For tracking fat secret serving ID
 });
 
+export type Serving = z.infer<typeof ServingSchema>;
+
 export const FoodItemSchema = z.object({
 	name: z.string(),
 	original_name: z.string().optional(), // The original user-entered or parsed name

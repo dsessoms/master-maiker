@@ -1,6 +1,8 @@
--- 1. Relax user_id on recipe to allow catalog recipes to have no owner.
---    An admin user_id would be a fake account existing purely to satisfy a constraint.
-ALTER TABLE public.recipe ALTER COLUMN user_id DROP NOT NULL;
+-- 1. Relax user_id on recipe, ingredient, and instruction to allow catalog
+--    recipes (and their child rows) to have no owner.
+ALTER TABLE public.recipe      ALTER COLUMN user_id DROP NOT NULL;
+ALTER TABLE public.ingredient  ALTER COLUMN user_id DROP NOT NULL;
+ALTER TABLE public.instruction ALTER COLUMN user_id DROP NOT NULL;
 
 -- 2. Track whether a recipe is user-owned or from the catalog, and optionally
 --    which catalog recipe a user recipe was copied from for provenance.
