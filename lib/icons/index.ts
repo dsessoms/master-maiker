@@ -39,3 +39,4 @@ export * from "./grip-vertical";
 export * from "./bug";
 export * from "./dot";
 export * from "./loader-2";
+export * from "./cooking-pot";

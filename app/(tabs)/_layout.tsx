@@ -1,4 +1,4 @@
-import { Bookmark, NotebookText, ShoppingCart, User } from "@/lib/icons";
+import { Bookmark, Lock, NotebookText, ShoppingCart, User } from "@/lib/icons";
 import { Redirect, Tabs } from "expo-router";
 
 import { MealPlanContextProvider } from "@/context/meal-plan-context";
@@ -66,6 +66,14 @@ export default function TabsLayout() {
 					options={{
 						title: "Account",
 						tabBarIcon: ({ color }) => <User size={20} color={color} />,
+					}}
+				/>
+
+				<Tabs.Screen
+					name="admin"
+					options={{
+						title: "Admin",
+						tabBarIcon: ({ color }) => <Lock size={20} color={color} />,
 					}}
 				/>
 			</Tabs>

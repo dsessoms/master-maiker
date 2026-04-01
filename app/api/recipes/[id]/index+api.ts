@@ -52,10 +52,12 @@ export async function GET(req: Request) {
 		)
 		.eq("id", recipeId);
 
-	// If authenticated, filter by user_id OR visibility = 'public'
+	// If authenticated, filter by user_id OR visibility = 'public' OR source = 'catalog'
 	// If not authenticated, only allow visibility = 'public'
 	if (session.user) {
-		query = query.or(`user_id.eq.${session.user.id},visibility.eq.public`);
+		query = query.or(
+			`user_id.eq.${session.user.id},visibility.eq.public,source.eq.catalog`,
+		);
 	} else {
 		query = query.eq("visibility", "public");
 	}
