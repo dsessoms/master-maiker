@@ -38,7 +38,6 @@ const DEFAULT_WEIGHTS: Record<WeightSignal, number> = {
 	protein_ratio: 1.0,
 	calorie_density: 1.0,
 	prep_time: 1.0,
-	novelty: 1.0,
 	source_preference: 1.0,
 	ingredient_overlap: 1.0,
 	leftover: 1.0,

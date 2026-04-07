@@ -125,7 +125,6 @@ export type WeightSignal =
 	| "protein_ratio"
 	| "calorie_density"
 	| "prep_time"
-	| "novelty"
 	| "source_preference"
 	| "ingredient_overlap"
 	| "leftover";
@@ -183,7 +182,7 @@ export type InterpreterOperation = PrefPatchOp | PlanEditOp | RegenerateSlotsOp;
 
 export interface CompiledSlotPreferences {
 	hard_filters: HardFilter[];
-	// Map of WeightSignals to their multiplied float values (e.g., novelty: 1.0)
+	// Map of WeightSignals to their multiplied float values (e.g., prep_time: 1.0)
 	weights: Record<WeightSignal, number>;
 
 	// Pre-assigned by explicit LLM user command (bypasses generator search)

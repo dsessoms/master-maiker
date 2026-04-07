@@ -42,9 +42,9 @@ export async function GET(req: Request) {
         serving (serving_id:fat_secret_id, *)
       ),
       instruction (*),
-      recipe_cuisines (cuisine_id),
-      recipe_diets (diet_id),
-      recipe_dish_types (dish_type_id),
+      recipe_cuisines (cuisine_id, cuisines (name)),
+      recipe_diets (diet_id, diets (name)),
+      recipe_dish_types (dish_type_id, dish_types (name)),
       recipe_tags (
         tags (name)
       )

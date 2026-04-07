@@ -30,6 +30,12 @@ export type ExpandedRecipe = Omit<RecipeRow, "user_id"> & {
 	instruction: Omit<InstructionRow, "user_id">[];
 	macros: RecipeMacrosRow[];
 	recipe_tags?: { tags: { name: string } | null }[];
+	recipe_cuisines?: { cuisine_id: number; cuisines: { name: string } | null }[];
+	recipe_diets?: { diet_id: number; diets: { name: string } | null }[];
+	recipe_dish_types?: {
+		dish_type_id: number;
+		dish_types: { name: string } | null;
+	}[];
 };
 
 export type Profile = Database["public"]["Tables"]["profile"]["Row"];

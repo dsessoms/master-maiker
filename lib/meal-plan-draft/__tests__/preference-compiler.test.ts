@@ -92,14 +92,13 @@ describe("dayOfWeekFromDate", () => {
 // ==========================================
 
 describe("compilePreferences — default weights", () => {
-	it("outputs all 7 weight signals defaulting to 1.0 when no patches are applied", () => {
+	it("outputs all 6 weight signals defaulting to 1.0 when no patches are applied", () => {
 		const result = compilePreferences(twoSlotDraft);
 		const weights = result[mondayDinnerKey].weights;
 
 		expect(weights.protein_ratio).toBe(1.0);
 		expect(weights.calorie_density).toBe(1.0);
 		expect(weights.prep_time).toBe(1.0);
-		expect(weights.novelty).toBe(1.0);
 		expect(weights.source_preference).toBe(1.0);
 		expect(weights.ingredient_overlap).toBe(1.0);
 		expect(weights.leftover).toBe(1.0);
@@ -189,18 +188,18 @@ describe("compilePreferences — global patches (scope: null)", () => {
 				op: "pref_patch",
 				action: "set_weight",
 				scope: null,
-				payload: { weight: { signal: "novelty", value: 3.0 } },
+				payload: { weight: { signal: "prep_time", value: 3.0 } },
 			},
 			{
 				op: "pref_patch",
 				action: "remove_weight",
 				scope: null,
-				payload: { weight: { signal: "novelty", value: 3.0 } },
+				payload: { weight: { signal: "prep_time", value: 3.0 } },
 			},
 		]);
 
 		const result = compilePreferences(draft);
-		expect(result[mondayDinnerKey].weights.novelty).toBe(1.0);
+		expect(result[mondayDinnerKey].weights.prep_time).toBe(1.0);
 	});
 });
 
@@ -280,30 +279,30 @@ describe("compilePreferences — scoped patches", () => {
 describe("compilePreferences — scope precedence", () => {
 	it("day + meal_type scoped patch overrides a global patch for the same signal", () => {
 		const draft = makeDraft(fullWeekDraft.slots, [
-			// Global: novelty = 0.5
+			// Global: protein_ratio = 0.5
 			{
 				op: "pref_patch",
 				action: "set_weight",
 				scope: null,
-				payload: { weight: { signal: "novelty", value: 0.5 } },
+				payload: { weight: { signal: "protein_ratio", value: 0.5 } },
 			},
-			// Scoped to monday.Dinner: novelty = 2.5 (should win)
+			// Scoped to monday.Dinner: protein_ratio = 2.5 (should win)
 			{
 				op: "pref_patch",
 				action: "set_weight",
 				scope: { days: ["monday"], meal_types: ["Dinner"] },
-				payload: { weight: { signal: "novelty", value: 2.5 } },
+				payload: { weight: { signal: "protein_ratio", value: 2.5 } },
 			},
 		]);
 
 		const result = compilePreferences(draft);
 
 		// Monday Dinner: scoped wins
-		expect(result[mondayDinnerKey].weights.novelty).toBe(2.5);
+		expect(result[mondayDinnerKey].weights.protein_ratio).toBe(2.5);
 		// Monday Breakfast: only global applies
-		expect(result[mondayBreakfastKey].weights.novelty).toBe(0.5);
+		expect(result[mondayBreakfastKey].weights.protein_ratio).toBe(0.5);
 		// Tuesday Dinner: only global applies
-		expect(result[tuesdayDinnerKey].weights.novelty).toBe(0.5);
+		expect(result[tuesdayDinnerKey].weights.protein_ratio).toBe(0.5);
 	});
 
 	it("day-only scope overrides global for that day", () => {
@@ -451,7 +450,7 @@ describe("compilePreferencesForSlots", () => {
 				op: "pref_patch",
 				action: "set_weight",
 				scope: null,
-				payload: { weight: { signal: "novelty", value: 1.5 } },
+				payload: { weight: { signal: "prep_time", value: 1.5 } },
 			},
 		]);
 

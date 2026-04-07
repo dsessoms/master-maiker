@@ -18,76 +18,63 @@ import {
 	View,
 } from "react-native";
 import type {
-	DraftFoodEntry,
 	DraftSlot,
 	InterpreterOperation,
 	MealPlanDraft,
 	MealType,
 	PrefPatchOp,
+	RegenerateSlotsOp,
 	SlotKey,
+	SlotTarget,
 } from "@/lib/meal-plan-draft/types";
+import { useEffect, useMemo, useState } from "react";
 
 import type { InterpreterResponseFromSchema } from "@/lib/meal-plan-draft/interpreter-schema";
 import { SafeAreaView } from "@/components/safe-area-view";
 import { Text } from "@/components/ui/text";
 import { compilePreferences } from "@/lib/meal-plan-draft";
+import { useGenerateSlots } from "@/hooks/meal-plans/use-generate-slots";
 import { useInterpretMealPlanMessage } from "@/hooks/meal-plans/use-interpret-meal-plan-message";
-import { useState } from "react";
+import { useProfiles } from "@/hooks/profiles/useProfiles";
 
 // ==========================================
-// Seed data — a realistic 3-day draft
+// Constants
 // ==========================================
 
-const SEED_DATES = ["2026-04-06", "2026-04-07", "2026-04-08"] as const;
 const MEAL_TYPES: MealType[] = ["Breakfast", "Lunch", "Dinner"];
+const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-function makeEntry(recipeName: string, recipeId: string): DraftFoodEntry {
-	return {
-		draft_entry_id: Crypto.randomUUID(),
-		locked: false,
-		recipe: {
-			id: recipeId,
-			name: recipeName,
-			calories_per_serving: 450,
-			macros_per_serving: { protein_g: 35, carbs_g: 40, fat_g: 15 },
-			yield: 4,
-			core_ingredients: [],
-		},
-		profile_food_entries: [
-			{ profile_id: "profile-dev", number_of_servings: 1 },
-		],
-	};
+/**
+ * Returns the ISO date string for the Monday of the current week,
+ * then offsets by `dayIndex` (0 = Mon … 6 = Sun).
+ */
+function isoWeekDate(dayIndex: number): string {
+	const today = new Date();
+	const dow = today.getDay(); // 0 = Sun
+	const diffToMonday = dow === 0 ? -6 : 1 - dow;
+	const d = new Date(today);
+	d.setDate(today.getDate() + diffToMonday + dayIndex);
+	return d.toISOString().slice(0, 10);
 }
 
-function buildSeedDraft(): Omit<MealPlanDraft, "undo_stack"> {
-	const SEED_RECIPES: Record<string, [string, string]> = {
-		"2026-04-06.Breakfast": ["Greek Yogurt Parfait", "recipe-001"],
-		"2026-04-06.Lunch": ["Grilled Chicken Salad", "recipe-002"],
-		"2026-04-06.Dinner": ["Beef Stir-fry with Rice", "recipe-003"],
-		"2026-04-07.Breakfast": ["Oatmeal with Berries", "recipe-004"],
-		"2026-04-07.Lunch": ["Turkey & Avocado Wrap", "recipe-005"],
-		"2026-04-07.Dinner": ["Salmon with Roasted Vegetables", "recipe-006"],
-		"2026-04-08.Breakfast": ["Scrambled Eggs & Toast", "recipe-007"],
-		"2026-04-08.Lunch": ["Lentil Soup", "recipe-008"],
-		"2026-04-08.Dinner": ["Pasta Primavera", "recipe-009"],
-	};
+// ==========================================
+// Draft builder (parameterised)
+// ==========================================
 
+function buildEmptyDraft(
+	dates: string[],
+	profileIds: string[],
+): Omit<MealPlanDraft, "undo_stack"> {
 	const slots: Record<SlotKey, DraftSlot> = {};
-	for (const date of SEED_DATES) {
+	for (const date of dates) {
 		for (const meal_type of MEAL_TYPES) {
 			const key: SlotKey = `${date}.${meal_type}`;
-			const recipeData = SEED_RECIPES[key];
-			slots[key] = {
-				date,
-				meal_type,
-				entries: recipeData ? [makeEntry(recipeData[0], recipeData[1])] : [],
-			};
+			slots[key] = { date, meal_type, entries: [] };
 		}
 	}
-
 	return {
 		session_id: Crypto.randomUUID(),
-		included_profile_ids: ["profile-dev"],
+		included_profile_ids: profileIds,
 		slots,
 		preference_patch_stack: [],
 	};
@@ -136,10 +123,79 @@ interface TurnMessage {
 	response?: InterpreterResponseFromSchema;
 }
 
-function DraftGrid({ draft }: { draft: Omit<MealPlanDraft, "undo_stack"> }) {
+function DraftGrid({
+	draft,
+	profiles,
+}: {
+	draft: Omit<MealPlanDraft, "undo_stack">;
+	profiles: { id: string; name: string }[];
+}) {
+	const dates = useMemo(
+		() => [...new Set(Object.values(draft.slots).map((s) => s.date))].sort(),
+		[draft.slots],
+	);
+
+	/** Total servings consumed for a single entry (all profiles combined). */
+	function entryServingsUsed(entry: DraftSlot["entries"][number]): number {
+		return entry.profile_food_entries.reduce(
+			(s, pfe) => s + pfe.number_of_servings,
+			0,
+		);
+	}
+
+	/**
+	 * Total servings consumed across ALL slots in the draft for a given recipe id.
+	 * This gives the true utilisation of the recipe's yield when it appears in
+	 * multiple slots (e.g. as a leftover).
+	 */
+	const totalServingsByRecipeId = useMemo(() => {
+		const map = new Map<string, number>();
+		for (const slot of Object.values(draft.slots)) {
+			for (const entry of slot.entries) {
+				const prev = map.get(entry.recipe.id) ?? 0;
+				map.set(entry.recipe.id, prev + entryServingsUsed(entry));
+			}
+		}
+		return map;
+	}, [draft.slots]);
+
+	/**
+	 * The slot key where a recipe first appears (sorted by date, then by meal
+	 * type order: Breakfast → Lunch → Dinner → Snack), used to decide which
+	 * slot renders the combined yield badge.
+	 *
+	 * A plain lexicographic sort on SlotKey would put Dinner before Lunch
+	 * (D < L alphabetically), so we sort explicitly by meal-type position.
+	 */
+	const firstSlotByRecipeId = useMemo(() => {
+		const mealTypeOrder: Record<MealType, number> = {
+			Breakfast: 0,
+			Lunch: 1,
+			Dinner: 2,
+			Snack: 3,
+		};
+
+		const sortedKeys = (Object.keys(draft.slots) as SlotKey[]).sort((a, b) => {
+			const slotA = draft.slots[a];
+			const slotB = draft.slots[b];
+			if (slotA.date !== slotB.date) return slotA.date < slotB.date ? -1 : 1;
+			return mealTypeOrder[slotA.meal_type] - mealTypeOrder[slotB.meal_type];
+		});
+
+		const map = new Map<string, SlotKey>();
+		for (const key of sortedKeys) {
+			for (const entry of draft.slots[key].entries) {
+				if (!map.has(entry.recipe.id)) {
+					map.set(entry.recipe.id, key);
+				}
+			}
+		}
+		return map;
+	}, [draft.slots]);
+
 	return (
 		<View>
-			{SEED_DATES.map((date) => (
+			{dates.map((date) => (
 				<View key={date} className="mb-2">
 					<Text className="text-xs font-semibold text-muted-foreground mb-1">
 						{date}
@@ -147,26 +203,221 @@ function DraftGrid({ draft }: { draft: Omit<MealPlanDraft, "undo_stack"> }) {
 					{MEAL_TYPES.map((meal_type) => {
 						const key: SlotKey = `${date}.${meal_type}`;
 						const slot = draft.slots[key];
-						const entry = slot?.entries[0];
+						if (!slot) return null;
+						const entry = slot.entries[0];
+						const hasError = (slot.errors?.length ?? 0) > 0;
+
+						// Yield utilisation — show total across all slots, but only on the
+						// first slot where this recipe appears.
+						const recipeYield = entry?.recipe.yield ?? 0;
+						const firstSlotKey = entry
+							? firstSlotByRecipeId.get(entry.recipe.id)
+							: undefined;
+						const isFirstOccurrence = entry != null && firstSlotKey === key;
+						const totalServingsUsed = entry
+							? (totalServingsByRecipeId.get(entry.recipe.id) ?? 0)
+							: 0;
+						const yieldPct =
+							isFirstOccurrence && recipeYield > 0
+								? Math.round((totalServingsUsed / recipeYield) * 100)
+								: null;
+
 						return (
-							<View key={key} className="flex-row items-center mb-0.5 gap-2">
-								<Text className="text-xs text-muted-foreground w-16">
-									{meal_type}
-								</Text>
-								<View
-									className={`flex-1 rounded px-2 py-0.5 ${entry?.locked ? "bg-amber-500/20 border border-amber-500/40" : "bg-muted"}`}
-								>
-									<Text className="text-xs" numberOfLines={1}>
-										{entry
-											? `${entry.locked ? "🔒 " : ""}${entry.recipe.name}`
-											: "—"}
+							<View key={key} className="mb-2">
+								<View className="flex-row items-center gap-2">
+									<Text className="text-xs text-muted-foreground w-16">
+										{meal_type}
 									</Text>
+									<View
+										className={`flex-1 rounded px-2 py-1 ${
+											hasError
+												? "bg-red-500/20 border border-red-500/40"
+												: entry?.locked
+													? "bg-amber-500/20 border border-amber-500/40"
+													: "bg-muted"
+										}`}
+									>
+										<View className="flex-row items-center justify-between gap-1">
+											<Text className="text-xs flex-1" numberOfLines={1}>
+												{hasError
+													? `⚠ ${slot.errors![0].reason}`
+													: entry
+														? `${entry.locked ? "🔒 " : ""}${entry.recipe.name}`
+														: "—"}
+											</Text>
+											{yieldPct !== null && (
+												<View
+													className={`rounded px-1 ${yieldPct >= 90 ? "bg-green-500/20" : yieldPct >= 50 ? "bg-amber-500/20" : "bg-muted"}`}
+												>
+													<Text className="text-xs font-mono text-muted-foreground">
+														{yieldPct}%
+													</Text>
+												</View>
+											)}
+										</View>
+
+										{/* Per-profile macro breakdown */}
+										{entry && profiles.length > 0 && (
+											<View className="mt-0.5 gap-0.5">
+												{profiles.map((profile) => {
+													const pfe = entry.profile_food_entries.find(
+														(p) => p.profile_id === profile.id,
+													);
+													if (!pfe || pfe.number_of_servings === 0) return null;
+													const m = entry.recipe.macros_per_serving;
+													const s = pfe.number_of_servings;
+													const cal = Math.round(
+														entry.recipe.calories_per_serving * s,
+													);
+													const pg = Math.round(m.protein_g * s);
+													const cg = Math.round(m.carbs_g * s);
+													const fg = Math.round(m.fat_g * s);
+													return (
+														<Text
+															key={profile.id}
+															className="text-xs font-mono text-muted-foreground"
+														>
+															{`${profile.name} ×${s} → ${cal} kcal · P${pg} C${cg} F${fg}`}
+														</Text>
+													);
+												})}
+											</View>
+										)}
+									</View>
 								</View>
 							</View>
 						);
 					})}
 				</View>
 			))}
+		</View>
+	);
+}
+
+// ==========================================
+// Average daily macro summary
+// ==========================================
+
+interface ProfileMacroTarget {
+	id: string;
+	name: string;
+	daily_calorie_goal: number | null;
+	protein_grams: number | null;
+	carbs_grams: number | null;
+	fat_grams: number | null;
+}
+
+interface DailyMacros {
+	cal: number;
+	protein: number;
+	carbs: number;
+	fat: number;
+}
+
+function DraftMacroSummary({
+	draft,
+	profiles,
+}: {
+	draft: Omit<MealPlanDraft, "undo_stack">;
+	profiles: ProfileMacroTarget[];
+}) {
+	/**
+	 * For each profile, sum total macros from all filled slots, then divide by
+	 * the number of distinct dates that have at least one filled slot so the
+	 * average isn't diluted by empty days.
+	 */
+	const avgByProfile = useMemo(() => {
+		const totals = new Map<string, DailyMacros>();
+		const filledDates = new Set<string>();
+
+		for (const slot of Object.values(draft.slots)) {
+			let slotHasEntry = false;
+			for (const entry of slot.entries) {
+				slotHasEntry = true;
+				for (const pfe of entry.profile_food_entries) {
+					if (pfe.number_of_servings === 0) continue;
+					const s = pfe.number_of_servings;
+					const m = entry.recipe.macros_per_serving;
+					const prev = totals.get(pfe.profile_id) ?? {
+						cal: 0,
+						protein: 0,
+						carbs: 0,
+						fat: 0,
+					};
+					totals.set(pfe.profile_id, {
+						cal: prev.cal + entry.recipe.calories_per_serving * s,
+						protein: prev.protein + m.protein_g * s,
+						carbs: prev.carbs + m.carbs_g * s,
+						fat: prev.fat + m.fat_g * s,
+					});
+				}
+			}
+			if (slotHasEntry) filledDates.add(slot.date);
+		}
+
+		const dayCount = Math.max(1, filledDates.size);
+		const result = new Map<string, DailyMacros>();
+		for (const [profileId, t] of totals) {
+			result.set(profileId, {
+				cal: Math.round(t.cal / dayCount),
+				protein: Math.round(t.protein / dayCount),
+				carbs: Math.round(t.carbs / dayCount),
+				fat: Math.round(t.fat / dayCount),
+			});
+		}
+		return result;
+	}, [draft.slots]);
+
+	const includedProfiles = profiles.filter((p) =>
+		draft.included_profile_ids.includes(p.id),
+	);
+
+	if (includedProfiles.length === 0 || avgByProfile.size === 0) {
+		return (
+			<Text className="text-xs text-muted-foreground italic mt-2">
+				No data yet
+			</Text>
+		);
+	}
+
+	return (
+		<View className="mt-3 pt-3 border-t border-border gap-2">
+			<Text className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+				Avg / Day
+			</Text>
+			{includedProfiles.map((profile) => {
+				const avg = avgByProfile.get(profile.id);
+				if (!avg) return null;
+
+				const goalCal = profile.daily_calorie_goal;
+				const calPct =
+					goalCal && goalCal > 0 ? Math.round((avg.cal / goalCal) * 100) : null;
+				const calColor =
+					calPct == null
+						? "text-muted-foreground"
+						: calPct >= 90 && calPct <= 110
+							? "text-green-400"
+							: calPct >= 75 && calPct <= 125
+								? "text-amber-400"
+								: "text-red-400";
+
+				return (
+					<View key={profile.id} className="gap-0.5">
+						<Text className="text-xs font-medium text-foreground">
+							{profile.name}
+						</Text>
+						<Text className={`text-xs font-mono ${calColor}`}>
+							{`${avg.cal} kcal${calPct != null ? ` (${calPct}% of goal)` : ""}`}
+						</Text>
+						<Text className="text-xs font-mono text-muted-foreground">
+							{`P${avg.protein}g · C${avg.carbs}g · F${avg.fat}g`}
+							{profile.protein_grams || profile.carbs_grams || profile.fat_grams
+								? ` (targets: P${profile.protein_grams ?? "—"}g · C${profile.carbs_grams ?? "—"}g · F${profile.fat_grams ?? "—"}g)`
+								: ""}
+						</Text>
+					</View>
+				);
+			})}
 		</View>
 	);
 }
@@ -209,6 +460,10 @@ function CompiledPreferencesGrid({
 }) {
 	const compiled = compilePreferences(draft);
 	const slotKeys = Object.keys(compiled) as SlotKey[];
+	const dates = useMemo(
+		() => [...new Set(Object.values(draft.slots).map((s) => s.date))].sort(),
+		[draft.slots],
+	);
 
 	if (slotKeys.length === 0) {
 		return (
@@ -220,7 +475,7 @@ function CompiledPreferencesGrid({
 
 	return (
 		<View>
-			{SEED_DATES.map((date) => (
+			{dates.map((date) => (
 				<View key={date} className="mb-3">
 					<Text className="text-xs font-semibold text-muted-foreground mb-1">
 						{date}
@@ -297,15 +552,22 @@ function CompiledPreferencesGrid({
 // Apply operations to draft (client-side execution)
 // ==========================================
 
+interface ApplyResult {
+	draft: Omit<MealPlanDraft, "undo_stack">;
+	regenerateOps: RegenerateSlotsOp[];
+}
+
 function applyOperationsToDraft(
 	draft: Omit<MealPlanDraft, "undo_stack">,
 	operations: InterpreterOperation[],
-): Omit<MealPlanDraft, "undo_stack"> {
+): ApplyResult {
 	let next = {
 		...draft,
 		slots: { ...draft.slots },
 		preference_patch_stack: [...draft.preference_patch_stack],
 	};
+
+	const regenerateOps: RegenerateSlotsOp[] = [];
 
 	for (const op of operations) {
 		if (op.op === "pref_patch") {
@@ -339,25 +601,165 @@ function applyOperationsToDraft(
 			} else if (op.action === "clear") {
 				const target = op.payload.target;
 				const newSlots = { ...next.slots };
-				if (target && target !== "all") {
+				if (!target || target === "all") {
+					// Clear all unlocked entries across all slots
+					for (const key of Object.keys(newSlots) as SlotKey[]) {
+						newSlots[key] = {
+							...newSlots[key],
+							entries: newSlots[key].entries.filter((e) => e.locked),
+						};
+					}
+				} else {
 					const targets = Array.isArray(target) ? target : [target];
 					for (const t of targets) {
 						const key: SlotKey = `${t.date}.${t.meal_type}`;
 						if (newSlots[key]) {
-							newSlots[key] = { ...newSlots[key], entries: [] };
+							newSlots[key] = {
+								...newSlots[key],
+								entries: newSlots[key].entries.filter((e) => e.locked),
+							};
+						}
+					}
+				}
+				next.slots = newSlots;
+			} else if (op.action === "swap") {
+				// Exchange entries between two slots. `target` and `to` must each be a
+				// single SlotTarget (or the first element of an array).
+				const rawTarget = Array.isArray(op.payload.target)
+					? op.payload.target[0]
+					: op.payload.target;
+				const rawTo = Array.isArray(op.payload.to)
+					? op.payload.to[0]
+					: op.payload.to;
+
+				if (
+					rawTarget &&
+					rawTarget !== "all" &&
+					rawTo &&
+					!Array.isArray(rawTo)
+				) {
+					const fromKey: SlotKey = `${rawTarget.date}.${rawTarget.meal_type}`;
+					const toKey: SlotKey = `${rawTo.date}.${rawTo.meal_type}`;
+					if (next.slots[fromKey] && next.slots[toKey]) {
+						const fromEntries = next.slots[fromKey].entries;
+						const toEntries = next.slots[toKey].entries;
+						next.slots = {
+							...next.slots,
+							[fromKey]: { ...next.slots[fromKey], entries: toEntries },
+							[toKey]: { ...next.slots[toKey], entries: fromEntries },
+						};
+					}
+				}
+			} else if (op.action === "move") {
+				// Copy entries from `target` to `to`, then clear the source.
+				const rawTarget = Array.isArray(op.payload.target)
+					? op.payload.target[0]
+					: op.payload.target;
+				const rawTo = Array.isArray(op.payload.to)
+					? op.payload.to[0]
+					: op.payload.to;
+
+				if (
+					rawTarget &&
+					rawTarget !== "all" &&
+					rawTo &&
+					!Array.isArray(rawTo)
+				) {
+					const fromKey: SlotKey = `${rawTarget.date}.${rawTarget.meal_type}`;
+					const toKey: SlotKey = `${rawTo.date}.${rawTo.meal_type}`;
+					if (next.slots[fromKey] && next.slots[toKey]) {
+						const movedEntries = next.slots[fromKey].entries;
+						next.slots = {
+							...next.slots,
+							[fromKey]: { ...next.slots[fromKey], entries: [] },
+							[toKey]: { ...next.slots[toKey], entries: movedEntries },
+						};
+					}
+				}
+			} else if (op.action === "copy") {
+				// Duplicate entries from `target` into `to` (source is unchanged).
+				// When `to` is an array, copy into each destination.
+				const rawTarget = Array.isArray(op.payload.target)
+					? op.payload.target[0]
+					: op.payload.target;
+				const destinations = op.payload.to
+					? Array.isArray(op.payload.to)
+						? op.payload.to
+						: [op.payload.to]
+					: [];
+
+				if (rawTarget && rawTarget !== "all" && destinations.length > 0) {
+					const fromKey: SlotKey = `${rawTarget.date}.${rawTarget.meal_type}`;
+					if (next.slots[fromKey]) {
+						const copiedEntries = next.slots[fromKey].entries.map((e) => ({
+							...e,
+							draft_entry_id: Crypto.randomUUID(),
+							locked: false,
+						}));
+						const newSlots = { ...next.slots };
+						for (const dest of destinations) {
+							const toKey: SlotKey = `${dest.date}.${dest.meal_type}`;
+							if (newSlots[toKey]) {
+								newSlots[toKey] = {
+									...newSlots[toKey],
+									entries: copiedEntries,
+								};
+							}
+						}
+						next.slots = newSlots;
+					}
+				}
+			} else if (op.action === "assign") {
+				// `assign` places a specific recipe (by recipe_id) into a slot.
+				// In the harness we don't have a recipe catalogue to resolve the id
+				// into a full DraftRecipe, so we mark the slot as needing a targeted
+				// regeneration. The regenerate_slots op produced by the interpreter
+				// will handle actual placement through the generator endpoint.
+				// Nothing to change in the draft structure here.
+			} else if (op.action === "add_slot") {
+				// Add a new meal-type row to every date currently in the draft.
+				const { meal_type } = op.payload;
+				if (meal_type) {
+					const existingDates = [
+						...new Set(Object.values(next.slots).map((s) => s.date)),
+					];
+					const newSlots = { ...next.slots };
+					for (const date of existingDates) {
+						const key: SlotKey = `${date}.${meal_type}`;
+						if (!newSlots[key]) {
+							newSlots[key] = { date, meal_type, entries: [] };
 						}
 					}
 					next.slots = newSlots;
 				}
+			} else if (op.action === "remove_slot") {
+				// Remove slots from the draft. If `meal_type` is provided, remove that
+				// meal-type row from every date. If `target` is provided, remove those
+				// specific slots.
+				const newSlots = { ...next.slots };
+				const { meal_type, target } = op.payload;
+
+				if (meal_type) {
+					for (const key of Object.keys(newSlots) as SlotKey[]) {
+						if (newSlots[key].meal_type === meal_type) {
+							delete newSlots[key];
+						}
+					}
+				} else if (target && target !== "all") {
+					const targets = Array.isArray(target) ? target : [target];
+					for (const t of targets) {
+						const key: SlotKey = `${t.date}.${t.meal_type}`;
+						delete newSlots[key];
+					}
+				}
+				next.slots = newSlots;
 			}
-			// Other plan_edit actions (swap, move, copy, assign, add_slot, remove_slot)
-			// are shown in the operations log but not applied here — full execution
-			// is the generator's responsibility in production.
+		} else if (op.op === "regenerate_slots") {
+			regenerateOps.push(op);
 		}
-		// regenerate_slots: shown in ops log; generator not wired in test harness
 	}
 
-	return next;
+	return { draft: next, regenerateOps };
 }
 
 // ==========================================
@@ -365,10 +767,137 @@ function applyOperationsToDraft(
 // ==========================================
 
 export default function InterpreterTestHarness() {
-	const [draft, setDraft] = useState(() => buildSeedDraft());
+	// ---- Day selection (default: current Mon–Sun) -------------------------
+	const [selectedDayIndices, setSelectedDayIndices] = useState<Set<number>>(
+		() => new Set([0, 1, 2, 3, 4, 5, 6]),
+	);
+
+	const selectedDates = useMemo(
+		() =>
+			[...selectedDayIndices].sort((a, b) => a - b).map((i) => isoWeekDate(i)),
+		[selectedDayIndices],
+	);
+
+	function toggleDay(i: number) {
+		setSelectedDayIndices((prev) => {
+			const next = new Set(prev);
+			if (next.has(i)) {
+				if (next.size === 1) return prev; // always keep at least 1
+				next.delete(i);
+			} else {
+				next.add(i);
+			}
+			return next;
+		});
+	}
+
+	// ---- Profile selection ------------------------------------------------
+	const { profiles, isLoading: isLoadingProfiles } = useProfiles();
+	const [selectedProfileIds, setSelectedProfileIds] = useState<Set<string>>(
+		() => new Set(),
+	);
+
+	// Auto-select all profiles on first load
+	const [autoSelected, setAutoSelected] = useState(false);
+	useEffect(() => {
+		if (!autoSelected && profiles.length > 0) {
+			setSelectedProfileIds(new Set(profiles.map((p) => p.id)));
+			setAutoSelected(true);
+		}
+	}, [autoSelected, profiles]);
+
+	function toggleProfile(id: string) {
+		setSelectedProfileIds((prev) => {
+			const next = new Set(prev);
+			if (next.has(id)) {
+				if (next.size === 1) return prev; // always keep at least 1
+				next.delete(id);
+			} else {
+				next.add(id);
+			}
+			return next;
+		});
+	}
+
+	// ---- Draft -----------------------------------------------------------
+	type DraftState = Omit<MealPlanDraft, "undo_stack">;
+	const [draft, setDraft] = useState<DraftState>(() =>
+		buildEmptyDraft(selectedDates, [...selectedProfileIds]),
+	);
+
+	// Keep included_profile_ids in sync whenever the profile selection changes.
+	// Does NOT reset slots — only updates the profile list on the existing draft.
+	useEffect(() => {
+		const ids = [...selectedProfileIds];
+		if (ids.length === 0) return;
+		setDraft((prev) => ({ ...prev, included_profile_ids: ids }));
+	}, [selectedProfileIds]);
+
 	const [turns, setTurns] = useState<TurnMessage[]>([]);
 	const [input, setInput] = useState("");
-	const { interpret, isPending } = useInterpretMealPlanMessage();
+	const { interpret, isPending: isInterpreting } =
+		useInterpretMealPlanMessage();
+	const { generateSlots, isPending: isGenerating } = useGenerateSlots();
+
+	const isPending = isInterpreting || isGenerating;
+
+	/**
+	 * Dispatches all `regenerate_slots` ops from a turn to the generator endpoint,
+	 * merges the returned slots back into the draft, then returns the updated draft.
+	 * Merges ops sequentially so each op sees the slots updated by the previous one.
+	 */
+	const applyRegenerateOps = async (
+		currentDraft: Omit<MealPlanDraft, "undo_stack">,
+		ops: RegenerateSlotsOp[],
+	): Promise<Omit<MealPlanDraft, "undo_stack">> => {
+		let latest = currentDraft;
+		for (const op of ops) {
+			const targetSlots =
+				op.target === null ? undefined : (op.target as SlotTarget[]);
+
+			const result = await generateSlots({
+				// Cast required: SlotKey template literal type is narrower than
+				// the Zod-inferred Record<string, ...> that the request schema expects.
+				draft: latest as unknown as Parameters<
+					typeof generateSlots
+				>[0]["draft"],
+				target_slots: targetSlots,
+			});
+
+			if (result && "updated_slots" in result && result.updated_slots) {
+				latest = {
+					...latest,
+					slots: result.updated_slots as typeof latest.slots,
+				};
+			}
+		}
+		return latest;
+	};
+
+	/** Full initial generation — regenerates all unlocked slots. */
+	const handleGenerateAll = async () => {
+		if (isPending) return;
+		try {
+			const result = await generateSlots({
+				draft: draft as unknown as Parameters<typeof generateSlots>[0]["draft"],
+			});
+			if (result && "updated_slots" in result && result.updated_slots) {
+				setDraft((prev) => ({
+					...prev,
+					slots: result.updated_slots as typeof prev.slots,
+				}));
+			}
+		} catch (e) {
+			setTurns((prev) => [
+				...prev,
+				{
+					id: Crypto.randomUUID(),
+					role: "assistant",
+					text: `Generator error: ${e instanceof Error ? e.message : "Unknown error"}`,
+				},
+			]);
+		}
+	};
 
 	const handleSend = async () => {
 		const trimmed = input.trim();
@@ -389,6 +918,17 @@ export default function InterpreterTestHarness() {
 				draft,
 			});
 
+			const { draft: draftAfterEdits, regenerateOps } = applyOperationsToDraft(
+				draft,
+				response.operations as InterpreterOperation[],
+			);
+
+			// Apply regenerate_slots ops sequentially through the generator
+			const finalDraft = await applyRegenerateOps(
+				draftAfterEdits,
+				regenerateOps,
+			);
+
 			const assistantTurn: TurnMessage = {
 				id: Crypto.randomUUID(),
 				role: "assistant",
@@ -397,12 +937,7 @@ export default function InterpreterTestHarness() {
 			};
 
 			setTurns((prev) => [...prev, assistantTurn]);
-			setDraft((prev) =>
-				applyOperationsToDraft(
-					prev,
-					response.operations as InterpreterOperation[],
-				),
-			);
+			setDraft(finalDraft);
 		} catch (e) {
 			setTurns((prev) => [
 				...prev,
@@ -415,8 +950,9 @@ export default function InterpreterTestHarness() {
 		}
 	};
 
+	/** Rebuild the draft whenever days or profiles change. Clears all slots. */
 	const handleReset = () => {
-		setDraft(buildSeedDraft());
+		setDraft(buildEmptyDraft(selectedDates, [...selectedProfileIds]));
 		setTurns([]);
 		setInput("");
 	};
@@ -432,12 +968,27 @@ export default function InterpreterTestHarness() {
 						{draft.preference_patch_stack.length !== 1 ? "es" : ""}
 					</Text>
 				</View>
-				<TouchableOpacity
-					onPress={handleReset}
-					className="px-3 py-1.5 bg-destructive/20 rounded"
-				>
-					<Text className="text-xs text-destructive font-medium">Reset</Text>
-				</TouchableOpacity>
+				<View className="flex-row gap-2">
+					<TouchableOpacity
+						onPress={handleGenerateAll}
+						disabled={isPending}
+						className={`px-3 py-1.5 rounded ${isPending ? "bg-primary/30" : "bg-primary/20"}`}
+					>
+						{isGenerating ? (
+							<ActivityIndicator size="small" />
+						) : (
+							<Text className="text-xs text-primary font-medium">
+								Generate All
+							</Text>
+						)}
+					</TouchableOpacity>
+					<TouchableOpacity
+						onPress={handleReset}
+						className="px-3 py-1.5 bg-destructive/20 rounded"
+					>
+						<Text className="text-xs text-destructive font-medium">Reset</Text>
+					</TouchableOpacity>
+				</View>
 			</View>
 
 			<ScrollView
@@ -445,12 +996,97 @@ export default function InterpreterTestHarness() {
 				contentContainerStyle={{ padding: 16 }}
 				keyboardShouldPersistTaps="handled"
 			>
+				{/* ── Day picker ── */}
+				<View className="mb-4 p-3 bg-card border border-border rounded-lg">
+					<Text className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">
+						Days to Plan
+					</Text>
+					<View className="flex-row gap-1.5 flex-wrap">
+						{DAY_LABELS.map((label, i) => {
+							const selected = selectedDayIndices.has(i);
+							return (
+								<TouchableOpacity
+									key={label}
+									onPress={() => toggleDay(i)}
+									className={`px-2.5 py-1 rounded-full border ${selected ? "bg-primary border-primary" : "bg-muted border-border"}`}
+								>
+									<Text
+										className={`text-xs font-medium ${selected ? "text-primary-foreground" : "text-muted-foreground"}`}
+									>
+										{label}
+									</Text>
+								</TouchableOpacity>
+							);
+						})}
+					</View>
+					<Text className="text-xs text-muted-foreground mt-1.5">
+						{selectedDates.join("  ·  ")}
+					</Text>
+				</View>
+
+				{/* ── Profile picker ── */}
+				<View className="mb-4 p-3 bg-card border border-border rounded-lg">
+					<Text className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">
+						Profiles
+					</Text>
+					{isLoadingProfiles ? (
+						<ActivityIndicator size="small" />
+					) : profiles.length === 0 ? (
+						<Text className="text-xs text-muted-foreground italic">
+							No profiles found
+						</Text>
+					) : (
+						<View className="gap-2">
+							{profiles.map((profile) => {
+								const selected = selectedProfileIds.has(profile.id);
+								return (
+									<TouchableOpacity
+										key={profile.id}
+										onPress={() => toggleProfile(profile.id)}
+										className={`flex-row items-center gap-2 p-2 rounded-lg border ${selected ? "bg-primary/10 border-primary/40" : "bg-muted border-border"}`}
+									>
+										<View
+											className={`w-3 h-3 rounded-full border ${selected ? "bg-primary border-primary" : "border-muted-foreground"}`}
+										/>
+										<View className="flex-1">
+											<Text
+												className={`text-xs font-medium ${selected ? "text-foreground" : "text-muted-foreground"}`}
+											>
+												{profile.name}
+												{profile.is_primary ? " ★" : ""}
+											</Text>
+											{(profile.daily_calorie_goal ||
+												profile.protein_grams ||
+												profile.carbs_grams ||
+												profile.fat_grams) && (
+												<Text className="text-xs font-mono text-muted-foreground">
+													{[
+														profile.daily_calorie_goal &&
+															`${profile.daily_calorie_goal} kcal`,
+														profile.protein_grams &&
+															`P${profile.protein_grams}g`,
+														profile.carbs_grams && `C${profile.carbs_grams}g`,
+														profile.fat_grams && `F${profile.fat_grams}g`,
+													]
+														.filter(Boolean)
+														.join(" · ")}
+												</Text>
+											)}
+										</View>
+									</TouchableOpacity>
+								);
+							})}
+						</View>
+					)}
+				</View>
+
 				{/* Draft state */}
 				<View className="mb-4 p-3 bg-card border border-border rounded-lg">
 					<Text className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">
 						Draft State
 					</Text>
-					<DraftGrid draft={draft} />
+					<DraftGrid draft={draft} profiles={profiles} />
+					<DraftMacroSummary draft={draft} profiles={profiles} />
 				</View>
 
 				{/* Patch stack */}
@@ -517,7 +1153,9 @@ export default function InterpreterTestHarness() {
 				{isPending && (
 					<View className="flex-row items-center gap-2 mb-4">
 						<ActivityIndicator size="small" />
-						<Text className="text-sm text-muted-foreground">Interpreting…</Text>
+						<Text className="text-sm text-muted-foreground">
+							{isGenerating ? "Generating…" : "Interpreting…"}
+						</Text>
 					</View>
 				)}
 			</ScrollView>
