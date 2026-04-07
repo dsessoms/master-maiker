@@ -32,10 +32,11 @@ import { useEffect, useMemo, useState } from "react";
 import type { InterpreterResponseFromSchema } from "@/lib/meal-plan-draft/interpreter-schema";
 import { SafeAreaView } from "@/components/safe-area-view";
 import { Text } from "@/components/ui/text";
-import { compilePreferences } from "@/lib/meal-plan-draft";
+import { compilePreferences, type SlotAssignment } from "@/lib/meal-plan-draft";
 import { useGenerateSlots } from "@/hooks/meal-plans/use-generate-slots";
 import { useInterpretMealPlanMessage } from "@/hooks/meal-plans/use-interpret-meal-plan-message";
 import { useProfiles } from "@/hooks/profiles/useProfiles";
+import { addDays, format, parseISO, startOfWeek } from "date-fns";
 
 // ==========================================
 // Constants
@@ -49,12 +50,8 @@ const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
  * then offsets by `dayIndex` (0 = Mon … 6 = Sun).
  */
 function isoWeekDate(dayIndex: number): string {
-	const today = new Date();
-	const dow = today.getDay(); // 0 = Sun
-	const diffToMonday = dow === 0 ? -6 : 1 - dow;
-	const d = new Date(today);
-	d.setDate(today.getDate() + diffToMonday + dayIndex);
-	return d.toISOString().slice(0, 10);
+	const monday = startOfWeek(new Date(), { weekStartsOn: 1 });
+	return format(addDays(monday, dayIndex), "yyyy-MM-dd");
 }
 
 // ==========================================
@@ -198,7 +195,7 @@ function DraftGrid({
 			{dates.map((date) => (
 				<View key={date} className="mb-2">
 					<Text className="text-xs font-semibold text-muted-foreground mb-1">
-						{date}
+						{`${format(parseISO(date), "EEEE")} - ${date}`}
 					</Text>
 					{MEAL_TYPES.map((meal_type) => {
 						const key: SlotKey = `${date}.${meal_type}`;
@@ -555,6 +552,7 @@ function CompiledPreferencesGrid({
 interface ApplyResult {
 	draft: Omit<MealPlanDraft, "undo_stack">;
 	regenerateOps: RegenerateSlotsOp[];
+	slotAssignments: SlotAssignment[];
 }
 
 function applyOperationsToDraft(
@@ -568,6 +566,7 @@ function applyOperationsToDraft(
 	};
 
 	const regenerateOps: RegenerateSlotsOp[] = [];
+	const slotAssignments: SlotAssignment[] = [];
 
 	for (const op of operations) {
 		if (op.op === "pref_patch") {
@@ -710,12 +709,23 @@ function applyOperationsToDraft(
 					}
 				}
 			} else if (op.action === "assign") {
-				// `assign` places a specific recipe (by recipe_id) into a slot.
-				// In the harness we don't have a recipe catalogue to resolve the id
-				// into a full DraftRecipe, so we mark the slot as needing a targeted
-				// regeneration. The regenerate_slots op produced by the interpreter
-				// will handle actual placement through the generator endpoint.
-				// Nothing to change in the draft structure here.
+				// Queue a targeted regenerate so the generator fills this slot,
+				// and collect the recipe_id so it reaches the compiler as an
+				// assigned_recipe_id override.
+				const rawTarget = Array.isArray(op.payload.target)
+					? op.payload.target[0]
+					: op.payload.target;
+				if (rawTarget && rawTarget !== "all" && op.payload.recipe_id) {
+					regenerateOps.push({
+						op: "regenerate_slots",
+						target: [rawTarget],
+					});
+					slotAssignments.push({
+						date: rawTarget.date,
+						meal_type: rawTarget.meal_type,
+						recipe_id: op.payload.recipe_id,
+					});
+				}
 			} else if (op.action === "add_slot") {
 				// Add a new meal-type row to every date currently in the draft.
 				const { meal_type } = op.payload;
@@ -759,7 +769,7 @@ function applyOperationsToDraft(
 		}
 	}
 
-	return { draft: next, regenerateOps };
+	return { draft: next, regenerateOps, slotAssignments };
 }
 
 // ==========================================
@@ -849,11 +859,22 @@ export default function InterpreterTestHarness() {
 	const applyRegenerateOps = async (
 		currentDraft: Omit<MealPlanDraft, "undo_stack">,
 		ops: RegenerateSlotsOp[],
+		slotAssignments: SlotAssignment[],
 	): Promise<Omit<MealPlanDraft, "undo_stack">> => {
 		let latest = currentDraft;
 		for (const op of ops) {
 			const targetSlots =
 				op.target === null ? undefined : (op.target as SlotTarget[]);
+
+			// Only forward assignments relevant to this op's target slots
+			const relevantAssignments =
+				targetSlots === undefined
+					? slotAssignments
+					: slotAssignments.filter((a) =>
+							targetSlots.some(
+								(t) => t.date === a.date && t.meal_type === a.meal_type,
+							),
+						);
 
 			const result = await generateSlots({
 				// Cast required: SlotKey template literal type is narrower than
@@ -862,6 +883,8 @@ export default function InterpreterTestHarness() {
 					typeof generateSlots
 				>[0]["draft"],
 				target_slots: targetSlots,
+				slot_assignments:
+					relevantAssignments.length > 0 ? relevantAssignments : undefined,
 			});
 
 			if (result && "updated_slots" in result && result.updated_slots) {
@@ -918,7 +941,11 @@ export default function InterpreterTestHarness() {
 				draft,
 			});
 
-			const { draft: draftAfterEdits, regenerateOps } = applyOperationsToDraft(
+			const {
+				draft: draftAfterEdits,
+				regenerateOps,
+				slotAssignments,
+			} = applyOperationsToDraft(
 				draft,
 				response.operations as InterpreterOperation[],
 			);
@@ -927,6 +954,7 @@ export default function InterpreterTestHarness() {
 			const finalDraft = await applyRegenerateOps(
 				draftAfterEdits,
 				regenerateOps,
+				slotAssignments,
 			);
 
 			const assistantTurn: TurnMessage = {

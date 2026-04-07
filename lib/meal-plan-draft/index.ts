@@ -5,4 +5,5 @@ export {
 	compilePreferences,
 	compilePreferencesForSlots,
 	dayOfWeekFromDate,
+	type SlotAssignment,
 } from "./preference-compiler";

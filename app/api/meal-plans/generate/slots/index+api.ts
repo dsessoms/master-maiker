@@ -93,6 +93,20 @@ const GenerateSlotsRequestSchema = z.object({
 	 * Corresponds to the `target` field of a `regenerate_slots` operation.
 	 */
 	target_slots: z.array(SlotTargetSchema).optional(),
+	/**
+	 * Per-slot recipe assignments from `plan_edit(assign)` interpreter ops.
+	 * Forwarded to the Preference Compiler, which writes `assigned_recipe_id`
+	 * into the compiled output so the generator places the exact recipe.
+	 */
+	slot_assignments: z
+		.array(
+			z.object({
+				date: z.string(),
+				meal_type: z.enum(["Breakfast", "Lunch", "Dinner", "Snack"]),
+				recipe_id: z.string(),
+			}),
+		)
+		.optional(),
 });
 
 export type PostGenerateSlotsRequest = z.infer<
@@ -331,7 +345,7 @@ export async function POST(req: Request) {
 		return jsonResponse({ error: "Malformed JSON" }, { status: 400 });
 	}
 
-	const { draft, target_slots } = body;
+	const { draft, target_slots, slot_assignments } = body;
 
 	// Resolve target slot keys from the target_slots array (if provided)
 	const targetSlotKeys: SlotKey[] | undefined = target_slots?.map(
@@ -354,7 +368,11 @@ export async function POST(req: Request) {
 		MealPlanDraft,
 		"slots" | "preference_patch_stack"
 	>;
-	const compiledPrefs = compilePreferences(draftForCompiler);
+	const compiledPrefs = compilePreferences(
+		draftForCompiler,
+		undefined,
+		slot_assignments,
+	);
 
 	// Run the generator
 	const output = generateSlots({

@@ -1,16 +1,16 @@
+import type { InterpreterFinalResponse } from "@/lib/meal-plan-draft/interpreter-schema";
 import type { InterpreterRequest } from "@/lib/meal-plan-draft/types";
-import type { InterpreterResponseFromSchema } from "@/lib/meal-plan-draft/interpreter-schema";
 import axiosWithAuth from "@/lib/axiosWithAuth";
 import { useMutation } from "@tanstack/react-query";
 
 export const useInterpretMealPlanMessage = () => {
 	const mutation = useMutation<
-		InterpreterResponseFromSchema,
+		InterpreterFinalResponse,
 		unknown,
-		InterpreterRequest
+		Pick<InterpreterRequest, "user_message" | "draft">
 	>({
-		mutationFn: async (request: InterpreterRequest) => {
-			const response = await axiosWithAuth.post<InterpreterResponseFromSchema>(
+		mutationFn: async (request) => {
+			const response = await axiosWithAuth.post<InterpreterFinalResponse>(
 				"/api/meal-plans/generate/interpret",
 				request,
 			);

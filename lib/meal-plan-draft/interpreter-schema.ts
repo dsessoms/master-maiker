@@ -187,7 +187,15 @@ export const PlanEditOpSchema = z
 			recipe_id: z
 				.string()
 				.optional()
-				.describe("Recipe ID for the assign action"),
+				.describe(
+					"Recipe ID for the assign action — resolved from a recipe_search_request, never invented",
+				),
+			recipe_name: z
+				.string()
+				.optional()
+				.describe(
+					"Human-readable name of the assigned recipe, copied from the search result",
+				),
 			lock: z
 				.boolean()
 				.optional()
@@ -245,6 +253,20 @@ export const InterpreterResponseSchema = z.object({
 });
 
 // ==========================================
+// Recipe resolution (for the search-request / follow-up flow)
+// ==========================================
+
+/**
+ * A single recipe returned by the server's recipe search during a
+ * `recipe_search_request` round-trip.
+ */
+export const ResolvedRecipeSchema = z.object({
+	id: z.string(),
+	name: z.string(),
+	description: z.string().nullable(),
+});
+
+// ==========================================
 // Inferred types (source of truth for API callers)
 // ==========================================
 
@@ -260,3 +282,7 @@ export type RegenerateSlotsOpFromSchema = z.infer<
 	typeof RegenerateSlotsOpSchema
 >;
 export type HardFilterFromSchema = z.infer<typeof HardFilterSchema>;
+export type ResolvedRecipe = z.infer<typeof ResolvedRecipeSchema>;
+export type InterpreterFinalResponse = z.infer<
+	typeof InterpreterResponseSchema
+>;

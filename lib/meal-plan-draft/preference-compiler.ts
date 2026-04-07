@@ -28,6 +28,7 @@ import type {
 	SlotKey,
 	WeightSignal,
 } from "./types";
+import { format, parseISO } from "date-fns";
 
 // ==========================================
 // Constants
@@ -108,18 +109,41 @@ function filterKey(filter: HardFilter): string {
 // ==========================================
 
 /**
+ * A per-slot recipe assignment produced by a `plan_edit(assign)` interpreter
+ * operation. Passed to the compiler so it can write `assigned_recipe_id` into
+ * the compiled output for the targeted slot — the generator then places that
+ * specific recipe rather than sampling from candidates.
+ */
+export interface SlotAssignment {
+	date: string;
+	meal_type: MealType;
+	recipe_id: string;
+}
+
+/**
  * Compiles the full preference patch stack from a draft into a flat
  * `CompiledSlotPreferences` per slot.
  *
  * Accepts the `slots` record separately so the compiler can be used with
  * a subset of slots (e.g., only target slots before regeneration) without
  * requiring a full `MealPlanDraft` object — useful for unit testing.
+ *
+ * `slotAssignments` — per-slot recipe pins from `plan_edit(assign)` ops.
+ * They take the highest precedence and override both patch-stack and profile
+ * defaults for `assigned_recipe_id`.
  */
 export function compilePreferences(
 	draft: Pick<MealPlanDraft, "slots" | "preference_patch_stack">,
 	profileDefaults?: Partial<CompiledSlotPreferences>,
+	slotAssignments?: SlotAssignment[],
 ): CompilerOutput {
 	const output: CompilerOutput = {};
+
+	// Build a fast lookup: SlotKey → recipe_id for O(1) access per slot
+	const assignmentMap = new Map<SlotKey, string>();
+	for (const a of slotAssignments ?? []) {
+		assignmentMap.set(`${a.date}.${a.meal_type}` as SlotKey, a.recipe_id);
+	}
 
 	for (const slotKey of Object.keys(draft.slots) as SlotKey[]) {
 		const slot = draft.slots[slotKey];
@@ -133,6 +157,7 @@ export function compilePreferences(
 			slotMealType,
 			draft.preference_patch_stack,
 			profileDefaults,
+			assignmentMap.get(slotKey),
 		);
 
 		output[slotKey] = compiled;
@@ -157,6 +182,8 @@ function compileSlot(
 	slotMealType: MealType,
 	patches: PrefPatchOp[],
 	profileDefaults?: Partial<CompiledSlotPreferences>,
+	/** Explicit recipe pin — highest precedence, overrides all other sources. */
+	assignedRecipeId?: string,
 ): CompiledSlotPreferences {
 	// Seed with defaults
 	const weights: Record<WeightSignal, number> = {
@@ -223,10 +250,12 @@ function compileSlot(
 		}
 	}
 
-	// Resolve the assigned_recipe_id: use the profile default if present.
-	// The generator will override this via `plan_edit(assign)` before calling
-	// the compiler, so we do not need to scan the patch stack for it here.
-	const assigned_recipe_id = profileDefaults?.assigned_recipe_id ?? null;
+	// Resolve the assigned_recipe_id in descending precedence:
+	//   1. Explicit pin from a plan_edit(assign) op  (assignedRecipeId param)
+	//   2. Profile defaults
+	//   3. null (no pin)
+	const assigned_recipe_id =
+		assignedRecipeId ?? profileDefaults?.assigned_recipe_id ?? null;
 
 	return {
 		hard_filters: Array.from(filterMap.values()),
@@ -239,27 +268,11 @@ function compileSlot(
 // Utility: derive DayOfWeek from an ISO date string
 // ==========================================
 
-const ISO_DAY_TO_DAY_OF_WEEK: DayOfWeek[] = [
-	"sunday",
-	"monday",
-	"tuesday",
-	"wednesday",
-	"thursday",
-	"friday",
-	"saturday",
-];
-
 /**
  * Derives the `DayOfWeek` enum value from an ISO date string (YYYY-MM-DD).
- *
- * Uses UTC to avoid timezone-dependent day shifts on the server, which
- * will typically run in UTC. For client-side use, callers should pass a
- * pre-resolved `DayOfWeek` if local timezone matters.
  */
 export function dayOfWeekFromDate(isoDate: string): DayOfWeek {
-	const date = new Date(`${isoDate}T00:00:00Z`);
-	const index = date.getUTCDay(); // 0 = Sunday
-	return ISO_DAY_TO_DAY_OF_WEEK[index];
+	return format(parseISO(isoDate), "EEEE").toLowerCase() as DayOfWeek;
 }
 
 /**
@@ -270,6 +283,7 @@ export function compilePreferencesForSlots(
 	draft: Pick<MealPlanDraft, "slots" | "preference_patch_stack">,
 	targetSlotKeys: SlotKey[],
 	profileDefaults?: Partial<CompiledSlotPreferences>,
+	slotAssignments?: SlotAssignment[],
 ): CompilerOutput {
 	const targetSet = new Set(targetSlotKeys);
 	const filteredSlots = Object.fromEntries(
@@ -284,5 +298,6 @@ export function compilePreferencesForSlots(
 			preference_patch_stack: draft.preference_patch_stack,
 		},
 		profileDefaults,
+		slotAssignments,
 	);
 }
