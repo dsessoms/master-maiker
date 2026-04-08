@@ -33,6 +33,11 @@ const MAX_TOOL_ROUNDS = 5;
 
 const InterpreterRequestSchema = z.object({
 	user_message: z.string().min(1),
+	/**
+	 * Optional profile id→name mapping so the LLM can resolve names mentioned
+	 * in the user message (e.g. "1 serving for David") to profile UUIDs.
+	 */
+	profiles: z.array(z.object({ id: z.string(), name: z.string() })).optional(),
 	draft: z.object({
 		session_id: z.string(),
 		included_profile_ids: z.array(z.string()),
@@ -64,10 +69,13 @@ const FUNCTION_DECLARATIONS = [
 		name: "search_recipes",
 		description:
 			"Search the user's recipe library by name. " +
-			"Call this BEFORE emitting any assign operation to obtain the real recipe_id. " +
+			"Only call this when the recipe is NOT already present in the current draft SLOTS. " +
+			"If the recipe is already in a slot, copy its recipe_id directly — no search needed. " +
 			"Never invent or guess a recipe_id. " +
-			"Provide alternate phrasings as separate queries to handle hyphenation or synonym mismatches " +
-			'(e.g. "cottage cheese pancakes" AND "cottage-cheese pancakes").',
+			"Provide alternate phrasings as separate queries to handle: " +
+			'(1) hyphenation mismatches (e.g. "cottage cheese pancakes" AND "cottage-cheese pancakes"); ' +
+			'(2) plural/singular forms (e.g. "enchiladas" AND "enchilada"); ' +
+			'(3) common synonyms or keyword subsets (e.g. "skillet", "one-pan").',
 		parameters: {
 			type: Type.OBJECT,
 			properties: {
@@ -98,7 +106,7 @@ const FUNCTION_DECLARATIONS = [
 						"Must be valid JSON. Use [] for an empty list. " +
 						"Each element MUST be one of exactly these three shapes:\n" +
 						'  { "op": "pref_patch", "action": "add_filter"|"remove_filter"|"set_weight"|"remove_weight", "scope": null|{days?,meal_types?}, "payload": {filter?,weight?} }\n' +
-						'  { "op": "plan_edit", "action": "swap"|"move"|"copy"|"clear"|"assign"|"add_slot"|"remove_slot"|"lock"|"unlock", "payload": {target?,to?,recipe_id?,recipe_name?,lock?,meal_type?,draft_entry_id?} }\n' +
+						'  { "op": "plan_edit", "action": "swap"|"move"|"copy"|"clear"|"assign"|"add_slot"|"remove_slot"|"lock"|"unlock", "payload": {target?,to?,recipe_id?,recipe_name?,lock?,meal_type?,draft_entry_id?,profile_servings?} }\n' +
 						'  { "op": "regenerate_slots", "target": [{date,meal_type}]|null }\n' +
 						"op is REQUIRED on every element. action and payload are fields of the element itself — NOT nested objects.",
 				},
@@ -150,6 +158,7 @@ SHAPE REFERENCE:
 
   plan_edit:
     { "op": "plan_edit", "action": "assign", "payload": { "target": { "date": "2026-04-07", "meal_type": "Dinner" }, "recipe_id": "<uuid>", "recipe_name": "<name>", "lock": true } }
+    { "op": "plan_edit", "action": "assign", "payload": { "target": { "date": "2026-04-07", "meal_type": "Dinner" }, "recipe_id": "<uuid>", "recipe_name": "<name>", "lock": true, "profile_servings": [{"profile_id": "<uuid>", "servings": 1}, {"profile_id": "<uuid>", "servings": 2}] } }
     { "op": "plan_edit", "action": "lock",   "payload": { "target": [{ "date": "2026-04-07", "meal_type": "Lunch" }] } }
     { "op": "plan_edit", "action": "unlock", "payload": { "target": "all" } }
     { "op": "plan_edit", "action": "clear",  "payload": { "target": { "date": "2026-04-07", "meal_type": "Breakfast" } } }
@@ -176,7 +185,7 @@ ACTION DESCRIPTIONS:
     move        — move a recipe from target to to (clears origin)
     copy        — copy a recipe from target to to (keeps origin)
     clear       — empty a slot's entries without removing the slot
-    assign      — place a specific recipe (by recipe_id) into a slot; set lock:true to immediately lock it
+    assign      — place a specific recipe (by recipe_id) into a slot; set lock:true to immediately lock it; optionally set profile_servings to override per-profile serving counts
     add_slot    — add a new meal_type row to all days in the plan
     remove_slot — remove a meal_type row from the plan entirely
     lock        — mark entries as locked so the generator never replaces them
@@ -213,6 +222,20 @@ COMMON PATTERNS (shown as actual operations_json arrays):
   [
     { "op": "plan_edit", "action": "assign", "payload": { "target": { "date": "<monday ISO date>", "meal_type": "Dinner" }, "recipe_id": "<resolved uuid>", "recipe_name": "Beef and Broccoli", "lock": true } }
   ]
+
+"1 serving for David and 2 servings for Milena of beef and broccoli on Monday dinner" (after search_recipes returned the id):
+  [
+    { "op": "plan_edit", "action": "assign", "payload": { "target": { "date": "<monday ISO date>", "meal_type": "Dinner" }, "recipe_id": "<resolved uuid>", "recipe_name": "Beef and Broccoli", "lock": true, "profile_servings": [{"profile_id": "<David's profile_id>", "servings": 1}, {"profile_id": "<Milena's profile_id>", "servings": 2}] } }
+  ]
+
+"Milena should have 2 servings of enchiladas" / "always give Milena 2 servings of enchiladas" / "update the enchiladas to 2 servings for Milena":
+  (The enchilada recipe appears in multiple slots. Emit one assign per slot containing it.)
+  [
+    { "op": "plan_edit", "action": "assign", "payload": { "target": { "date": "<slot1 date>", "meal_type": "<slot1 meal_type>" }, "recipe_id": "<enchilada recipe_id from draft>", "recipe_name": "<enchilada recipe name>", "lock": true, "profile_servings": [{"profile_id": "<Milena's profile_id>", "servings": 2}] } },
+    { "op": "plan_edit", "action": "assign", "payload": { "target": { "date": "<slot2 date>", "meal_type": "<slot2 meal_type>" }, "recipe_id": "<enchilada recipe_id from draft>", "recipe_name": "<enchilada recipe name>", "lock": true, "profile_servings": [{"profile_id": "<Milena's profile_id>", "servings": 2}] } }
+  ]
+  Note: Only Milena's servings are in profile_servings — other profiles' existing servings are preserved automatically.
+  Note: Recipes are matched flexibly: "enchiladas" matches "enchilada" (singular/plural) as a substring of the recipe name.
 
 "Same breakfast every day" (monday already filled):
   [
@@ -267,12 +290,35 @@ COMMON PATTERNS (shown as actual operations_json arrays):
 "Undo that":
   []   (undo is handled client-side; say so in interpretation_summary)
 
+DECLARATIVE SERVING STATEMENTS:
+  Users often state serving preferences as facts rather than direct commands:
+    - "Milena should have 2 servings of X"
+    - "Always give David 1 serving of X"
+    - "I want Milena to get 2 servings of X"
+    - "Update the X to 2 servings for Milena"
+  These are ALL equivalent to an assign operation with profile_servings set for the named profile.
+  Apply the update to EVERY slot in the draft that contains a recipe matching X (using flexible word/stem matching).
+  Do NOT treat them as preference statements or emit empty operations.
+
 RECIPE ASSIGNMENT RULES:
   - NEVER invent or guess a recipe_id.
-  - Before emitting any assign operation, call search_recipes to obtain the real id.
-  - Pick the best match from results by name/description similarity.
+  - BEFORE calling search_recipes, scan the SLOTS section of the current draft context:
+      • Each slot entry shows its recipe name with (recipe_id: <uuid>, entry_id: <uuid>).
+      • Match flexibly: check if any significant word from the user's phrase appears as a
+        case-insensitive substring in a recipe name. Also try singular/plural variants
+        (e.g. "enchiladas" → also try "enchilada"; "tomatoes" → also try "tomato").
+      • If any slot recipe name contains a matching word or stem, that recipe is a match —
+        copy its recipe_id verbatim and emit the assign op immediately without calling search_recipes.
+      • Only call search_recipes when no draft slot recipe name contains a matching word or stem.
+  - When searching, pick the best match from results by name/description similarity.
   - If results are empty, call output_operations with empty operations and explain the recipe wasn't found.
   - Include both recipe_id and recipe_name in the assign payload.
+  - If the user specifies explicit serving counts per person (e.g. "1 serving for David, 2 for Milena"):
+      • Look up each person's profile_id in the PROFILES LOOKUP section of the draft context.
+      • Include a profile_servings array in the assign payload with { profile_id, servings } entries.
+      • Only include profiles explicitly mentioned; omit profiles the user did not specify.
+      • If a name is not found in the PROFILES LOOKUP, note the ambiguity and set is_ambiguous: true.
+  - If no explicit servings are stated, omit profile_servings entirely (the generator computes them from calorie targets).
 
 RECIPE BAN RULES:
   - A ban blocks a specific recipe from being selected by the generator for the rest of the session.
@@ -368,7 +414,7 @@ export async function POST(req: Request) {
 			);
 		}
 
-		const { user_message, draft } = validation.data;
+		const { user_message, draft, profiles } = validation.data;
 
 		// Pre-compute the set of dates that actually exist in this draft.
 		// Used to reject operations that reference hallucinated dates.
@@ -381,7 +427,7 @@ export async function POST(req: Request) {
 		const userTurn = `${user_message}
 
 --- CURRENT DRAFT STATE ---
-${buildDraftContext(draft)}`;
+${buildDraftContext(draft, profiles ?? [])}`;
 
 		const contents: Content[] = [{ role: "user", parts: [{ text: userTurn }] }];
 
@@ -661,10 +707,25 @@ function collectDatesFromTarget(target: unknown, out: string[]): void {
  * Returns true if the interpretation_summary contains action verbs that imply
  * operations should have been emitted. Used to catch the "empty ops + planning
  * summary" mismatch before returning a bad response to the client.
+ *
+ * Matches both present and past tense so that phrases like "Removed pumpkin
+ * chili from the plan" are caught just as reliably as "will regenerate".
+ *
+ * NOT matched (valid empty-ops cases):
+ *   - "Undo is handled client-side."
+ *   - "The recipe wasn't found in your library."
+ *   - "Could not add it to your plan."
+ *   - "No changes needed."
  */
 function summaryImpliesActions(summary: string): boolean {
-	return /\b(unlock|lock|clear|regenerat|assign|swap|move|copy|add[\s_-]slot|remove[\s_-]slot|will|going to)/i.test(
-		summary,
+	// Strip negated verb phrases before testing so that "could not add",
+	// "unable to find", "didn't regenerate", etc. are not treated as actions.
+	const withoutNegations = summary.replace(
+		/\b(could\s+not|would\s+not|did\s+not|was\s+not|were\s+not|can\s+not|cannot|don't|didn't|wasn't|weren't|unable\s+to|failed?\s+to|not)\s+\w+/gi,
+		" ",
+	);
+	return /\b(unlock(ed)?|lock(ed)?|clear(ed)?|regenerat(ed|ing)?|assign(ed)?|swap(ped)?|mov(ed|ing)?|cop(ied|ying)?|remov(ed|ing)?|ban(ned)?|replac(ed)?|updat(ed)?|chang(ed)?|exclud(ed|ing)?|add(ed)?|plac(ed)?|trigger(ed)?|should\s+(have|get|receive)|will|going\s+to)\b/i.test(
+		withoutNegations,
 	);
 }
 
@@ -677,15 +738,31 @@ async function searchRecipes(
 	userId: string,
 	queries: string[],
 ): Promise<ResolvedRecipe[]> {
+	const baseTerms = queries.flatMap((q) =>
+		q
+			.toLowerCase()
+			.split(/[\s\-]+/)
+			.filter((t) => t.length > 1),
+	);
+
+	// Generate singular variants so that e.g. "enchiladas" also matches
+	// "enchilada", "tomatoes" → "tomato", "berries" → "berry".
+	const singular = (t: string): string | null => {
+		if (t.endsWith("ies") && t.length > 4) return t.slice(0, -3) + "y";
+		if (t.endsWith("oes") && t.length > 4) return t.slice(0, -2); // tomatoes→tomato
+		if (t.endsWith("es") && t.length > 3) return t.slice(0, -1); // enchiladas handled below via 's'
+		if (t.endsWith("s") && t.length > 3) return t.slice(0, -1); // enchiladas→enchilada
+		return null;
+	};
+
 	const terms = [
-		...new Set(
-			queries.flatMap((q) =>
-				q
-					.toLowerCase()
-					.split(/[\s\-]+/)
-					.filter((t) => t.length > 1),
-			),
-		),
+		...new Set([
+			...baseTerms,
+			...baseTerms.flatMap((t) => {
+				const s = singular(t);
+				return s ? [s] : [];
+			}),
+		]),
 	];
 
 	if (terms.length === 0) return [];
@@ -718,6 +795,7 @@ async function searchRecipes(
  */
 function buildDraftContext(
 	draft: z.infer<typeof InterpreterRequestSchema>["draft"],
+	profiles: { id: string; name: string }[] = [],
 ): string {
 	const lines: string[] = [];
 
@@ -727,6 +805,17 @@ function buildDraftContext(
 	lines.push(`Session ID: ${draft.session_id}`);
 	lines.push(`Profiles: ${draft.included_profile_ids.join(", ")}`);
 
+	// Emit a human-readable PROFILES LOOKUP if names were provided.
+	// The LLM uses this to resolve names to profile UUIDs for profile_servings.
+	if (profiles.length > 0) {
+		lines.push("");
+		lines.push(
+			"PROFILES LOOKUP (use profile_id for profile_servings in assign ops):",
+		);
+		for (const p of profiles) {
+			lines.push(`  ${p.name.padEnd(20)} → ${p.id}`);
+		}
+	}
 	// Build an explicit day-name → date(s) lookup from the actual draft slots.
 	// The model MUST use this table when resolving day references — it must not
 	// compute or guess dates itself.

@@ -724,6 +724,9 @@ function applyOperationsToDraft(
 						date: rawTarget.date,
 						meal_type: rawTarget.meal_type,
 						recipe_id: op.payload.recipe_id,
+						...(op.payload.profile_servings
+							? { profile_servings: op.payload.profile_servings }
+							: {}),
 					});
 				}
 			} else if (op.action === "add_slot") {
@@ -939,6 +942,7 @@ export default function InterpreterTestHarness() {
 			const response = await interpret({
 				user_message: trimmed,
 				draft,
+				profiles: profiles?.map((p) => ({ id: p.id, name: p.name })),
 			});
 
 			const {

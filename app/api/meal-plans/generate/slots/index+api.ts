@@ -104,6 +104,14 @@ const GenerateSlotsRequestSchema = z.object({
 				date: z.string(),
 				meal_type: z.enum(["Breakfast", "Lunch", "Dinner", "Snack"]),
 				recipe_id: z.string(),
+				profile_servings: z
+					.array(
+						z.object({
+							profile_id: z.string(),
+							servings: z.number(),
+						}),
+					)
+					.optional(),
 			}),
 		)
 		.optional(),

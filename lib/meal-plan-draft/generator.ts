@@ -20,6 +20,7 @@ import type {
 	CompiledSlotPreferences,
 	CompilerOutput,
 	DraftFoodEntry,
+	DraftProfileFoodEntry,
 	DraftSlot,
 	HardFilter,
 	MealPlanDraft,
@@ -545,10 +546,31 @@ export function generateSlots(input: GeneratorInput): GeneratorOutput {
 			);
 
 			if (assignedCandidate) {
-				const neededServings = computeNeededServings(
-					calorieTarget,
-					assignedCandidate.calories_per_serving,
-				);
+				// Merge explicit per-profile servings with the existing entry's servings so
+				// that partial updates (e.g. "update Milena's servings") preserve unchanged
+				// profiles (e.g. David's servings stay the same).
+				const existingEntry = slot.entries[0] ?? null;
+				const rawExplicit = prefs.explicit_profile_servings;
+				const resolvedServings =
+					rawExplicit && rawExplicit.length > 0
+						? mergeProfileServings(
+								existingEntry?.profile_food_entries ?? [],
+								rawExplicit,
+							)
+						: undefined;
+
+				// When explicit servings exist use their sum for leftover tracking;
+				// otherwise compute from calorie target.
+				const neededServings =
+					resolvedServings && resolvedServings.length > 0
+						? resolvedServings.reduce(
+								(sum, pfe) => sum + pfe.number_of_servings,
+								0,
+							)
+						: computeNeededServings(
+								calorieTarget,
+								assignedCandidate.calories_per_serving,
+							);
 
 				const newEntry = buildDraftEntry(
 					assignedCandidate,
@@ -557,11 +579,15 @@ export function generateSlots(input: GeneratorInput): GeneratorOutput {
 					profile_targets,
 					activeMealTypes,
 					true, // assigned entries are locked
+					resolvedServings,
 				);
 
+				// Assign always replaces everything in the slot — do NOT append to
+				// lockedEntries, because a re-assign of the same slot must overwrite
+				// the previously-locked entry rather than stack a duplicate.
 				updatedSlots[slotKey] = {
 					...slot,
-					entries: [...lockedEntries, newEntry],
+					entries: [newEntry],
 					errors: undefined,
 				};
 
@@ -674,6 +700,38 @@ export function generateSlots(input: GeneratorInput): GeneratorOutput {
 // Helpers
 // ==========================================
 
+/**
+ * Merges a base set of profile_food_entries with explicit overrides.
+ *
+ * - Profiles present in `overrides` get their number_of_servings updated.
+ * - Profiles only in `base` (not mentioned by the user) are preserved unchanged.
+ * - Profiles only in `overrides` (new profiles being added) are appended.
+ *
+ * This ensures partial updates like "set Milena to 2 servings" leave David's
+ * servings untouched.
+ */
+function mergeProfileServings(
+	base: DraftProfileFoodEntry[],
+	overrides: DraftProfileFoodEntry[],
+): DraftProfileFoodEntry[] {
+	const overrideMap = new Map(
+		overrides.map((o) => [o.profile_id, o.number_of_servings]),
+	);
+	// Apply overrides to existing profiles
+	const merged = base.map((e) => ({
+		...e,
+		number_of_servings: overrideMap.get(e.profile_id) ?? e.number_of_servings,
+	}));
+	// Append override-only profiles (not currently in the slot)
+	const baseIds = new Set(base.map((e) => e.profile_id));
+	for (const o of overrides) {
+		if (!baseIds.has(o.profile_id)) {
+			merged.push(o);
+		}
+	}
+	return merged;
+}
+
 /** Builds a DraftFoodEntry from a selected candidate and serving computation. */
 function buildDraftEntry(
 	candidate: GeneratorCandidate,
@@ -682,7 +740,32 @@ function buildDraftEntry(
 	profileTargets: ProfileCalorieTarget[],
 	activeMealTypes: MealType[],
 	locked: boolean,
+	/**
+	 * Explicit per-profile serving counts from a plan_edit(assign) op.
+	 * When supplied, these are used verbatim; calorie-target computation is skipped.
+	 */
+	explicitProfileServings?: DraftProfileFoodEntry[],
 ): DraftFoodEntry {
+	// If explicit servings were provided by the user, use them directly.
+	if (explicitProfileServings && explicitProfileServings.length > 0) {
+		return {
+			draft_entry_id: generateUUID(),
+			locked,
+			recipe: {
+				id: candidate.id,
+				name: candidate.name,
+				calories_per_serving: candidate.calories_per_serving,
+				macros_per_serving: { ...candidate.macros_per_serving },
+				yield: candidate.yield,
+				core_ingredients: [...candidate.core_ingredients],
+				is_leftover: candidate.is_leftover,
+				available_servings: candidate.available_servings,
+				expires_after: candidate.expires_after,
+			},
+			profile_food_entries: explicitProfileServings,
+		};
+	}
+
 	// Distribute servings proportionally based on each profile's per-slot calorie goal.
 	// A profile with a larger goal receives proportionally more servings.
 	const mealCount = activeMealTypes.length > 0 ? activeMealTypes.length : 3;

@@ -164,8 +164,15 @@ export interface PlanEditOp {
 		draft_entry_id?: string; // For targeting a specific recipe within a slot (e.g. locking just the main dish)
 		to?: SlotTarget | SlotTarget[]; // For swap/move/copy
 		recipe_id?: string; // For assign
+		recipe_name?: string; // For assign — human-readable name
 		lock?: boolean; // For assign
 		meal_type?: MealType; // For add_slot
+		/**
+		 * Explicit per-profile serving overrides for the assign action.
+		 * When present, the generator uses these exact values instead of
+		 * computing from calorie targets.
+		 */
+		profile_servings?: { profile_id: string; servings: number }[];
 	};
 }
 
@@ -187,6 +194,13 @@ export interface CompiledSlotPreferences {
 
 	// Pre-assigned by explicit LLM user command (bypasses generator search)
 	assigned_recipe_id: string | null;
+
+	/**
+	 * Explicit per-profile serving counts from a plan_edit(assign) op.
+	 * When present, the generator uses these exact values rather than
+	 * computing servings from calorie targets.
+	 */
+	explicit_profile_servings?: DraftProfileFoodEntry[];
 }
 
 // The complete output passed from the Compiler to the Generator.
@@ -201,6 +215,12 @@ export type CompilerOutput = Record<SlotKey, CompiledSlotPreferences>;
 export interface InterpreterRequest {
 	user_message: string;
 	draft: Omit<MealPlanDraft, "undo_stack">;
+	/**
+	 * Profile id → name mapping. When provided, the interpreter can resolve
+	 * profile names mentioned by the user (e.g. "1 serving for David") to
+	 * profile IDs for use in per-profile serving overrides.
+	 */
+	profiles?: { id: string; name: string }[];
 }
 
 export interface InterpreterResponse {

@@ -118,6 +118,12 @@ export interface SlotAssignment {
 	date: string;
 	meal_type: MealType;
 	recipe_id: string;
+	/**
+	 * Explicit per-profile serving counts from the assign payload.
+	 * When present, the generator uses these exact values instead of
+	 * computing servings from calorie targets.
+	 */
+	profile_servings?: { profile_id: string; servings: number }[];
 }
 
 /**
@@ -139,10 +145,10 @@ export function compilePreferences(
 ): CompilerOutput {
 	const output: CompilerOutput = {};
 
-	// Build a fast lookup: SlotKey → recipe_id for O(1) access per slot
-	const assignmentMap = new Map<SlotKey, string>();
+	// Build a fast lookup: SlotKey → assignment for O(1) access per slot
+	const assignmentMap = new Map<SlotKey, SlotAssignment>();
 	for (const a of slotAssignments ?? []) {
-		assignmentMap.set(`${a.date}.${a.meal_type}` as SlotKey, a.recipe_id);
+		assignmentMap.set(`${a.date}.${a.meal_type}` as SlotKey, a);
 	}
 
 	for (const slotKey of Object.keys(draft.slots) as SlotKey[]) {
@@ -151,13 +157,15 @@ export function compilePreferences(
 		const slotMealType = slot.meal_type;
 
 		// Start from profile defaults, then apply patches in increasing precedence.
+		const assignment = assignmentMap.get(slotKey);
 		const compiled = compileSlot(
 			slotKey,
 			slotDay,
 			slotMealType,
 			draft.preference_patch_stack,
 			profileDefaults,
-			assignmentMap.get(slotKey),
+			assignment?.recipe_id,
+			assignment?.profile_servings,
 		);
 
 		output[slotKey] = compiled;
@@ -184,6 +192,8 @@ function compileSlot(
 	profileDefaults?: Partial<CompiledSlotPreferences>,
 	/** Explicit recipe pin — highest precedence, overrides all other sources. */
 	assignedRecipeId?: string,
+	/** Explicit per-profile serving overrides from a plan_edit(assign) op. */
+	explicitProfileServings?: { profile_id: string; servings: number }[],
 ): CompiledSlotPreferences {
 	// Seed with defaults
 	const weights: Record<WeightSignal, number> = {
@@ -257,10 +267,20 @@ function compileSlot(
 	const assigned_recipe_id =
 		assignedRecipeId ?? profileDefaults?.assigned_recipe_id ?? null;
 
+	// Map explicit profile_servings to DraftProfileFoodEntry shape if provided
+	const explicit_profile_servings =
+		explicitProfileServings && explicitProfileServings.length > 0
+			? explicitProfileServings.map((ps) => ({
+					profile_id: ps.profile_id,
+					number_of_servings: ps.servings,
+				}))
+			: profileDefaults?.explicit_profile_servings;
+
 	return {
 		hard_filters: Array.from(filterMap.values()),
 		weights,
 		assigned_recipe_id,
+		...(explicit_profile_servings ? { explicit_profile_servings } : {}),
 	};
 }
 

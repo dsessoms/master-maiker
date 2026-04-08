@@ -7,7 +7,9 @@ export const useInterpretMealPlanMessage = () => {
 	const mutation = useMutation<
 		InterpreterFinalResponse,
 		unknown,
-		Pick<InterpreterRequest, "user_message" | "draft">
+		Pick<InterpreterRequest, "user_message" | "draft"> & {
+			profiles?: { id: string; name: string }[];
+		}
 	>({
 		mutationFn: async (request) => {
 			const response = await axiosWithAuth.post<InterpreterFinalResponse>(

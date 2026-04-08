@@ -205,6 +205,25 @@ export const PlanEditOpSchema = z
 			meal_type: MealTypeSchema.optional().describe(
 				"Meal type to add for the add_slot action",
 			),
+			profile_servings: z
+				.array(
+					z.object({
+						profile_id: z
+							.string()
+							.describe(
+								"Profile UUID from the PROFILES lookup in draft context",
+							),
+						servings: z
+							.number()
+							.describe("Number of servings for this profile"),
+					}),
+				)
+				.optional()
+				.describe(
+					"Explicit per-profile serving counts for the assign action. " +
+						"When provided, the generator uses these exact values instead of computing from calorie targets. " +
+						"Omit to let the generator compute servings automatically.",
+				),
 		}),
 	})
 	.describe(
