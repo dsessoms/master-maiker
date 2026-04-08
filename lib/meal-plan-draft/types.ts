@@ -98,6 +98,7 @@ export interface MealPlanDraft {
 
 export type HardFilterType =
 	| "exclude_ingredient"
+	| "exclude_recipe"
 	| "dietary_restriction"
 	| "max_prep_time"
 	| "max_ingredient_count"
@@ -106,8 +107,7 @@ export type HardFilterType =
 
 /**
  * The value shape for each HardFilterType:
- *   exclude_ingredient   → string  (e.g. "kale")
- *   dietary_restriction  → string  (e.g. "vegan", "gluten-free")
+ *   exclude_ingredient   → string  (e.g. "kale")	 *   exclude_recipe       → string  (recipe UUID — bans that recipe from being selected) *   dietary_restriction  → string  (e.g. "vegan", "gluten-free")
  *   max_prep_time        → number  (minutes)
  *   max_ingredient_count → number
  *   include_cuisine      → string[] (e.g. ["italian", "japanese"])

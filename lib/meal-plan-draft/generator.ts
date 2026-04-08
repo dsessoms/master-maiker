@@ -193,6 +193,11 @@ function passesHardFilters(
 				break;
 			}
 
+			case "exclude_recipe": {
+				if (candidate.id === (filter.value as string)) return false;
+				break;
+			}
+
 			case "dietary_restriction": {
 				const restriction = (filter.value as string).toLowerCase();
 				const satisfies = candidate.diet_names.some((d) =>

@@ -30,6 +30,7 @@ export const DayOfWeekSchema = z.enum([
 
 export const HardFilterTypeSchema = z.enum([
 	"exclude_ingredient",
+	"exclude_recipe",
 	"dietary_restriction",
 	"max_prep_time",
 	"max_ingredient_count",
@@ -42,6 +43,7 @@ export const HardFilterSchema = z.object({
 	/**
 	 * Value shape by type:
 	 *   exclude_ingredient / dietary_restriction / source_restriction → string
+	 *   exclude_recipe → string (recipe UUID)
 	 *   max_prep_time / max_ingredient_count → number
 	 *   include_cuisine → string[]
 	 *
@@ -52,7 +54,7 @@ export const HardFilterSchema = z.object({
 	value: z
 		.union([z.string(), z.number(), z.array(z.string())])
 		.describe(
-			"string for exclude_ingredient/dietary_restriction/source_restriction, " +
+			"string for exclude_ingredient/exclude_recipe/dietary_restriction/source_restriction, " +
 				"number for max_prep_time/max_ingredient_count, " +
 				"string[] for include_cuisine",
 		),

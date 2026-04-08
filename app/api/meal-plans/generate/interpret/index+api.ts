@@ -144,6 +144,7 @@ SHAPE REFERENCE:
 
   pref_patch:
     { "op": "pref_patch", "action": "add_filter", "scope": null, "payload": { "filter": { "type": "exclude_ingredient", "value": "kale" } } }
+    { "op": "pref_patch", "action": "add_filter", "scope": null, "payload": { "filter": { "type": "exclude_recipe", "value": "<recipe-uuid>" } } }
     { "op": "pref_patch", "action": "set_weight",  "scope": { "days": ["monday"], "meal_types": ["Dinner"] }, "payload": { "weight": { "signal": "calorie_density", "value": 1.8 } } }
     { "op": "pref_patch", "action": "remove_weight", "scope": null, "payload": { "weight": { "signal": "novelty", "value": 1.0 } } }
 
@@ -164,7 +165,7 @@ SHAPE REFERENCE:
 ACTION DESCRIPTIONS:
 
   pref_patch actions:
-    add_filter    — add a hard constraint (exclude ingredient, dietary restriction, max prep time, cuisine allow-list)
+    add_filter    — add a hard constraint (exclude ingredient, exclude specific recipe by ID, dietary restriction, max prep time, cuisine allow-list)
     remove_filter — remove a previously added hard constraint
     set_weight    — adjust a scoring signal multiplier (>1.0 boosts, 0.0–1.0 penalises)
     remove_weight — reset a scoring signal to its default of 1.0
@@ -237,6 +238,32 @@ COMMON PATTERNS (shown as actual operations_json arrays):
     { "op": "regenerate_slots", "target": [{ "date": "<monday ISO date>", "meal_type": "Dinner" }] }
   ]
 
+"Don't use the chili recipe" / "ban the chili recipe" (recipe is currently in the draft — no search needed):
+  [
+    { "op": "plan_edit", "action": "unlock", "payload": { "target": [<all SlotTargets currently containing the banned recipe>] } },
+    { "op": "pref_patch", "action": "add_filter", "scope": null, "payload": { "filter": { "type": "exclude_recipe", "value": "<recipe_id from draft SLOTS — NOT the entry_id>" } } },
+    { "op": "regenerate_slots", "target": [<all SlotTargets currently containing the banned recipe>] }
+  ]
+  Note: All slots containing the same recipe share the SAME recipe_id — emit exactly ONE exclude_recipe filter.
+  Note: Omit the unlock op for any slot where the entry is already unlocked.
+  Note: Omit regenerate_slots entirely if the recipe does not appear in any slot.
+
+"Don't use the chili recipe for any of the dinners" (scoped ban — meal type only):
+  [
+    { "op": "plan_edit", "action": "unlock", "payload": { "target": [<Dinner SlotTargets currently containing the banned recipe>] } },
+    { "op": "pref_patch", "action": "add_filter", "scope": { "meal_types": ["Dinner"] }, "payload": { "filter": { "type": "exclude_recipe", "value": "<recipe_id>" } } },
+    { "op": "regenerate_slots", "target": [<Dinner SlotTargets currently containing the banned recipe>] }
+  ]
+  Note: scope is { meal_types: ["Dinner"] } — NOT null — because the user qualified the ban to dinners only.
+
+"I'm not a fan of zoodles" (draft contains "High Protein Chicken Bolognese With Zoodles"):
+  [
+    { "op": "plan_edit", "action": "unlock", "payload": { "target": [<SlotTargets containing the zoodles recipe, if locked>] } },
+    { "op": "pref_patch", "action": "add_filter", "scope": null, "payload": { "filter": { "type": "exclude_recipe", "value": "<recipe_id of the zoodles recipe>" } } },
+    { "op": "regenerate_slots", "target": [<SlotTargets containing the zoodles recipe>] }
+  ]
+  (is_ambiguous: true — "zoodles" is a preparation style, not an ingredient, so only the specific recipe is banned; zucchini is NOT excluded globally since the user may enjoy it in other forms)
+
 "Undo that":
   []   (undo is handled client-side; say so in interpretation_summary)
 
@@ -246,6 +273,42 @@ RECIPE ASSIGNMENT RULES:
   - Pick the best match from results by name/description similarity.
   - If results are empty, call output_operations with empty operations and explain the recipe wasn't found.
   - Include both recipe_id and recipe_name in the assign payload.
+
+RECIPE BAN RULES:
+  - A ban blocks a specific recipe from being selected by the generator for the rest of the session.
+  - The recipe's ID is available directly in the draft context — do NOT call search_recipes for a ban.
+  - Each slot entry in the SLOTS section shows BOTH identifiers:
+      recipe_id  — the stable recipe UUID. Use THIS for the exclude_recipe filter value.
+      entry_id   — an ephemeral slot UUID only used to target a specific DraftFoodEntry. NEVER use this as an exclude_recipe value.
+  - Find the recipe_id by name-matching the recipe the user mentioned, then copy that recipe_id verbatim.
+  - A single recipe may appear in multiple slots, but all occurrences share the SAME recipe_id. Emit ONE exclude_recipe filter using that single recipe_id.
+  - Use the exclude_recipe filter type with the recipe's UUID as the value.
+  - After adding the ban filter, also regenerate any affected slots (slots that currently contain the banned recipe AND fall within the ban scope) so they are immediately replaced.
+  - Unlock a slot first if its entry is locked before regenerating.
+  - If the recipe is not found in the current draft, say so in interpretation_summary and emit [] — do not invent a recipe_id.
+
+  SCOPED VS GLOBAL BAN:
+  - If the user scopes the ban to specific meal types (e.g. "not for dinners", "only for lunches") or specific days,
+    set the scope on the exclude_recipe filter accordingly — do NOT default to scope: null.
+  - scope: null = banned from ALL slots in the plan (use only when the user wants a full ban with no qualification).
+  - scope: { meal_types: ["Dinner"] } = banned from dinner slots only.
+  - scope: { days: ["monday", "tuesday"] } = banned on those days across all meal types.
+  - scope: { days: [...], meal_types: [...] } = banned at the exact intersection.
+  - Only regenerate slots that contain the recipe AND fall within the ban scope.
+
+IMPLICIT RECIPE BAN — KEYWORD IN RECIPE NAME:
+  When the user expresses dislike for a food, ingredient, or preparation style (e.g. "I don't like zoodles",
+  "not a fan of quinoa", "I hate Brussels sprouts"), do the following BEFORE defaulting to a global ingredient filter:
+    1. Scan every recipe name in the current draft SLOTS for the mentioned keyword (case-insensitive substring match).
+    2. If one or more recipe names contain the keyword → treat it as a ban for each matched recipe.
+       Emit one exclude_recipe filter per distinct recipe_id found (usually just one).
+       Decide whether to ALSO emit an exclude_ingredient filter:
+         - The keyword is an ingredient (e.g. "quinoa", "Brussels sprouts", "kale") → YES, add exclude_ingredient with that ingredient name.
+         - The keyword is a preparation style or dish form (e.g. "zoodles", "spiralized", "purée") → NO, skip exclude_ingredient.
+           The user may enjoy the underlying ingredient in other forms; only the specific recipe is removed.
+    3. If NO recipe names in the draft contain the keyword → fall back to a global exclude_ingredient filter only
+       (the ingredient likely appears in un-shown recipe details rather than the name).
+  Set is_ambiguous: true when you apply rule 2 so the UI can confirm your interpretation.
 
 WEIGHT SIGNAL GUIDE:
   protein_ratio: higher = rank high-protein recipes higher
@@ -600,7 +663,7 @@ function collectDatesFromTarget(target: unknown, out: string[]): void {
  * summary" mismatch before returning a bad response to the client.
  */
 function summaryImpliesActions(summary: string): boolean {
-	return /\b(unlock|lock|clear|regenerat|assign|swap|move|copy|add[\s_-]slot|remove[\s_-]slot|will|going to)\b/i.test(
+	return /\b(unlock|lock|clear|regenerat|assign|swap|move|copy|add[\s_-]slot|remove[\s_-]slot|will|going to)/i.test(
 		summary,
 	);
 }
@@ -708,7 +771,7 @@ function buildDraftContext(
 		} else {
 			const entryDescriptions = slot.entries.map((e) => {
 				const lockLabel = e.locked ? " [LOCKED]" : "";
-				return `${e.recipe.name} (entry_id: ${e.draft_entry_id})${lockLabel}`;
+				return `${e.recipe.name} (recipe_id: ${e.recipe.id}, entry_id: ${e.draft_entry_id})${lockLabel}`;
 			});
 			lines.push(`  ${label}: ${entryDescriptions.join(", ")}`);
 		}
