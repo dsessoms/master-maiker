@@ -146,7 +146,11 @@ interface RecipeCandidateRow {
 	recipe_diets: { diets: { name: string } | null }[];
 	recipe_dish_types: { dish_types: { name: string } | null }[];
 	// Supabase uses the table name "ingredient" (singular) for the join key
-	ingredient: { name: string | null; type: string }[];
+	ingredient: {
+		name: string | null;
+		type: string;
+		food: { spoonacular_id: number | null; food_name: string } | null;
+	}[];
 }
 
 // ==========================================
@@ -172,12 +176,22 @@ function mapRowToCandidate(row: RecipeCandidateRow): GeneratorCandidate {
 	const prepMinutes =
 		(row.prep_time_hours ?? 0) * 60 + (row.prep_time_minutes ?? 0);
 
-	const coreIngredients = row.ingredient
+	type IngredientRow = {
+		name: string | null;
+		type: string;
+		food: { spoonacular_id: number | null; food_name: string } | null;
+	};
+
+	const coreIngredients = row.ingredient.map(
+		(i: IngredientRow) => i.food?.food_name as string,
+	);
+
+	const spoonacularIngredientIds = row.ingredient
 		.filter(
-			(i: { name: string | null; type: string }) =>
-				i.type !== "pantry_staple" && i.name != null,
+			(i: IngredientRow) =>
+				i.type !== "pantry_staple" && i.food?.spoonacular_id != null,
 		)
-		.map((i: { name: string | null; type: string }) => i.name as string);
+		.map((i: IngredientRow) => i.food!.spoonacular_id as number);
 
 	const cuisineNames = row.recipe_cuisines
 		.map((rc) => rc.cuisines?.name ?? "")
@@ -204,6 +218,7 @@ function mapRowToCandidate(row: RecipeCandidateRow): GeneratorCandidate {
 		yield: row.number_of_servings,
 		prep_time_minutes: prepMinutes,
 		core_ingredients: coreIngredients,
+		spoonacular_ingredient_ids: spoonacularIngredientIds,
 		cuisine_names: cuisineNames,
 		diet_names: dietNames,
 		dish_type_names: dishTypeNames,
@@ -234,7 +249,7 @@ async function fetchLibraryRecipes(
 			recipe_cuisines (cuisines (name)),
 			recipe_diets (diets (name)),
 			recipe_dish_types (dish_types (name)),
-			ingredient (name, type)
+			ingredient (name, type, food(spoonacular_id, food_name))
 		`,
 		)
 		.eq("user_id", userId);
@@ -263,7 +278,7 @@ async function fetchCatalogRecipes(): Promise<GeneratorCandidate[]> {
 			recipe_cuisines (cuisines (name)),
 			recipe_diets (diets (name)),
 			recipe_dish_types (dish_types (name)),
-			ingredient (name, type)
+			ingredient (name, type, food(spoonacular_id, food_name))
 		`,
 		)
 		.eq("source", "catalog")

@@ -62,6 +62,13 @@ export const HardFilterSchema = z.object({
 		.string()
 		.optional()
 		.describe("Unit of the value when applicable, e.g. 'minutes'"),
+	spoonacular_ingredient_id: z
+		.number()
+		.optional()
+		.describe(
+			"Resolved Spoonacular ingredient ID for exclude_ingredient filters. " +
+				"Populated server-side after interpretation; never emitted by the LLM.",
+		),
 });
 
 // ==========================================

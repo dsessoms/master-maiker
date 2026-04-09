@@ -60,6 +60,9 @@ export interface GeneratorCandidate {
 	// Non-pantry-staple ingredients used for the ingredient_overlap signal
 	core_ingredients: string[];
 
+	// Spoonacular ingredient IDs for core_ingredients — enables precise exclude_ingredient matching
+	spoonacular_ingredient_ids: number[];
+
 	// Cuisine names (lowercase) for include_cuisine filter
 	cuisine_names: string[];
 
@@ -187,10 +190,16 @@ function passesHardFilters(
 		switch (filter.type) {
 			case "exclude_ingredient": {
 				const ingredient = (filter.value as string).toLowerCase();
-				const excluded = candidate.core_ingredients.some((ci) =>
+				const excludedByName = candidate.core_ingredients.some((ci) =>
 					ci.toLowerCase().includes(ingredient),
 				);
-				if (excluded) return false;
+				const excludedById =
+					filter.spoonacular_ingredient_id != null &&
+					candidate.spoonacular_ingredient_ids.includes(
+						filter.spoonacular_ingredient_id,
+					);
+
+				if (excludedByName || excludedById) return false;
 				break;
 			}
 

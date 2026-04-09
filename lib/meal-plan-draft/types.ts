@@ -119,6 +119,12 @@ export interface HardFilter {
 	type: HardFilterType;
 	value: HardFilterValue;
 	unit?: string; // e.g., "minutes"
+	/**
+	 * Resolved Spoonacular ingredient ID for `exclude_ingredient` filters.
+	 * Populated server-side by the interpret API after calling Spoonacular;
+	 * never emitted by the LLM. Used alongside name matching for precise filtering.
+	 */
+	spoonacular_ingredient_id?: number;
 }
 
 export type WeightSignal =

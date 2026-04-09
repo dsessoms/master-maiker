@@ -17,15 +17,17 @@ import type { Content, Part } from "@google/genai";
 import {
 	InterpreterResponseSchema,
 	type ResolvedRecipe,
+	type InterpreterFinalResponse,
 } from "@/lib/meal-plan-draft/interpreter-schema";
 import { dayOfWeekFromDate } from "@/lib/meal-plan-draft";
 import { jsonResponse } from "@/lib/server/json-response";
 import { validateSession } from "@/lib/server/validate-session";
 import { supabase } from "@/config/supabase-server";
+import { Spoonacular } from "@/lib/server/spoonacular/spoonacular-helper";
 import { z } from "zod";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY as string;
-const MAX_TOOL_ROUNDS = 5;
+const MAX_TOOL_ROUNDS = 10;
 
 // ==========================================
 // Request validation
@@ -279,6 +281,13 @@ COMMON PATTERNS (shown as actual operations_json arrays):
   ]
   Note: scope is { meal_types: ["Dinner"] } — NOT null — because the user qualified the ban to dinners only.
 
+"Let's get rid of High Protein Blueberry Muffins With Greek Yogurt" (recipe appears in saturday + sunday breakfast — scan every SLOT line to find it):
+  [
+    { "op": "pref_patch", "action": "add_filter", "scope": null, "payload": { "filter": { "type": "exclude_recipe", "value": "<recipe_id copied verbatim from the saturday breakfast slot>" } } },
+    { "op": "regenerate_slots", "target": [{ "date": "<saturday ISO date>", "meal_type": "Breakfast" }, { "date": "<sunday ISO date>", "meal_type": "Breakfast" }] }
+  ]
+  Note: The recipe appears on SLOT lines — the model MUST scan all slot lines before concluding "not found".
+
 "I'm not a fan of zoodles" (draft contains "High Protein Chicken Bolognese With Zoodles"):
   [
     { "op": "plan_edit", "action": "unlock", "payload": { "target": [<SlotTargets containing the zoodles recipe, if locked>] } },
@@ -301,7 +310,11 @@ DECLARATIVE SERVING STATEMENTS:
   Do NOT treat them as preference statements or emit empty operations.
 
 RECIPE ASSIGNMENT RULES:
-  - NEVER invent or guess a recipe_id.
+  - NEVER invent or guess a recipe_id. Every recipe_id in an assign payload MUST be a real UUID
+    (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx) copied verbatim from the draft SLOTS or returned
+    by search_recipes. Placeholder strings such as "unknown", "N/A", "TBD", "search", or any
+    non-UUID value are STRICTLY FORBIDDEN — they will be rejected. If you do not yet have the real
+    UUID, call search_recipes BEFORE calling output_operations.
   - BEFORE calling search_recipes, scan the SLOTS section of the current draft context:
       • Each slot entry shows its recipe name with (recipe_id: <uuid>, entry_id: <uuid>).
       • Match flexibly: check if any significant word from the user's phrase appears as a
@@ -332,6 +345,13 @@ RECIPE BAN RULES:
   - After adding the ban filter, also regenerate any affected slots (slots that currently contain the banned recipe AND fall within the ban scope) so they are immediately replaced.
   - Unlock a slot first if its entry is locked before regenerating.
   - If the recipe is not found in the current draft, say so in interpretation_summary and emit [] — do not invent a recipe_id.
+
+  CRITICAL — HOW TO DETERMINE IF A RECIPE IS IN THE DRAFT:
+  Before concluding that a recipe is absent, you MUST read EVERY line in the SLOTS section sequentially
+  and check whether the user's recipe name (or any significant word from it) appears as a case-insensitive
+  substring of the recipe name on that line. A match anywhere in the SLOTS section means the recipe IS
+  present in the draft. Only after scanning every slot line without finding any match may you conclude
+  "recipe not found". Do NOT rely on memory or prior context — always re-read the SLOTS section.
 
   SCOPED VS GLOBAL BAN:
   - If the user scopes the ban to specific meal types (e.g. "not for dinners", "only for lunches") or specific days,
@@ -431,6 +451,11 @@ ${buildDraftContext(draft, profiles ?? [])}`;
 
 		const contents: Content[] = [{ role: "user", parts: [{ text: userTurn }] }];
 
+		// Track whether we have already sent a nudge for the current stall streak.
+		// A second consecutive empty response means the model is stuck and more
+		// nudging won't help — bail early rather than burning more token budget.
+		let consecutiveEmptyRounds = 0;
+
 		for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
 			const response = await ai.models.generateContent({
 				model: "gemini-2.5-flash-lite",
@@ -446,28 +471,87 @@ ${buildDraftContext(draft, profiles ?? [])}`;
 								FUNCTION_DECLARATIONS as unknown as import("@google/genai").FunctionDeclaration[],
 						},
 					],
-					maxOutputTokens: 8_000,
+					// 32k gives the model enough budget to think AND output a full
+					// operations array for complex multi-step requests without stalling.
+					maxOutputTokens: 32_000,
 					temperature: 0.2,
+					thinkingConfig: {
+						thinkingBudget: 512,
+					},
 				},
 			});
 
-			const candidate = response.candidates?.[0];
-			const parts = candidate?.content?.parts ?? [];
+			console.log(JSON.stringify(response, null, 2));
 
-			// Append model turn to conversation history (even if parts is empty,
-			// so the conversation stays valid for the next round).
-			if (candidate?.content) {
-				contents.push({
-					role: "model",
-					parts: parts.length > 0 ? parts : [{ text: "" }],
-				});
+			const candidate = response.candidates?.[0];
+			// Filter out thought parts — they are internal reasoning tokens and
+			// must not be re-sent as conversation history (causes API errors).
+			const parts = (candidate?.content?.parts ?? []).filter(
+				(p) => !(p as { thought?: boolean }).thought,
+			);
+
+			// Only append the model turn when there is real content to append.
+			// Appending empty turns pollutes the conversation history and causes
+			// the model to stall further on subsequent rounds.
+			if (parts.length > 0) {
+				contents.push({ role: "model", parts });
 			}
 
 			const functionCallParts = parts.filter((p) => p.functionCall != null);
+			const finishReason = candidate?.finishReason as string | undefined;
 
 			if (functionCallParts.length === 0) {
+				// MALFORMED_FUNCTION_CALL means the model attempted a tool call but
+				// produced syntactically invalid output. This is NOT the same as
+				// stalling — nudging about "call output_operations now" is wrong here.
+				// Instead, tell the model its call was malformed and ask it to retry.
+				if (finishReason === "MALFORMED_FUNCTION_CALL") {
+					consecutiveEmptyRounds++;
+
+					if (consecutiveEmptyRounds > 1) {
+						console.warn(
+							"Interpreter: repeated MALFORMED_FUNCTION_CALL, aborting",
+							{ round },
+						);
+						return jsonResponse({
+							operations: [],
+							interpretation_summary:
+								"I wasn't able to process that request. Please try rephrasing.",
+							is_ambiguous: false,
+						});
+					}
+
+					console.warn(
+						"Interpreter: MALFORMED_FUNCTION_CALL, asking model to retry",
+						{ round },
+					);
+					contents.push({
+						role: "user",
+						parts: [
+							{
+								text: "Your last function call could not be parsed (MALFORMED_FUNCTION_CALL). This is usually caused by invalid JSON inside a string argument or an incomplete response. Please re-read the function schema and call the function again with a syntactically valid JSON payload.",
+							},
+						],
+					});
+					continue;
+				}
+
+				consecutiveEmptyRounds++;
+
+				if (consecutiveEmptyRounds > 1) {
+					// Two consecutive empty responses — nudging isn't working, give up.
+					console.warn("Interpreter: model stalled after nudge, aborting", {
+						round,
+					});
+					return jsonResponse({
+						operations: [],
+						interpretation_summary:
+							"I wasn't able to process that request. Please try rephrasing.",
+						is_ambiguous: false,
+					});
+				}
+
 				if (round === MAX_TOOL_ROUNDS - 1) {
-					// Last round and still no function call — give up gracefully.
 					console.warn("Interpreter: model stalled on final round", { parts });
 					return jsonResponse({
 						operations: [],
@@ -476,9 +560,9 @@ ${buildDraftContext(draft, profiles ?? [])}`;
 						is_ambiguous: false,
 					});
 				}
-				// Model stalled mid-conversation (common after search_recipes returns
-				// results). Nudge it and let the loop continue.
-				console.warn("Interpreter: model stalled, nudging", { round, parts });
+
+				// First empty response — send a single nudge and try once more.
+				console.warn("Interpreter: model stalled, nudging", { round });
 				contents.push({
 					role: "user",
 					parts: [
@@ -489,6 +573,9 @@ ${buildDraftContext(draft, profiles ?? [])}`;
 				});
 				continue;
 			}
+
+			// Model produced real output — reset the stall counter.
+			consecutiveEmptyRounds = 0;
 
 			const toolResultParts: Part[] = [];
 			let shouldRetry = false;
@@ -530,15 +617,26 @@ ${buildDraftContext(draft, profiles ?? [])}`;
 					let parsedOperations: unknown;
 					try {
 						parsedOperations = JSON.parse(args.operations_json ?? "[]");
-					} catch {
+					} catch (jsonErr) {
 						console.error(
 							"Interpreter: operations_json is not valid JSON",
 							args.operations_json,
 						);
-						return jsonResponse(
-							{ error: "Model returned invalid JSON for operations_json" },
-							{ status: 500 },
-						);
+						toolResultParts.push({
+							functionResponse: {
+								name: "output_operations",
+								response: {
+									error:
+										`operations_json could not be parsed as JSON: ${(jsonErr as Error).message}. ` +
+										"This is most likely caused by missing closing braces on operation objects. " +
+										"Every operation object must be fully closed before the next one begins — " +
+										'e.g. {..., "payload": {...}}  (two closing braces when the op has a payload). ' +
+										"Please call output_operations again with a syntactically valid JSON array.",
+								},
+							},
+						});
+						shouldRetry = true;
+						break;
 					}
 
 					// Catch the "empty ops + action summary" mismatch.
@@ -560,6 +658,32 @@ ${buildDraftContext(draft, profiles ?? [])}`;
 									error:
 										"Your operations_json is empty but your interpretation_summary describes actions (unlock, clear, regenerate, etc.) that must appear in operations_json. " +
 										"Call output_operations again and include those operations in the array.",
+								},
+							},
+						});
+						shouldRetry = true;
+						break;
+					}
+
+					// Validate that every assign operation uses a real UUID recipe_id.
+					// The model sometimes emits placeholder strings like "unknown" instead
+					// of calling search_recipes first.
+					const invalidRecipeIds = findInvalidRecipeIds(
+						parsedOperations as unknown[],
+					);
+					if (invalidRecipeIds.length > 0) {
+						console.warn(
+							"Interpreter: assign operations contain non-UUID recipe_ids",
+							{ invalidRecipeIds },
+						);
+						toolResultParts.push({
+							functionResponse: {
+								name: "output_operations",
+								response: {
+									error:
+										`Your operations contain invalid recipe_id value(s): ${invalidRecipeIds.map((r) => JSON.stringify(r)).join(", ")}. ` +
+										"Every recipe_id in an assign payload MUST be a real UUID copied from the draft SLOTS or returned by search_recipes. " +
+										"Call search_recipes now to look up the correct recipe_id, then call output_operations again with the real UUID.",
 								},
 							},
 						});
@@ -616,7 +740,10 @@ ${buildDraftContext(draft, profiles ?? [])}`;
 						);
 					}
 
-					return jsonResponse(finalValidation.data);
+					const enrichedData = await enrichExcludeIngredientFilters(
+						finalValidation.data,
+					);
+					return jsonResponse(enrichedData);
 				}
 			}
 
@@ -657,6 +784,95 @@ ${buildDraftContext(draft, profiles ?? [])}`;
 // ==========================================
 // Helpers
 // ==========================================
+
+/**
+ * Walks the interpreter response and enriches every `exclude_ingredient`
+ * filter with a `spoonacular_ingredient_id` resolved via the Spoonacular API.
+ *
+ * This runs server-side after LLM output is validated so the LLM never needs
+ * to know about Spoonacular IDs. The generator then uses the ID alongside the
+ * name string for more precise ingredient-level filtering.
+ *
+ * Lookups for duplicate ingredient names are deduplicated. If a lookup fails
+ * (network error, ingredient not found) the filter is returned as-is — the
+ * name-based fallback in the generator still applies.
+ */
+async function enrichExcludeIngredientFilters(
+	response: InterpreterFinalResponse,
+): Promise<InterpreterFinalResponse> {
+	// Collect unique ingredient names from all add_filter exclude_ingredient ops
+	const ingredientNames = new Set<string>();
+	for (const op of response.operations) {
+		if (
+			op.op === "pref_patch" &&
+			op.action === "add_filter" &&
+			op.payload.filter?.type === "exclude_ingredient"
+		) {
+			ingredientNames.add(op.payload.filter.value as string);
+		}
+	}
+
+	if (ingredientNames.size === 0) return response;
+
+	// Resolve all ingredient names in a single Spoonacular API call
+	const idByName = await Spoonacular.lookupIngredientIds([...ingredientNames]);
+
+	// Return a new response with spoonacular_ingredient_id injected into matching filters
+	return {
+		...response,
+		operations: response.operations.map((op) => {
+			if (
+				op.op !== "pref_patch" ||
+				op.action !== "add_filter" ||
+				op.payload.filter?.type !== "exclude_ingredient"
+			) {
+				return op;
+			}
+			const ingredientName = op.payload.filter.value as string;
+			const spoonacularId = idByName.get(ingredientName);
+			if (spoonacularId == null) return op;
+			return {
+				...op,
+				payload: {
+					...op.payload,
+					filter: {
+						...op.payload.filter,
+						spoonacular_ingredient_id: spoonacularId,
+					},
+				},
+			};
+		}),
+	};
+}
+
+const UUID_REGEX =
+	/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Returns the recipe_id values from assign operations that are not valid UUIDs.
+ * Catches cases where the model emits placeholder strings like "unknown" instead
+ * of calling search_recipes to resolve the real ID.
+ */
+function findInvalidRecipeIds(ops: unknown[]): string[] {
+	const invalid: string[] = [];
+	for (const op of ops) {
+		if (
+			typeof op !== "object" ||
+			op === null ||
+			(op as Record<string, unknown>).op !== "plan_edit" ||
+			(op as Record<string, unknown>).action !== "assign"
+		)
+			continue;
+		const payload = (op as Record<string, unknown>).payload as
+			| Record<string, unknown>
+			| undefined;
+		const recipeId = payload?.recipe_id;
+		if (typeof recipeId === "string" && !UUID_REGEX.test(recipeId)) {
+			invalid.push(recipeId);
+		}
+	}
+	return invalid;
+}
 
 /**
  * Returns any dates referenced in the operations array that are not in
@@ -738,6 +954,7 @@ async function searchRecipes(
 	userId: string,
 	queries: string[],
 ): Promise<ResolvedRecipe[]> {
+	console.debug("called search", queries);
 	const baseTerms = queries.flatMap((q) =>
 		q
 			.toLowerCase()
