@@ -40,6 +40,19 @@ const InterpreterRequestSchema = z.object({
 	 * in the user message (e.g. "1 serving for David") to profile UUIDs.
 	 */
 	profiles: z.array(z.object({ id: z.string(), name: z.string() })).optional(),
+	/**
+	 * Prior turns in this session (oldest first). Passed to the LLM so it can
+	 * resolve follow-up references (e.g. "2 servings for David" after a previous
+	 * assign turn).
+	 */
+	conversation_history: z
+		.array(
+			z.object({
+				role: z.enum(["user", "assistant"]),
+				content: z.string(),
+			}),
+		)
+		.optional(),
 	draft: z.object({
 		session_id: z.string(),
 		included_profile_ids: z.array(z.string()),
@@ -467,7 +480,8 @@ export async function POST(req: Request) {
 			);
 		}
 
-		const { user_message, draft, profiles } = validation.data;
+		const { user_message, draft, profiles, conversation_history } =
+			validation.data;
 
 		// Pre-compute the set of dates that actually exist in this draft.
 		// Used to reject operations that reference hallucinated dates.
@@ -482,7 +496,19 @@ export async function POST(req: Request) {
 --- CURRENT DRAFT STATE ---
 ${buildDraftContext(draft, profiles ?? [])}`;
 
-		const contents: Content[] = [{ role: "user", parts: [{ text: userTurn }] }];
+		// Build the conversation history for the LLM. Prior turns give it the
+		// context needed to resolve follow-up references (e.g. "2 servings for
+		// David" after a previous assign turn). Only the CURRENT user turn
+		// includes the full draft context to keep prior turns token-efficient.
+		const contents: Content[] = [
+			...(conversation_history ?? []).map(
+				(turn): Content => ({
+					role: turn.role === "assistant" ? "model" : "user",
+					parts: [{ text: turn.content }],
+				}),
+			),
+			{ role: "user", parts: [{ text: userTurn }] },
+		];
 
 		// Track whether we have already sent a nudge for the current stall streak.
 		// A second consecutive empty response means the model is stuck and more

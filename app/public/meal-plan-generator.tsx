@@ -943,6 +943,10 @@ export default function InterpreterTestHarness() {
 				user_message: trimmed,
 				draft,
 				profiles: profiles?.map((p) => ({ id: p.id, name: p.name })),
+				conversation_history: turns.map((t) => ({
+					role: t.role,
+					content: t.text,
+				})),
 			});
 
 			const {

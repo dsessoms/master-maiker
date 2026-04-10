@@ -7,7 +7,10 @@ export const useInterpretMealPlanMessage = () => {
 	const mutation = useMutation<
 		InterpreterFinalResponse,
 		unknown,
-		Pick<InterpreterRequest, "user_message" | "draft"> & {
+		Pick<
+			InterpreterRequest,
+			"user_message" | "draft" | "conversation_history"
+		> & {
 			profiles?: { id: string; name: string }[];
 		}
 	>({

@@ -229,6 +229,12 @@ export interface InterpreterRequest {
 	 * profile IDs for use in per-profile serving overrides.
 	 */
 	profiles?: { id: string; name: string }[];
+	/**
+	 * Prior turns in this meal-plan session, oldest first.
+	 * Sent to the LLM so it can resolve follow-up references like
+	 * "2 servings for David" after a previous assign turn.
+	 */
+	conversation_history?: { role: "user" | "assistant"; content: string }[];
 }
 
 export interface InterpreterResponse {
