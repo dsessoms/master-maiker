@@ -35,6 +35,7 @@ export const HardFilterTypeSchema = z.enum([
 	"max_prep_time",
 	"max_ingredient_count",
 	"include_cuisine",
+	"exclude_cuisine",
 	"source_restriction",
 ]);
 
@@ -56,7 +57,7 @@ export const HardFilterSchema = z.object({
 		.describe(
 			"string for exclude_ingredient/exclude_recipe/dietary_restriction/source_restriction, " +
 				"number for max_prep_time/max_ingredient_count, " +
-				"string[] for include_cuisine",
+				"string[] for include_cuisine/exclude_cuisine",
 		),
 	unit: z
 		.string()

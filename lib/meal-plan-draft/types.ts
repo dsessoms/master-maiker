@@ -103,6 +103,7 @@ export type HardFilterType =
 	| "max_prep_time"
 	| "max_ingredient_count"
 	| "include_cuisine"
+	| "exclude_cuisine"
 	| "source_restriction";
 
 /**
@@ -111,6 +112,7 @@ export type HardFilterType =
  *   max_prep_time        → number  (minutes)
  *   max_ingredient_count → number
  *   include_cuisine      → string[] (e.g. ["italian", "japanese"])
+ *   exclude_cuisine      → string[] (e.g. ["mexican", "chinese"])
  *   source_restriction   → "library" | "catalog"
  */
 export type HardFilterValue = string | number | string[];

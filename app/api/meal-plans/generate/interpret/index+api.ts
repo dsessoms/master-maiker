@@ -155,6 +155,11 @@ SHAPE REFERENCE:
   pref_patch:
     { "op": "pref_patch", "action": "add_filter", "scope": null, "payload": { "filter": { "type": "exclude_ingredient", "value": "kale" } } }
     { "op": "pref_patch", "action": "add_filter", "scope": null, "payload": { "filter": { "type": "exclude_recipe", "value": "<recipe-uuid>" } } }
+    { "op": "pref_patch", "action": "add_filter", "scope": null, "payload": { "filter": { "type": "dietary_restriction", "value": "vegetarian" } } }
+    { "op": "pref_patch", "action": "add_filter", "scope": null, "payload": { "filter": { "type": "dietary_restriction", "value": "vegan" } } }
+    { "op": "pref_patch", "action": "add_filter", "scope": null, "payload": { "filter": { "type": "dietary_restriction", "value": "gluten free" } } }
+    { "op": "pref_patch", "action": "add_filter", "scope": null, "payload": { "filter": { "type": "include_cuisine", "value": ["Italian", "Mediterranean"] } } }
+    { "op": "pref_patch", "action": "add_filter", "scope": null, "payload": { "filter": { "type": "exclude_cuisine", "value": ["Mexican", "Chinese"] } } }
     { "op": "pref_patch", "action": "set_weight",  "scope": { "days": ["monday"], "meal_types": ["Dinner"] }, "payload": { "weight": { "signal": "calorie_density", "value": 1.8 } } }
     { "op": "pref_patch", "action": "remove_weight", "scope": null, "payload": { "weight": { "signal": "novelty", "value": 1.0 } } }
 
@@ -176,7 +181,12 @@ SHAPE REFERENCE:
 ACTION DESCRIPTIONS:
 
   pref_patch actions:
-    add_filter    — add a hard constraint (exclude ingredient, exclude specific recipe by ID, dietary restriction, max prep time, cuisine allow-list)
+    add_filter    — add a hard constraint (exclude ingredient, exclude specific recipe by ID, dietary restriction, max prep time, cuisine allow-list, cuisine block-list)
+                    Use type "dietary_restriction" for any diet-style request: "vegetarian", "vegan", "gluten free", "dairy free", "nut free", "pescatarian", "paleo", "high-protein", "low-calorie", "low-carb", "low-fat", "keto".
+                    Normalise the value to a lowercase canonical diet name matching the VALID DIETS list (e.g. "I want to eat vegetarian" → value: "vegetarian"; "I want gluten-free meals" → value: "gluten free").
+                    Use type "exclude_cuisine" with a string[] value when the user wants to avoid a whole cuisine (e.g. "no Mexican food" → value: ["Mexican"]).
+                    Use type "include_cuisine" with a string[] value when the user wants to restrict to specific cuisines.
+                    Cuisine values must match the VALID CUISINES list exactly (case-insensitive).
     remove_filter — remove a previously added hard constraint
     set_weight    — adjust a scoring signal multiplier (>1.0 boosts, 0.0–1.0 penalises)
     remove_weight — reset a scoring signal to its default of 1.0
@@ -201,6 +211,18 @@ Operations in the array are executed IN ORDER. Always respect this sequence:
   4. regenerate_slots → always last in a sequence
 
 COMMON PATTERNS (shown as actual operations_json arrays):
+
+"No Mexican food" / "I don't want Mexican cuisine":
+  [
+    { "op": "pref_patch", "action": "add_filter", "scope": null, "payload": { "filter": { "type": "exclude_cuisine", "value": ["Mexican"] } } },
+    { "op": "regenerate_slots", "target": null }
+  ]
+
+"Eat vegetarian this week" / "I want to go vegetarian" / "only vegetarian recipes":
+  [
+    { "op": "pref_patch", "action": "add_filter", "scope": null, "payload": { "filter": { "type": "dietary_restriction", "value": "vegetarian" } } },
+    { "op": "regenerate_slots", "target": null }
+  ]
 
 "No kale":
   [
@@ -401,6 +423,17 @@ CURRENT DRAFT CONTEXT:
   - Identify exact slot dates and meal types to target
   - Reference locked/unlocked state when emitting lock/unlock operations
   - Understand which preference patches are already active
+
+VALID CUISINES (use these exact strings for include_cuisine / exclude_cuisine filter values):
+  African, Asian, American, British, Cajun, Caribbean, Chinese, Eastern European, European, French,
+  German, Greek, Indian, Irish, Italian, Japanese, Jewish, Korean, Latin American, Mediterranean,
+  Mexican, Middle Eastern, Nordic, Southern, Spanish, Thai, Vietnamese
+  When the user names a cuisine not in this list, map it to the closest match (e.g. "Chinese food" → "Chinese").
+
+VALID DIETS (use these exact strings for dietary_restriction filter values):
+  vegan, vegetarian, gluten free, dairy free, nut free, pescatarian, paleo,
+  high-protein, low-calorie, low-carb, low-fat, keto
+  When the user names a diet not in this list, map it to the closest match (e.g. "ketogenic" → "keto", "gluten-free" → "gluten free").
 
 DAY NAME RESOLUTION (CRITICAL):
   When the user references day names ("monday", "this friday", "next tuesday", etc.):

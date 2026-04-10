@@ -240,6 +240,17 @@ function passesHardFilters(
 				break;
 			}
 
+			case "exclude_cuisine": {
+				const excludedCuisines = (filter.value as string[]).map((c) =>
+					c.toLowerCase(),
+				);
+				const hasBannedCuisine = candidate.cuisine_names.some((cn) =>
+					excludedCuisines.some((ec) => cn.toLowerCase().includes(ec)),
+				);
+				if (hasBannedCuisine) return false;
+				break;
+			}
+
 			case "source_restriction": {
 				const allowedSource = filter.value as string;
 				if (candidate.source !== allowedSource) return false;
