@@ -242,6 +242,13 @@ function DraftGrid({
 														? `${entry.locked ? "🔒 " : ""}${entry.recipe.name}`
 														: "—"}
 											</Text>
+											{entry?.recipe.is_leftover && (
+												<View className="rounded px-1 bg-sky-500/20 border border-sky-500/40">
+													<Text className="text-xs font-mono text-sky-400">
+														leftover
+													</Text>
+												</View>
+											)}
 											{yieldPct !== null && (
 												<View
 													className={`rounded px-1 ${yieldPct >= 90 ? "bg-green-500/20" : yieldPct >= 50 ? "bg-amber-500/20" : "bg-muted"}`}
