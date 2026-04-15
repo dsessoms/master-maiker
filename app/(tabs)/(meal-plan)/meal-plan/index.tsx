@@ -23,6 +23,7 @@ import { AddShoppingItemsModal } from "@/components/shopping/add-shopping-items-
 import { Button } from "@/components/ui/button";
 import { DaySection } from "@/components//meal-plan/day-section";
 import { DnDScrollView } from "@/components/ui/dnd/dnd-scroll-view";
+import { GatedFeature } from "@/components/feature-flags/gated-feature";
 import { MealPlanContext } from "@/context/meal-plan-context";
 import { MustrdButton } from "@/components/mustrd-button";
 import { NotesModal } from "@/components/meal-plan/notes-modal";
@@ -32,7 +33,6 @@ import { Text } from "@/components/ui/text";
 import { View } from "react-native";
 import { WeekSelector } from "@/components//week-selector";
 import { useClearMealPlan } from "@/hooks/meal-plans/use-clear-meal-plan";
-import { useFeatureFlag } from "@/hooks/feature-flags/useFeatureFlag";
 
 export default function MealPlanScreen() {
 	const router = useRouter();
@@ -55,9 +55,6 @@ export default function MealPlanScreen() {
 	const [showClearDialog, setShowClearDialog] = useState(false);
 	const [showAddToShoppingListModal, setShowAddToShoppingListModal] =
 		useState(false);
-
-	const { enabled: premiumFeaturesEnabled } =
-		useFeatureFlag("premium-features");
 
 	const weekDates = useMemo(
 		() =>
@@ -205,6 +202,12 @@ export default function MealPlanScreen() {
 						<MustrdButton />
 					</DropdownMenuTrigger>
 					<DropdownMenuContent side="top" align="end" className="w-64 mb-2">
+						<GatedFeature flagName="premium-features">
+							<DropdownMenuItem onPress={() => null}>
+								<WandSparkles className="text-foreground mr-2" size={16} />
+								<Text>Generate Meal Plan</Text>
+							</DropdownMenuItem>
+						</GatedFeature>
 						<DropdownMenuItem
 							onPress={() => setShowAddToShoppingListModal(true)}
 						>

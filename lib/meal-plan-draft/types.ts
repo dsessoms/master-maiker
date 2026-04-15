@@ -34,7 +34,7 @@ export interface DraftRecipe {
 		carbs_g: number;
 		fat_g: number;
 	};
-	yield: number;
+	servings: number;
 	core_ingredients: string[];
 
 	// Transient generator state

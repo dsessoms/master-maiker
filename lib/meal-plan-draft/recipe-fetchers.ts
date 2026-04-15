@@ -87,7 +87,7 @@ export function mapRowToCandidate(row: RecipeCandidateRow): GeneratorCandidate {
 			carbs_g: carbsPerServing,
 			fat_g: fatPerServing,
 		},
-		yield: row.number_of_servings,
+		servings: row.number_of_servings,
 		prep_time_minutes: prepMinutes,
 		core_ingredients: coreIngredients,
 		spoonacular_ingredient_ids: spoonacularIngredientIds,

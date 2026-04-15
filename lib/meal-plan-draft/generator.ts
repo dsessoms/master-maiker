@@ -10,8 +10,8 @@
  *      that apply to every slot (scope:null patches).
  *   2. Eligible counts + pool stats  — per-slot eligible candidate lists
  *      (accurate tightness for processing order) and normalization stats.
- *   3. Yield-first selection  — most-constrained-first slot loop. Prefers
- *      consuming existing yield (leftovers), applies variety caps, enforces
+ *   3. Serving-first selection  — most-constrained-first slot loop. Prefers
+ *      consuming existing servings (leftovers), applies variety caps, enforces
  *      same-day uniqueness, promotes retroactive cook days, and uses seeded
  *      top-K weighted-random sampling for plan variety.
  *   4. Placement pass  — converts slot assignments to `DraftFoodEntry` values
@@ -54,8 +54,7 @@ export interface GeneratorCandidate {
 		fat_g: number;
 	};
 
-	// Yield (total servings the recipe makes)
-	yield: number;
+	servings: number;
 
 	// Prep time in total minutes (hours * 60 + minutes)
 	prep_time_minutes: number;
@@ -75,7 +74,7 @@ export interface GeneratorCandidate {
 	// Dish type names (lowercase) for meal-type slot filtering, e.g. 'breakfast', 'main dish'
 	dish_type_names: string[];
 
-	// Leftover state — set when a recipe has surplus yield from an earlier slot
+	// Leftover state — set when a recipe has surplus servings from an earlier slot
 	is_leftover?: boolean;
 	available_servings?: number;
 	expires_after?: string; // ISO date string
@@ -166,7 +165,7 @@ export interface GeneratorOutput {
 
 interface ChosenEntry {
 	candidate: GeneratorCandidate;
-	remaining_yield: number;
+	remaining_servings: number;
 	cook_date: string; // ISO date of the slot where this recipe was (or will be) cooked
 }
 
@@ -514,7 +513,7 @@ function normalize(value: number, min: number, max: number): number {
  *   prep_time        — lower prep time is better (descending)
  *   source_preference — library recipes preferred over catalog
  *   ingredient_overlap — shares ingredients with already-placed recipes
- *   leftover         — extra boost for consuming committed surplus yield
+ *   leftover         — extra boost for consuming committed surplus servings
  */
 function scoreCandidate(
 	candidate: GeneratorCandidate,
@@ -673,9 +672,9 @@ function findCookDaySlot(
 
 /**
  * Estimates what fraction of remaining uncovered slots a candidate could cover
- * with its leftover yield after the current slot, normalized to [0, 1].
+ * with its leftover servings after the current slot, normalized to [0, 1].
  *
- * Rewards new recipes with high yield that can bridge multiple future slots —
+ * Rewards new recipes with high servings that can bridge multiple future slots —
  * reducing the total number of distinct recipes in the plan.
  */
 function coveragePotential(
@@ -687,7 +686,7 @@ function coveragePotential(
 	eligibleCandidates: Record<SlotKey, GeneratorCandidate[]>,
 	dailyAssignments: Map<string, Set<string>>,
 ): number {
-	if (candidate.yield <= estimatedServings) return 0;
+	if (candidate.servings <= estimatedServings) return 0;
 
 	const expiresAfter = addDays(currentSlotDate, LEFTOVER_FRESHNESS_DAYS);
 	let coverableCount = 0;
@@ -819,10 +818,10 @@ export function generateSlots(input: GeneratorInput): GeneratorOutput {
 	});
 
 	// ==========================================
-	// Phase 3: Yield-first selection
+	// Phase 3: Serving-first selection
 	// ==========================================
 
-	// Registry of recipes committed to the plan with remaining consumable yield.
+	// Registry of recipes committed to the plan with remaining consumable servings.
 	const chosenRegistry = new Map<string, ChosenEntry>();
 
 	// Final per-slot assignments — populated by both the selection loop and
@@ -914,9 +913,9 @@ export function generateSlots(input: GeneratorInput): GeneratorOutput {
 				const existingChosen = chosenRegistry.get(assignedCandidate.id);
 				chosenRegistry.set(assignedCandidate.id, {
 					candidate: assignedCandidate,
-					remaining_yield: Math.max(
+					remaining_servings: Math.max(
 						0,
-						(existingChosen?.remaining_yield ?? assignedCandidate.yield) -
+						(existingChosen?.remaining_servings ?? assignedCandidate.servings) -
 							neededServings,
 					),
 					cook_date: slot.date,
@@ -966,14 +965,14 @@ export function generateSlots(input: GeneratorInput): GeneratorOutput {
 		const scored: { item: GeneratorCandidate; score: number }[] = [];
 		const addedIds = new Set<string>();
 
-		// Leftover candidates: surplus yield already committed in the plan
+		// Leftover candidates: surplus servings already committed in the plan
 		for (const [id, entry] of chosenRegistry) {
-			if (entry.remaining_yield <= 0) continue;
+			if (entry.remaining_servings <= 0) continue;
 
 			const leftoverCandidate: GeneratorCandidate = {
 				...entry.candidate,
 				is_leftover: true,
-				available_servings: entry.remaining_yield,
+				available_servings: entry.remaining_servings,
 				expires_after: addDays(entry.cook_date, LEFTOVER_FRESHNESS_DAYS),
 			};
 
@@ -1050,7 +1049,7 @@ export function generateSlots(input: GeneratorInput): GeneratorOutput {
 		let isLeftoverSlot = selected.is_leftover === true;
 		let cookDaySlotKey: SlotKey | null = null;
 
-		if (!selected.is_leftover && selected.yield > estimatedServings) {
+		if (!selected.is_leftover && selected.servings > estimatedServings) {
 			cookDaySlotKey = findCookDaySlot(
 				selected.id,
 				slotKey,
@@ -1089,9 +1088,9 @@ export function generateSlots(input: GeneratorInput): GeneratorOutput {
 		if (selected.is_leftover) {
 			const existing = chosenRegistry.get(selected.id);
 			if (existing) {
-				existing.remaining_yield = Math.max(
+				existing.remaining_servings = Math.max(
 					0,
-					existing.remaining_yield - estimatedServings,
+					existing.remaining_servings - estimatedServings,
 				);
 			}
 		} else {
@@ -1100,7 +1099,7 @@ export function generateSlots(input: GeneratorInput): GeneratorOutput {
 				: slot.date;
 			chosenRegistry.set(selected.id, {
 				candidate: selected,
-				remaining_yield: Math.max(0, selected.yield - estimatedServings),
+				remaining_servings: Math.max(0, selected.servings - estimatedServings),
 				cook_date: cookDate,
 			});
 			for (const ci of selected.core_ingredients) {
@@ -1222,7 +1221,7 @@ function buildDraftEntry(
 				name: candidate.name,
 				calories_per_serving: candidate.calories_per_serving,
 				macros_per_serving: { ...candidate.macros_per_serving },
-				yield: candidate.yield,
+				servings: candidate.servings,
 				core_ingredients: [...candidate.core_ingredients],
 				is_leftover: candidate.is_leftover,
 				available_servings: candidate.available_servings,
@@ -1250,7 +1249,7 @@ function buildDraftEntry(
 			name: candidate.name,
 			calories_per_serving: candidate.calories_per_serving,
 			macros_per_serving: { ...candidate.macros_per_serving },
-			yield: candidate.yield,
+			servings: candidate.servings,
 			core_ingredients: [...candidate.core_ingredients],
 			is_leftover: candidate.is_leftover,
 			available_servings: candidate.available_servings,

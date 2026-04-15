@@ -106,7 +106,7 @@ function DraftGrid({
 
 	/**
 	 * Total servings consumed across ALL slots in the draft for a given recipe id.
-	 * This gives the true utilisation of the recipe's yield when it appears in
+	 * This gives the true utilisation of the recipe's servings when it appears in
 	 * multiple slots (e.g. as a leftover).
 	 */
 	const totalServingsByRecipeId = useMemo(() => {
@@ -123,7 +123,7 @@ function DraftGrid({
 	/**
 	 * The slot key where a recipe first appears (sorted by date, then by meal
 	 * type order: Breakfast → Lunch → Dinner → Snack), used to decide which
-	 * slot renders the combined yield badge.
+	 * slot renders the combined servings badge.
 	 *
 	 * A plain lexicographic sort on SlotKey would put Dinner before Lunch
 	 * (D < L alphabetically), so we sort explicitly by meal-type position.
@@ -168,9 +168,9 @@ function DraftGrid({
 						const entry = slot.entries[0];
 						const hasError = (slot.errors?.length ?? 0) > 0;
 
-						// Yield utilisation — show total across all slots, but only on the
+						// Servings utilisation — show total across all slots, but only on the
 						// first slot where this recipe appears.
-						const recipeYield = entry?.recipe.yield ?? 0;
+						const recipeServings = entry?.recipe.servings ?? 0;
 						const firstSlotKey = entry
 							? firstSlotByRecipeId.get(entry.recipe.id)
 							: undefined;
@@ -178,9 +178,9 @@ function DraftGrid({
 						const totalServingsUsed = entry
 							? (totalServingsByRecipeId.get(entry.recipe.id) ?? 0)
 							: 0;
-						const yieldPct =
-							isFirstOccurrence && recipeYield > 0
-								? Math.round((totalServingsUsed / recipeYield) * 100)
+						const servingsPct =
+							isFirstOccurrence && recipeServings > 0
+								? Math.round((totalServingsUsed / recipeServings) * 100)
 								: null;
 
 						return (
@@ -213,12 +213,12 @@ function DraftGrid({
 													</Text>
 												</View>
 											)}
-											{yieldPct !== null && (
+											{servingsPct !== null && (
 												<View
-													className={`rounded px-1 ${yieldPct >= 90 ? "bg-green-500/20" : yieldPct >= 50 ? "bg-amber-500/20" : "bg-muted"}`}
+													className={`rounded px-1 ${servingsPct >= 90 ? "bg-green-500/20" : servingsPct >= 50 ? "bg-amber-500/20" : "bg-muted"}`}
 												>
 													<Text className="text-xs font-mono text-muted-foreground">
-														{yieldPct}%
+														{servingsPct}%
 													</Text>
 												</View>
 											)}
