@@ -48,10 +48,6 @@ interface MealPlanContextInterface {
 		mealType: "Breakfast" | "Lunch" | "Dinner" | "Snack",
 	) => void;
 	closeNotesModal: () => void;
-	// Generate meal plan modal
-	generateMealPlanModalOpen: boolean;
-	openGenerateMealPlanModal: () => void;
-	closeGenerateMealPlanModal: () => void;
 }
 
 function getStartOfWeek() {
@@ -79,9 +75,6 @@ const INITIAL_MEAL_PLAN_CONTEXT: MealPlanContextInterface = {
 	notesModalState: null,
 	openNotesModal: () => null,
 	closeNotesModal: () => null,
-	generateMealPlanModalOpen: false,
-	openGenerateMealPlanModal: () => null,
-	closeGenerateMealPlanModal: () => null,
 };
 
 export const MealPlanContext = createContext<MealPlanContextInterface>(
@@ -97,8 +90,6 @@ export const MealPlanContextProvider = ({ children }: { children: any }) => {
 	const [addNoteAction, setAddNoteAction] = useState<AddNoteAction | null>(
 		null,
 	);
-	const [generateMealPlanModalOpen, setGenerateMealPlanModalOpen] =
-		useState(false);
 
 	// Fetch profiles
 	const { profiles, isLoading: isLoadingProfiles } = useProfiles();
@@ -207,14 +198,6 @@ export const MealPlanContextProvider = ({ children }: { children: any }) => {
 		setAddNoteAction(null);
 	};
 
-	const openGenerateMealPlanModal = () => {
-		setGenerateMealPlanModalOpen(true);
-	};
-
-	const closeGenerateMealPlanModal = () => {
-		setGenerateMealPlanModalOpen(false);
-	};
-
 	return (
 		<MealPlanContext.Provider
 			value={{
@@ -238,9 +221,6 @@ export const MealPlanContextProvider = ({ children }: { children: any }) => {
 				notesModalState: addNoteAction,
 				openNotesModal,
 				closeNotesModal,
-				generateMealPlanModalOpen,
-				openGenerateMealPlanModal,
-				closeGenerateMealPlanModal,
 			}}
 		>
 			{children}

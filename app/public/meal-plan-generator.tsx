@@ -19,24 +19,20 @@ import {
 } from "react-native";
 import type {
 	DraftSlot,
-	InterpreterOperation,
 	MealPlanDraft,
 	MealType,
 	PrefPatchOp,
-	RegenerateSlotsOp,
 	SlotKey,
-	SlotTarget,
 } from "@/lib/meal-plan-draft/types";
+import { addDays, format, parseISO, startOfWeek } from "date-fns";
 import { useEffect, useMemo, useState } from "react";
 
-import type { InterpreterResponseFromSchema } from "@/lib/meal-plan-draft/interpreter-schema";
+import type { PostChatRequest } from "@/app/api/meal-plans/generate/chat/index+api";
 import { SafeAreaView } from "@/components/safe-area-view";
 import { Text } from "@/components/ui/text";
-import { compilePreferences, type SlotAssignment } from "@/lib/meal-plan-draft";
-import { useGenerateSlots } from "@/hooks/meal-plans/use-generate-slots";
-import { useInterpretMealPlanMessage } from "@/hooks/meal-plans/use-interpret-meal-plan-message";
+import { compilePreferences } from "@/lib/meal-plan-draft";
+import { useGenerateMealPlanChat } from "@/hooks/meal-plans/use-generate-meal-plan-chat";
 import { useProfiles } from "@/hooks/profiles/useProfiles";
-import { addDays, format, parseISO, startOfWeek } from "date-fns";
 
 // ==========================================
 // Constants
@@ -81,43 +77,11 @@ function buildEmptyDraft(
 // Sub-components
 // ==========================================
 
-function OpPill({ op }: { op: InterpreterOperation }) {
-	const bgColor =
-		op.op === "pref_patch"
-			? "bg-blue-500/20 border-blue-500/40"
-			: op.op === "plan_edit"
-				? "bg-amber-500/20 border-amber-500/40"
-				: "bg-green-500/20 border-green-500/40";
-
-	const label =
-		op.op === "pref_patch"
-			? `pref_patch · ${op.action}`
-			: op.op === "plan_edit"
-				? `plan_edit · ${op.action}`
-				: `regenerate_slots · ${op.target === null ? "all unlocked" : `${op.target.length} slot(s)`}`;
-
-	return (
-		<View className={`rounded border px-2 py-1 mb-1 ${bgColor}`}>
-			<Text className="text-xs font-mono">{label}</Text>
-			<Text
-				className="text-xs text-muted-foreground font-mono"
-				numberOfLines={3}
-			>
-				{JSON.stringify(
-					"payload" in op ? op.payload : { target: op.target },
-					null,
-					2,
-				)}
-			</Text>
-		</View>
-	);
-}
-
 interface TurnMessage {
 	id: string;
 	role: "user" | "assistant";
 	text: string;
-	response?: InterpreterResponseFromSchema;
+	is_ambiguous?: boolean;
 }
 
 function DraftGrid({
@@ -553,239 +517,8 @@ function CompiledPreferencesGrid({
 }
 
 // ==========================================
-// Apply operations to draft (client-side execution)
-// ==========================================
-
-interface ApplyResult {
-	draft: Omit<MealPlanDraft, "undo_stack">;
-	regenerateOps: RegenerateSlotsOp[];
-	slotAssignments: SlotAssignment[];
-}
-
-function applyOperationsToDraft(
-	draft: Omit<MealPlanDraft, "undo_stack">,
-	operations: InterpreterOperation[],
-): ApplyResult {
-	let next = {
-		...draft,
-		slots: { ...draft.slots },
-		preference_patch_stack: [...draft.preference_patch_stack],
-	};
-
-	const regenerateOps: RegenerateSlotsOp[] = [];
-	const slotAssignments: SlotAssignment[] = [];
-
-	for (const op of operations) {
-		if (op.op === "pref_patch") {
-			next.preference_patch_stack = [...next.preference_patch_stack, op];
-		} else if (op.op === "plan_edit") {
-			if (op.action === "lock" || op.action === "unlock") {
-				const locked = op.action === "lock";
-				const target = op.payload.target;
-				const newSlots = { ...next.slots };
-
-				if (target === "all" || !target) {
-					for (const key of Object.keys(newSlots) as SlotKey[]) {
-						newSlots[key] = {
-							...newSlots[key],
-							entries: newSlots[key].entries.map((e) => ({ ...e, locked })),
-						};
-					}
-				} else {
-					const targets = Array.isArray(target) ? target : [target];
-					for (const t of targets) {
-						const key: SlotKey = `${t.date}.${t.meal_type}`;
-						if (newSlots[key]) {
-							newSlots[key] = {
-								...newSlots[key],
-								entries: newSlots[key].entries.map((e) => ({ ...e, locked })),
-							};
-						}
-					}
-				}
-				next.slots = newSlots;
-			} else if (op.action === "clear") {
-				const target = op.payload.target;
-				const newSlots = { ...next.slots };
-				if (!target || target === "all") {
-					// Clear all unlocked entries across all slots
-					for (const key of Object.keys(newSlots) as SlotKey[]) {
-						newSlots[key] = {
-							...newSlots[key],
-							entries: newSlots[key].entries.filter((e) => e.locked),
-						};
-					}
-				} else {
-					const targets = Array.isArray(target) ? target : [target];
-					for (const t of targets) {
-						const key: SlotKey = `${t.date}.${t.meal_type}`;
-						if (newSlots[key]) {
-							newSlots[key] = {
-								...newSlots[key],
-								entries: newSlots[key].entries.filter((e) => e.locked),
-							};
-						}
-					}
-				}
-				next.slots = newSlots;
-			} else if (op.action === "swap") {
-				// Exchange entries between two slots. `target` and `to` must each be a
-				// single SlotTarget (or the first element of an array).
-				const rawTarget = Array.isArray(op.payload.target)
-					? op.payload.target[0]
-					: op.payload.target;
-				const rawTo = Array.isArray(op.payload.to)
-					? op.payload.to[0]
-					: op.payload.to;
-
-				if (
-					rawTarget &&
-					rawTarget !== "all" &&
-					rawTo &&
-					!Array.isArray(rawTo)
-				) {
-					const fromKey: SlotKey = `${rawTarget.date}.${rawTarget.meal_type}`;
-					const toKey: SlotKey = `${rawTo.date}.${rawTo.meal_type}`;
-					if (next.slots[fromKey] && next.slots[toKey]) {
-						const fromEntries = next.slots[fromKey].entries;
-						const toEntries = next.slots[toKey].entries;
-						next.slots = {
-							...next.slots,
-							[fromKey]: { ...next.slots[fromKey], entries: toEntries },
-							[toKey]: { ...next.slots[toKey], entries: fromEntries },
-						};
-					}
-				}
-			} else if (op.action === "move") {
-				// Copy entries from `target` to `to`, then clear the source.
-				const rawTarget = Array.isArray(op.payload.target)
-					? op.payload.target[0]
-					: op.payload.target;
-				const rawTo = Array.isArray(op.payload.to)
-					? op.payload.to[0]
-					: op.payload.to;
-
-				if (
-					rawTarget &&
-					rawTarget !== "all" &&
-					rawTo &&
-					!Array.isArray(rawTo)
-				) {
-					const fromKey: SlotKey = `${rawTarget.date}.${rawTarget.meal_type}`;
-					const toKey: SlotKey = `${rawTo.date}.${rawTo.meal_type}`;
-					if (next.slots[fromKey] && next.slots[toKey]) {
-						const movedEntries = next.slots[fromKey].entries;
-						next.slots = {
-							...next.slots,
-							[fromKey]: { ...next.slots[fromKey], entries: [] },
-							[toKey]: { ...next.slots[toKey], entries: movedEntries },
-						};
-					}
-				}
-			} else if (op.action === "copy") {
-				// Duplicate entries from `target` into `to` (source is unchanged).
-				// When `to` is an array, copy into each destination.
-				const rawTarget = Array.isArray(op.payload.target)
-					? op.payload.target[0]
-					: op.payload.target;
-				const destinations = op.payload.to
-					? Array.isArray(op.payload.to)
-						? op.payload.to
-						: [op.payload.to]
-					: [];
-
-				if (rawTarget && rawTarget !== "all" && destinations.length > 0) {
-					const fromKey: SlotKey = `${rawTarget.date}.${rawTarget.meal_type}`;
-					if (next.slots[fromKey]) {
-						const copiedEntries = next.slots[fromKey].entries.map((e) => ({
-							...e,
-							draft_entry_id: Crypto.randomUUID(),
-							locked: false,
-						}));
-						const newSlots = { ...next.slots };
-						for (const dest of destinations) {
-							const toKey: SlotKey = `${dest.date}.${dest.meal_type}`;
-							if (newSlots[toKey]) {
-								newSlots[toKey] = {
-									...newSlots[toKey],
-									entries: copiedEntries,
-								};
-							}
-						}
-						next.slots = newSlots;
-					}
-				}
-			} else if (op.action === "assign") {
-				// Queue a targeted regenerate so the generator fills this slot,
-				// and collect the recipe_id so it reaches the compiler as an
-				// assigned_recipe_id override.
-				const rawTarget = Array.isArray(op.payload.target)
-					? op.payload.target[0]
-					: op.payload.target;
-				if (rawTarget && rawTarget !== "all" && op.payload.recipe_id) {
-					regenerateOps.push({
-						op: "regenerate_slots",
-						target: [rawTarget],
-					});
-					slotAssignments.push({
-						date: rawTarget.date,
-						meal_type: rawTarget.meal_type,
-						recipe_id: op.payload.recipe_id,
-						...(op.payload.profile_servings
-							? { profile_servings: op.payload.profile_servings }
-							: {}),
-					});
-				}
-			} else if (op.action === "add_slot") {
-				// Add a new meal-type row to every date currently in the draft.
-				const { meal_type } = op.payload;
-				if (meal_type) {
-					const existingDates = [
-						...new Set(Object.values(next.slots).map((s) => s.date)),
-					];
-					const newSlots = { ...next.slots };
-					for (const date of existingDates) {
-						const key: SlotKey = `${date}.${meal_type}`;
-						if (!newSlots[key]) {
-							newSlots[key] = { date, meal_type, entries: [] };
-						}
-					}
-					next.slots = newSlots;
-				}
-			} else if (op.action === "remove_slot") {
-				// Remove slots from the draft. If `meal_type` is provided, remove that
-				// meal-type row from every date. If `target` is provided, remove those
-				// specific slots.
-				const newSlots = { ...next.slots };
-				const { meal_type, target } = op.payload;
-
-				if (meal_type) {
-					for (const key of Object.keys(newSlots) as SlotKey[]) {
-						if (newSlots[key].meal_type === meal_type) {
-							delete newSlots[key];
-						}
-					}
-				} else if (target && target !== "all") {
-					const targets = Array.isArray(target) ? target : [target];
-					for (const t of targets) {
-						const key: SlotKey = `${t.date}.${t.meal_type}`;
-						delete newSlots[key];
-					}
-				}
-				next.slots = newSlots;
-			}
-		} else if (op.op === "regenerate_slots") {
-			regenerateOps.push(op);
-		}
-	}
-
-	return { draft: next, regenerateOps, slotAssignments };
-}
-
-// ==========================================
 // Main screen
 // ==========================================
-
 export default function InterpreterTestHarness() {
 	// ---- Day selection (default: current Mon–Sun) -------------------------
 	const [selectedDayIndices, setSelectedDayIndices] = useState<Set<number>>(
@@ -855,69 +588,22 @@ export default function InterpreterTestHarness() {
 
 	const [turns, setTurns] = useState<TurnMessage[]>([]);
 	const [input, setInput] = useState("");
-	const { interpret, isPending: isInterpreting } =
-		useInterpretMealPlanMessage();
-	const { generateSlots, isPending: isGenerating } = useGenerateSlots();
-
-	const isPending = isInterpreting || isGenerating;
-
-	/**
-	 * Dispatches all `regenerate_slots` ops from a turn to the generator endpoint,
-	 * merges the returned slots back into the draft, then returns the updated draft.
-	 * Merges ops sequentially so each op sees the slots updated by the previous one.
-	 */
-	const applyRegenerateOps = async (
-		currentDraft: Omit<MealPlanDraft, "undo_stack">,
-		ops: RegenerateSlotsOp[],
-		slotAssignments: SlotAssignment[],
-	): Promise<Omit<MealPlanDraft, "undo_stack">> => {
-		let latest = currentDraft;
-		for (const op of ops) {
-			const targetSlots =
-				op.target === null ? undefined : (op.target as SlotTarget[]);
-
-			// Only forward assignments relevant to this op's target slots
-			const relevantAssignments =
-				targetSlots === undefined
-					? slotAssignments
-					: slotAssignments.filter((a) =>
-							targetSlots.some(
-								(t) => t.date === a.date && t.meal_type === a.meal_type,
-							),
-						);
-
-			const result = await generateSlots({
-				// Cast required: SlotKey template literal type is narrower than
-				// the Zod-inferred Record<string, ...> that the request schema expects.
-				draft: latest as unknown as Parameters<
-					typeof generateSlots
-				>[0]["draft"],
-				target_slots: targetSlots,
-				slot_assignments:
-					relevantAssignments.length > 0 ? relevantAssignments : undefined,
-			});
-
-			if (result && "updated_slots" in result && result.updated_slots) {
-				latest = {
-					...latest,
-					slots: result.updated_slots as typeof latest.slots,
-				};
-			}
-		}
-		return latest;
-	};
+	const { sendMessage, isPending } = useGenerateMealPlanChat();
 
 	/** Full initial generation — regenerates all unlocked slots. */
 	const handleGenerateAll = async () => {
 		if (isPending) return;
 		try {
-			const result = await generateSlots({
-				draft: draft as unknown as Parameters<typeof generateSlots>[0]["draft"],
+			const result = await sendMessage({
+				draft: draft as unknown as PostChatRequest["draft"],
+				generate_all: true,
 			});
-			if (result && "updated_slots" in result && result.updated_slots) {
+			if ("updated_slots" in result) {
 				setDraft((prev) => ({
 					...prev,
 					slots: result.updated_slots as typeof prev.slots,
+					preference_patch_stack:
+						result.preference_patch_stack as unknown as typeof prev.preference_patch_stack,
 				}));
 			}
 		} catch (e) {
@@ -946,9 +632,9 @@ export default function InterpreterTestHarness() {
 		setInput("");
 
 		try {
-			const response = await interpret({
+			const response = await sendMessage({
 				user_message: trimmed,
-				draft,
+				draft: draft as unknown as PostChatRequest["draft"],
 				profiles: profiles?.map((p) => ({ id: p.id, name: p.name })),
 				conversation_history: turns.map((t) => ({
 					role: t.role,
@@ -956,31 +642,23 @@ export default function InterpreterTestHarness() {
 				})),
 			});
 
-			const {
-				draft: draftAfterEdits,
-				regenerateOps,
-				slotAssignments,
-			} = applyOperationsToDraft(
-				draft,
-				response.operations as InterpreterOperation[],
-			);
-
-			// Apply regenerate_slots ops sequentially through the generator
-			const finalDraft = await applyRegenerateOps(
-				draftAfterEdits,
-				regenerateOps,
-				slotAssignments,
-			);
-
-			const assistantTurn: TurnMessage = {
-				id: Crypto.randomUUID(),
-				role: "assistant",
-				text: response.interpretation_summary,
-				response,
-			};
-
-			setTurns((prev) => [...prev, assistantTurn]);
-			setDraft(finalDraft);
+			if ("updated_slots" in response) {
+				setDraft((prev) => ({
+					...prev,
+					slots: response.updated_slots as typeof prev.slots,
+					preference_patch_stack:
+						response.preference_patch_stack as unknown as typeof prev.preference_patch_stack,
+				}));
+				setTurns((prev) => [
+					...prev,
+					{
+						id: Crypto.randomUUID(),
+						role: "assistant",
+						text: response.interpretation_summary,
+						is_ambiguous: response.is_ambiguous,
+					},
+				]);
+			}
 		} catch (e) {
 			setTurns((prev) => [
 				...prev,
@@ -1017,7 +695,7 @@ export default function InterpreterTestHarness() {
 						disabled={isPending}
 						className={`px-3 py-1.5 rounded ${isPending ? "bg-primary/30" : "bg-primary/20"}`}
 					>
-						{isGenerating ? (
+						{isPending ? (
 							<ActivityIndicator size="small" />
 						) : (
 							<Text className="text-xs text-primary font-medium">
@@ -1162,30 +840,14 @@ export default function InterpreterTestHarness() {
 									</View>
 								) : (
 									<View className="max-w-full">
-										{/* Summary bubble */}
-										<View className="bg-primary/15 border border-primary/25 px-3 py-2 rounded-xl rounded-tl-sm mb-2">
+										<View className="bg-primary/15 border border-primary/25 px-3 py-2 rounded-xl rounded-tl-sm">
 											<Text className="text-sm">{turn.text}</Text>
-											{turn.response?.is_ambiguous && (
+											{turn.is_ambiguous && (
 												<Text className="text-xs text-amber-500 mt-1">
 													⚠ Ambiguous — made a reasonable assumption
 												</Text>
 											)}
 										</View>
-										{/* Operations */}
-										{turn.response && turn.response.operations.length > 0 ? (
-											<View>
-												<Text className="text-xs text-muted-foreground mb-1">
-													{`${turn.response.operations.length} operation${turn.response.operations.length !== 1 ? "s" : ""} emitted:`}
-												</Text>
-												{turn.response.operations.map((op, i) => (
-													<OpPill key={i} op={op as InterpreterOperation} />
-												))}
-											</View>
-										) : turn.response ? (
-											<Text className="text-xs text-muted-foreground italic">
-												No operations emitted
-											</Text>
-										) : null}
 									</View>
 								)}
 							</View>
@@ -1196,9 +858,7 @@ export default function InterpreterTestHarness() {
 				{isPending && (
 					<View className="flex-row items-center gap-2 mb-4">
 						<ActivityIndicator size="small" />
-						<Text className="text-sm text-muted-foreground">
-							{isGenerating ? "Generating…" : "Interpreting…"}
-						</Text>
+						<Text className="text-sm text-muted-foreground">Working…</Text>
 					</View>
 				)}
 			</ScrollView>

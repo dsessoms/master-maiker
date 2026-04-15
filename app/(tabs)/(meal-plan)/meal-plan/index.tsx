@@ -23,7 +23,6 @@ import { AddShoppingItemsModal } from "@/components/shopping/add-shopping-items-
 import { Button } from "@/components/ui/button";
 import { DaySection } from "@/components//meal-plan/day-section";
 import { DnDScrollView } from "@/components/ui/dnd/dnd-scroll-view";
-import { GenerateMealPlanModal } from "@/components/meal-plan/generate-meal-plan-modal";
 import { MealPlanContext } from "@/context/meal-plan-context";
 import { MustrdButton } from "@/components/mustrd-button";
 import { NotesModal } from "@/components/meal-plan/notes-modal";
@@ -48,8 +47,6 @@ export default function MealPlanScreen() {
 		foodEntriesByDay,
 		notesModalState,
 		closeNotesModal,
-		generateMealPlanModalOpen,
-		openGenerateMealPlanModal,
 	} = useContext(MealPlanContext);
 
 	const { mutateAsync: clearMealPlan, isPending: isClearingMealPlan } =
@@ -172,12 +169,6 @@ export default function MealPlanScreen() {
 					mealType={notesModalState.mealType}
 				/>
 			)}
-			{generateMealPlanModalOpen && (
-				<GenerateMealPlanModal
-					defaultStartDate={startDate}
-					defaultEndDate={endDate}
-				/>
-			)}
 			<AddShoppingItemsModal
 				isOpen={showAddToShoppingListModal}
 				onClose={() => setShowAddToShoppingListModal(false)}
@@ -214,12 +205,6 @@ export default function MealPlanScreen() {
 						<MustrdButton />
 					</DropdownMenuTrigger>
 					<DropdownMenuContent side="top" align="end" className="w-64 mb-2">
-						{premiumFeaturesEnabled && (
-							<DropdownMenuItem onPress={openGenerateMealPlanModal}>
-								<WandSparkles className="text-foreground mr-2" size={16} />
-								<Text>Generate meal plan</Text>
-							</DropdownMenuItem>
-						)}
 						<DropdownMenuItem
 							onPress={() => setShowAddToShoppingListModal(true)}
 						>
