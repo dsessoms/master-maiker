@@ -15,27 +15,32 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ShoppingCart, Trash2Icon, WandSparkles } from "@/lib/icons";
 import { Stack, useRouter } from "expo-router";
+import { View, useWindowDimensions } from "react-native";
 import { eachDayOfInterval, format } from "date-fns";
-import { useContext, useMemo, useState } from "react";
+import { useCallback, useContext, useMemo, useState } from "react";
 
+import type { ActiveDraft } from "@/components/meal-plan/generator/types";
 import { AddShoppingItemsData } from "@/components/shopping/add-shopping-items-modal/types";
 import { AddShoppingItemsModal } from "@/components/shopping/add-shopping-items-modal";
 import { Button } from "@/components/ui/button";
 import { DaySection } from "@/components//meal-plan/day-section";
 import { DnDScrollView } from "@/components/ui/dnd/dnd-scroll-view";
+import { DraftDaySection } from "@/components/meal-plan/generator/draft-day-section";
 import { GatedFeature } from "@/components/feature-flags/gated-feature";
 import { MealPlanContext } from "@/context/meal-plan-context";
+import { MealPlanGeneratorPortal } from "@/components/meal-plan/generator/meal-plan-generator-portal";
 import { MustrdButton } from "@/components/mustrd-button";
 import { NotesModal } from "@/components/meal-plan/notes-modal";
 import { ProfileDropdown } from "@/components//user-dropdown";
 import { SafeAreaView } from "@/components//safe-area-view";
+import type { SlotKey } from "@/lib/meal-plan-draft/types";
 import { Text } from "@/components/ui/text";
-import { View } from "react-native";
 import { WeekSelector } from "@/components//week-selector";
 import { useClearMealPlan } from "@/hooks/meal-plans/use-clear-meal-plan";
 
 export default function MealPlanScreen() {
 	const router = useRouter();
+	const { height: windowHeight } = useWindowDimensions();
 	const {
 		startDate,
 		endDate,
@@ -55,6 +60,17 @@ export default function MealPlanScreen() {
 	const [showClearDialog, setShowClearDialog] = useState(false);
 	const [showAddToShoppingListModal, setShowAddToShoppingListModal] =
 		useState(false);
+	const [showGeneratorPortal, setShowGeneratorPortal] = useState(false);
+	const [activeDraft, setActiveDraft] = useState<ActiveDraft | null>(null);
+
+	// Bottom padding: setup panel is bottom-anchored (~SETUP_HEIGHT), chat bar is shorter (~150px with message)
+	const SETUP_PANEL_HEIGHT = Math.min(Math.round(windowHeight * 0.58), 480);
+	const CHAT_BAR_HEIGHT = 160;
+	const portalPaddingBottom = showGeneratorPortal
+		? activeDraft
+			? CHAT_BAR_HEIGHT
+			: SETUP_PANEL_HEIGHT
+		: 0;
 
 	const weekDates = useMemo(
 		() =>
@@ -98,6 +114,52 @@ export default function MealPlanScreen() {
 		return { recipes };
 	}, [foodEntriesByDay]);
 
+	// Flat profile list for the generator portal
+	const profileList = useMemo(
+		() =>
+			selectableProfiles.map((p) => ({
+				id: p.id,
+				name: p.name,
+				avatarUrl: p.avatar_url,
+			})),
+		[selectableProfiles],
+	);
+
+	// Dates that the active draft covers (to decide which day sections to replace)
+	const draftDates = useMemo(
+		() =>
+			activeDraft
+				? new Set(Object.values(activeDraft.slots).map((s) => s.date))
+				: new Set<string>(),
+		[activeDraft],
+	);
+
+	// Toggle lock state on a draft entry — updates activeDraft directly (no undo stack)
+	const handleToggleLock = useCallback(
+		(slotKey: string, draftEntryId: string) => {
+			setActiveDraft((prev) => {
+				if (!prev) return prev;
+				const slot = prev.slots[slotKey as SlotKey];
+				if (!slot) return prev;
+				return {
+					...prev,
+					slots: {
+						...prev.slots,
+						[slotKey]: {
+							...slot,
+							entries: slot.entries.map((e) =>
+								e.draft_entry_id === draftEntryId
+									? { ...e, locked: !e.locked }
+									: e,
+							),
+						},
+					},
+				};
+			});
+		},
+		[],
+	);
+
 	const handleClearMealPlan = async () => {
 		try {
 			await clearMealPlan({ startDate, endDate });
@@ -136,12 +198,25 @@ export default function MealPlanScreen() {
 					</View>
 				</View>
 				<DnDScrollView
-					contentContainerStyle={{ flexGrow: 1 }}
+					contentContainerStyle={{
+						flexGrow: 1,
+						paddingBottom: portalPaddingBottom,
+					}}
 					style={{ flex: 1 }}
 				>
 					<View className="w-full max-w-3xl mx-auto bg-muted-background px-4">
 						{weekDates.map((date) => {
 							const dateString = format(date, "yyyy-MM-dd");
+							if (activeDraft && draftDates.has(dateString)) {
+								return (
+									<DraftDaySection
+										key={dateString}
+										date={date}
+										draft={activeDraft}
+										onToggleLock={handleToggleLock}
+									/>
+								);
+							}
 							return (
 								<DaySection
 									key={dateString}
@@ -171,6 +246,15 @@ export default function MealPlanScreen() {
 				onClose={() => setShowAddToShoppingListModal(false)}
 				itemsToAdd={shoppingItemsData}
 			/>
+			<MealPlanGeneratorPortal
+				isOpen={showGeneratorPortal}
+				onClose={() => setShowGeneratorPortal(false)}
+				weekDates={weekDates}
+				profiles={profileList}
+				foodEntriesByDay={foodEntriesByDay}
+				draft={activeDraft}
+				onDraftChange={setActiveDraft}
+			/>
 			<Dialog open={showClearDialog} onOpenChange={setShowClearDialog}>
 				<DialogContent>
 					<DialogHeader>
@@ -196,31 +280,33 @@ export default function MealPlanScreen() {
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
-			<View className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full max-w-3xl px-4 flex-row justify-end">
-				<DropdownMenu>
-					<DropdownMenuTrigger asChild>
-						<MustrdButton />
-					</DropdownMenuTrigger>
-					<DropdownMenuContent side="top" align="end" className="w-64 mb-2">
-						<GatedFeature flagName="premium-features">
-							<DropdownMenuItem onPress={() => null}>
-								<WandSparkles className="text-foreground mr-2" size={16} />
-								<Text>Generate Meal Plan</Text>
+			{!showGeneratorPortal && (
+				<View className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full max-w-3xl px-4 flex-row justify-end">
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<MustrdButton />
+						</DropdownMenuTrigger>
+						<DropdownMenuContent side="top" align="end" className="w-64 mb-2">
+							<GatedFeature flagName="premium-features">
+								<DropdownMenuItem onPress={() => setShowGeneratorPortal(true)}>
+									<WandSparkles className="text-foreground mr-2" size={16} />
+									<Text>Generate Meal Plan</Text>
+								</DropdownMenuItem>
+							</GatedFeature>
+							<DropdownMenuItem
+								onPress={() => setShowAddToShoppingListModal(true)}
+							>
+								<ShoppingCart className="text-foreground mr-2" size={16} />
+								<Text>Add to list</Text>
 							</DropdownMenuItem>
-						</GatedFeature>
-						<DropdownMenuItem
-							onPress={() => setShowAddToShoppingListModal(true)}
-						>
-							<ShoppingCart className="text-foreground mr-2" size={16} />
-							<Text>Add to list</Text>
-						</DropdownMenuItem>
-						<DropdownMenuItem onPress={() => setShowClearDialog(true)}>
-							<Trash2Icon className="text-destructive mr-2" size={16} />
-							<Text className="text-destructive">Clear meal plan</Text>
-						</DropdownMenuItem>
-					</DropdownMenuContent>
-				</DropdownMenu>
-			</View>
+							<DropdownMenuItem onPress={() => setShowClearDialog(true)}>
+								<Trash2Icon className="text-destructive mr-2" size={16} />
+								<Text className="text-destructive">Clear meal plan</Text>
+							</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
+				</View>
+			)}
 		</SafeAreaView>
 	);
 }

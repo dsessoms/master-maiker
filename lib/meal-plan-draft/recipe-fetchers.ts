@@ -23,6 +23,7 @@ export interface RecipeCandidateRow {
 	number_of_servings: number;
 	prep_time_hours: number | null;
 	prep_time_minutes: number | null;
+	image_id: string | null;
 	macros: RecipeMacrosRow[];
 	recipe_cuisines: { cuisines: { name: string } | null }[];
 	recipe_diets: { diets: { name: string } | null }[];
@@ -88,6 +89,7 @@ export function mapRowToCandidate(row: RecipeCandidateRow): GeneratorCandidate {
 			fat_g: fatPerServing,
 		},
 		servings: row.number_of_servings,
+		image_id: row.image_id,
 		prep_time_minutes: prepMinutes,
 		core_ingredients: coreIngredients,
 		spoonacular_ingredient_ids: spoonacularIngredientIds,
@@ -108,6 +110,7 @@ const RECIPE_SELECT = `
 	number_of_servings,
 	prep_time_hours,
 	prep_time_minutes,
+	image_id,
 	macros:recipe_macros (calories, protein, carbohydrate, fat),
 	recipe_cuisines (cuisines (name)),
 	recipe_diets (diets (name)),

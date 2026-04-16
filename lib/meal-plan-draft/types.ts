@@ -4,6 +4,7 @@
 
 // Aligns with DB `public.meal_type_enum`
 export type MealType = "Breakfast" | "Lunch" | "Dinner" | "Snack";
+export const MEAL_TYPES: MealType[] = ["Breakfast", "Lunch", "Dinner", "Snack"];
 export type DayOfWeek =
 	| "monday"
 	| "tuesday"
@@ -36,6 +37,7 @@ export interface DraftRecipe {
 	};
 	servings: number;
 	core_ingredients: string[];
+	image_id?: string | null;
 
 	// Transient generator state
 	is_leftover?: boolean;

@@ -55,6 +55,7 @@ export interface GeneratorCandidate {
 	};
 
 	servings: number;
+	image_id?: string | null;
 
 	// Prep time in total minutes (hours * 60 + minutes)
 	prep_time_minutes: number;
@@ -651,6 +652,11 @@ function findCookDaySlot(
 		const slot = draft.slots[key];
 		if (!slot) continue;
 
+		// Only promote empty slots as cook days — slots with any existing entries
+		// (locked or unlocked) are already occupied and must not receive a new
+		// stacked entry from retroactive cook-day promotion.
+		if (slot.entries.length > 0) continue;
+
 		if (slot.date >= targetDate) continue;
 		if (targetDate > addDays(slot.date, LEFTOVER_FRESHNESS_DAYS)) continue;
 		if (!eligibleCandidates[key]?.some((c) => c.id === selectedId)) continue;
@@ -851,9 +857,11 @@ export function generateSlots(input: GeneratorInput): GeneratorOutput {
 		dailyAssignments.get(date)!.add(recipeId);
 	}
 
-	// Pre-seed state from locked entries in slots NOT being regenerated.
+	// Pre-seed state from locked entries across ALL slots (including those being
+	// regenerated). Slots with [locked + unlocked] entries are in slotsToProcess,
+	// so without this, their locked recipe IDs are never recorded — allowing the
+	// generator to pick the same recipe again as the new unlocked entry (duplicate).
 	for (const key of allSlotKeys) {
-		if (slotsToProcess.includes(key)) continue;
 		const slot = draft.slots[key];
 		for (const entry of slot.entries) {
 			if (!entry.locked) continue;
@@ -1222,6 +1230,7 @@ function buildDraftEntry(
 				calories_per_serving: candidate.calories_per_serving,
 				macros_per_serving: { ...candidate.macros_per_serving },
 				servings: candidate.servings,
+				image_id: candidate.image_id,
 				core_ingredients: [...candidate.core_ingredients],
 				is_leftover: candidate.is_leftover,
 				available_servings: candidate.available_servings,
@@ -1250,6 +1259,7 @@ function buildDraftEntry(
 			calories_per_serving: candidate.calories_per_serving,
 			macros_per_serving: { ...candidate.macros_per_serving },
 			servings: candidate.servings,
+			image_id: candidate.image_id,
 			core_ingredients: [...candidate.core_ingredients],
 			is_leftover: candidate.is_leftover,
 			available_servings: candidate.available_servings,

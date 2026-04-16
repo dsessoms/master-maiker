@@ -3,6 +3,7 @@ import { useContext, useMemo } from "react";
 
 import { Dot } from "@/lib/icons";
 import { FoodEntry } from "@/app/api/food-entries/index+api";
+import { MEAL_TYPES } from "@/lib/meal-plan-draft/types";
 import { MacroDisplay } from "./macro-display";
 import { MealPlanContext } from "@/context/meal-plan-context";
 import { MealSection } from "./meal-section";
@@ -63,30 +64,15 @@ export const DaySection = ({
 				</View>
 			</View>
 			<View>
-				<MealSection
-					mealType="Breakfast"
-					date={dateString}
-					foodEntries={recipeEntriesByMealType["Breakfast"]}
-					onAdd={() => onAdd("Breakfast")}
-				/>
-				<MealSection
-					mealType="Lunch"
-					date={dateString}
-					foodEntries={recipeEntriesByMealType["Lunch"]}
-					onAdd={() => onAdd("Lunch")}
-				/>
-				<MealSection
-					mealType="Dinner"
-					date={dateString}
-					foodEntries={recipeEntriesByMealType["Dinner"]}
-					onAdd={() => onAdd("Dinner")}
-				/>
-				<MealSection
-					mealType="Snack"
-					date={dateString}
-					foodEntries={recipeEntriesByMealType["Snack"]}
-					onAdd={() => onAdd("Snack")}
-				/>
+				{MEAL_TYPES.map((mealType) => (
+					<MealSection
+						key={mealType}
+						mealType={mealType}
+						date={dateString}
+						foodEntries={recipeEntriesByMealType[mealType]}
+						onAdd={() => onAdd(mealType)}
+					/>
+				))}
 			</View>
 		</View>
 	);

@@ -6,11 +6,14 @@ import React from "react";
 import { colors } from "@/constants/colors";
 import { useAuth } from "@/context/supabase-provider";
 import { useColorScheme } from "@/lib/useColorScheme";
+import { useFeatureFlag } from "@/hooks/feature-flags/useFeatureFlag";
 
 export default function TabsLayout() {
 	const { colorScheme } = useColorScheme();
 
 	const { initialized, session } = useAuth();
+
+	const { enabled: isAdminUser } = useFeatureFlag("admin-user");
 
 	if (!initialized) {
 		return null;
@@ -69,13 +72,15 @@ export default function TabsLayout() {
 					}}
 				/>
 
-				<Tabs.Screen
-					name="admin"
-					options={{
-						title: "Admin",
-						tabBarIcon: ({ color }) => <Lock size={20} color={color} />,
-					}}
-				/>
+				<Tabs.Protected guard={isAdminUser}>
+					<Tabs.Screen
+						name="admin"
+						options={{
+							title: "Admin",
+							tabBarIcon: ({ color }) => <Lock size={20} color={color} />,
+						}}
+					/>
+				</Tabs.Protected>
 			</Tabs>
 		</MealPlanContextProvider>
 	);

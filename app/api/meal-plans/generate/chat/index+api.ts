@@ -73,6 +73,7 @@ const DraftSlotSchema = z.object({
 					fat_g: z.number(),
 				}),
 				servings: z.number(),
+				image_id: z.string().nullish(),
 				core_ingredients: z.array(z.string()),
 				is_leftover: z.boolean().optional(),
 				available_servings: z.number().optional(),
