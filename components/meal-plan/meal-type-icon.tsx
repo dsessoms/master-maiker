@@ -1,6 +1,6 @@
 import { Apple, Egg, Hamburger, Salad } from "@/lib/icons";
 
-import type { MealType } from "@/lib/meal-plan-draft/types";
+import type { MealType } from "@/lib/schemas/meal-plans/generate/draft-schema";
 
 export const MealTypeIcon = ({
 	mealType,

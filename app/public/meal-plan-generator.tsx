@@ -23,11 +23,11 @@ import type {
 	MealType,
 	PrefPatchOp,
 	SlotKey,
-} from "@/lib/meal-plan-draft/types";
+} from "@/lib/schemas/meal-plans/generate/draft-schema";
 import { addDays, format, parseISO, startOfWeek } from "date-fns";
 import { useEffect, useMemo, useState } from "react";
 
-import type { PostChatRequest } from "@/app/api/meal-plans/generate/chat/index+api";
+import type { PostChatRequest } from "@/lib/schemas/meal-plans/generate/draft-schema";
 import { SafeAreaView } from "@/components/safe-area-view";
 import { Text } from "@/components/ui/text";
 import { compilePreferences } from "@/lib/meal-plan-draft";

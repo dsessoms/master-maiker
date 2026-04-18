@@ -15,7 +15,6 @@
 
 import { GoogleGenAI } from "@google/genai";
 import type { Content, Part } from "@google/genai";
-import { z } from "zod";
 import { jsonResponse } from "@/lib/server/json-response";
 import { validateSession } from "@/lib/server/validate-session";
 import { InterpreterResponseSchema } from "@/lib/meal-plan-draft/interpreter-schema";
@@ -28,7 +27,14 @@ import {
 	compilePreferences,
 	type SlotAssignment,
 } from "@/lib/meal-plan-draft/preference-compiler";
-import type { MealPlanDraft, SlotKey } from "@/lib/meal-plan-draft/types";
+import { ChatRequestSchema } from "@/lib/schemas/meal-plans/generate/draft-schema";
+import type {
+	DraftSlot,
+	MealPlanDraft,
+	PrefPatchOp,
+	PostChatRequest,
+	SlotKey,
+} from "@/lib/schemas/meal-plans/generate/draft-schema";
 import {
 	SYSTEM_PROMPT,
 	FUNCTION_DECLARATIONS,
@@ -53,78 +59,10 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY as string;
 const MAX_TOOL_ROUNDS = 10;
 
 // ==========================================
-// Request validation
-// ==========================================
-
-const DraftSlotSchema = z.object({
-	date: z.string(),
-	meal_type: z.enum(["Breakfast", "Lunch", "Dinner", "Snack"]),
-	entries: z.array(
-		z.object({
-			draft_entry_id: z.string(),
-			locked: z.boolean(),
-			recipe: z.object({
-				id: z.string(),
-				name: z.string(),
-				calories_per_serving: z.number(),
-				macros_per_serving: z.object({
-					protein_g: z.number(),
-					carbs_g: z.number(),
-					fat_g: z.number(),
-				}),
-				servings: z.number(),
-				image_id: z.string().nullish(),
-				core_ingredients: z.array(z.string()),
-				is_leftover: z.boolean().optional(),
-				available_servings: z.number().optional(),
-				expires_after: z.string().optional(),
-			}),
-			profile_food_entries: z.array(
-				z.object({
-					profile_id: z.string(),
-					number_of_servings: z.number(),
-				}),
-			),
-		}),
-	),
-	errors: z
-		.array(
-			z.object({
-				reason: z.literal("over_constrained"),
-				filters: z.array(z.record(z.string(), z.unknown())),
-			}),
-		)
-		.optional(),
-});
-
-const ChatRequestSchema = z.object({
-	/** Required for normal chat mode; omit when generate_all is true. */
-	user_message: z.string().min(1).optional(),
-	draft: z.object({
-		session_id: z.string(),
-		included_profile_ids: z.array(z.string()).min(1),
-		slots: z.record(DraftSlotSchema),
-		preference_patch_stack: z.array(z.record(z.string(), z.unknown())),
-	}),
-	profiles: z.array(z.object({ id: z.string(), name: z.string() })).optional(),
-	conversation_history: z
-		.array(
-			z.object({
-				role: z.enum(["user", "assistant"]),
-				content: z.string(),
-			}),
-		)
-		.optional(),
-	/** When true, skip the LLM and generate all unlocked slots immediately. */
-	generate_all: z.boolean().optional(),
-});
-
-export type PostChatRequest = z.infer<typeof ChatRequestSchema>;
-export type PostChatResponse = Awaited<ReturnType<typeof POST>>;
-
-// ==========================================
 // Handler
 // ==========================================
+
+export type PostChatResponse = Awaited<ReturnType<typeof POST>>;
 
 export async function POST(req: Request) {
 	const session = await validateSession(req);
@@ -171,21 +109,21 @@ async function handleGenerateAll(
 	userId: string,
 	draft: PostChatRequest["draft"],
 ) {
+	// Zod's z.record() always infers Record<string, ...>; the values are fully typed,
+	// only the key type differs from the SlotKey template literal. Cast once here.
+	const typedDraft = draft as Omit<MealPlanDraft, "undo_stack">;
+
 	const [libraryRecipes, catalogRecipes, profileTargets] = await Promise.all([
 		fetchLibraryRecipes(userId),
 		fetchCatalogRecipes(),
-		fetchProfileTargets(draft.included_profile_ids),
+		fetchProfileTargets(typedDraft.included_profile_ids),
 	]);
 
 	const candidates = deduplicateCandidates(libraryRecipes, catalogRecipes);
-	const draftForCompiler = draft as unknown as Pick<
-		MealPlanDraft,
-		"slots" | "preference_patch_stack"
-	>;
-	const compiledPrefs = compilePreferences(draftForCompiler);
+	const compiledPrefs = compilePreferences(typedDraft);
 
 	const output = generateSlots({
-		draft: draft as unknown as Omit<MealPlanDraft, "undo_stack">,
+		draft: typedDraft,
 		compiled_prefs: compiledPrefs,
 		candidates,
 		profile_targets: profileTargets,
@@ -193,7 +131,7 @@ async function handleGenerateAll(
 
 	return jsonResponse({
 		updated_slots: output.updated_slots,
-		preference_patch_stack: draft.preference_patch_stack,
+		preference_patch_stack: typedDraft.preference_patch_stack,
 		interpretation_summary: "Generated all unlocked slots.",
 		is_ambiguous: false,
 	});
@@ -204,7 +142,9 @@ async function handleGenerateAll(
 // ==========================================
 
 async function handleChat(userId: string, body: PostChatRequest) {
-	const { user_message, draft, profiles, conversation_history } = body;
+	const { user_message, profiles, conversation_history } = body;
+	// Zod's z.record() infers Record<string, ...>; values are fully typed, only key type differs.
+	const draft = body.draft as Omit<MealPlanDraft, "undo_stack">;
 
 	const validDraftDates = new Set(
 		Object.values(draft.slots).map((s) => s.date),
@@ -312,8 +252,8 @@ ${buildDraftContext(draft, profiles ?? [])}`;
 		const toolResultParts: Part[] = [];
 		let shouldRetry = false;
 		let finalResult: {
-			updated_slots: Record<SlotKey, (typeof draft.slots)[string]>;
-			preference_patch_stack: typeof draft.preference_patch_stack;
+			updated_slots: Record<SlotKey, DraftSlot>;
+			preference_patch_stack: PrefPatchOp[];
 			interpretation_summary: string;
 			is_ambiguous: boolean;
 		} | null = null;
@@ -449,10 +389,7 @@ ${buildDraftContext(draft, profiles ?? [])}`;
 					draft: updatedDraft,
 					regenerateOps,
 					slotAssignments,
-				} = applyOperationsToDraft(
-					draft as unknown as Omit<MealPlanDraft, "undo_stack">,
-					enriched.operations,
-				);
+				} = applyOperationsToDraft(draft, enriched.operations);
 
 				// Run generation for any regenerate_slots operations
 				const mergedSlots = { ...updatedDraft.slots };
@@ -475,10 +412,6 @@ ${buildDraftContext(draft, profiles ?? [])}`;
 							? regenOp.target.map((t) => `${t.date}.${t.meal_type}` as SlotKey)
 							: undefined;
 
-						const draftForCompiler = updatedDraft as unknown as Pick<
-							MealPlanDraft,
-							"slots" | "preference_patch_stack"
-						>;
 						const relevantAssignments: SlotAssignment[] = targetSlotKeys
 							? slotAssignments.filter((a) =>
 									targetSlotKeys.includes(
@@ -488,7 +421,7 @@ ${buildDraftContext(draft, profiles ?? [])}`;
 							: slotAssignments;
 
 						const compiledPrefs = compilePreferences(
-							draftForCompiler,
+							updatedDraft,
 							undefined,
 							relevantAssignments,
 						);
@@ -506,12 +439,8 @@ ${buildDraftContext(draft, profiles ?? [])}`;
 				}
 
 				finalResult = {
-					updated_slots: mergedSlots as Record<
-						SlotKey,
-						(typeof draft.slots)[string]
-					>,
-					preference_patch_stack:
-						updatedDraft.preference_patch_stack as unknown as typeof draft.preference_patch_stack,
+					updated_slots: mergedSlots as Record<SlotKey, DraftSlot>,
+					preference_patch_stack: updatedDraft.preference_patch_stack,
 					interpretation_summary: enriched.interpretation_summary,
 					is_ambiguous: enriched.is_ambiguous,
 				};

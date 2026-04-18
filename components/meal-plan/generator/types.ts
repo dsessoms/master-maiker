@@ -1,4 +1,7 @@
-import type { MealPlanDraft, MealType } from "@/lib/meal-plan-draft/types";
+import type {
+	MealPlanDraft,
+	MealType,
+} from "@/lib/schemas/meal-plans/generate/draft-schema";
 
 export type RecipeSource = "library" | "catalog";
 export type ExistingBehavior = "keep" | "replace";

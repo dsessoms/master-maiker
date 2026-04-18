@@ -4,7 +4,7 @@ import type {
 	MealPlanDraft,
 	PrefPatchOp,
 	SlotKey,
-} from "../types";
+} from "@/lib/schemas/meal-plans/generate/draft-schema";
 import {
 	compilePreferences,
 	compilePreferencesForSlots,

@@ -1,10 +1,11 @@
-import { ActivityIndicator, Pressable, ScrollView, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
 import type { ExistingBehavior, GeneratorSetup, RecipeSource } from "./types";
 import { useEffect, useRef } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Check } from "@/lib/icons";
-import type { MealType } from "@/lib/meal-plan-draft/types";
+import { LoadingIndicator } from "@/components/ui/loading-indicator";
+import type { MealType } from "@/lib/schemas/meal-plans/generate/draft-schema";
 import { Text } from "@/components/ui/text";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -151,280 +152,295 @@ export function SetupWizard({
 	const isLastStep = currentStep === STEP_IDS.length - 1;
 
 	return (
-		<ScrollView
-			ref={scrollRef}
-			className="flex-1"
-			showsVerticalScrollIndicator={false}
-			keyboardShouldPersistTaps="handled"
-		>
-			<View className="gap-3 pb-2">
-				{/* Answered steps */}
-				{STEP_IDS.slice(0, currentStep).map((stepId, idx) => (
-					<Pressable key={stepId} onPress={() => onStepChange(idx)}>
-						<View className="px-3 py-2 rounded-xl bg-muted/50 flex-row items-center gap-2.5">
-							<View className="w-5 h-5 rounded-full bg-primary/15 items-center justify-center flex-shrink-0">
-								<Check size={11} className="text-primary" />
-							</View>
-							<Text
-								className="text-xs text-muted-foreground flex-shrink-0"
-								numberOfLines={1}
-							>
-								{STEP_QUESTIONS[stepId]}
-							</Text>
-							<Text
-								className="text-xs font-semibold text-foreground flex-1 text-right"
-								numberOfLines={1}
-							>
-								{getSummary(stepId)}
-							</Text>
-						</View>
-					</Pressable>
-				))}
-
-				{/* Current step */}
-				<View className="gap-3">
-					<Text className="text-base font-semibold text-foreground">
-						{STEP_QUESTIONS[STEP_IDS[currentStep]]}
-					</Text>
-
-					{/* Days options */}
-					{STEP_IDS[currentStep] === "days" && (
-						<View className="flex-row flex-wrap gap-2">
-							{weekDates.map((date, idx) => {
-								const dateString = format(date, "yyyy-MM-dd");
-								const isSelected = setup.dateStrings.includes(dateString);
-								return (
-									<Pressable
-										key={dateString}
-										onPress={() => toggleDate(dateString)}
-										className={cn(
-											"px-3 py-1.5 rounded-full border",
-											isSelected
-												? "bg-primary border-primary"
-												: "bg-background border-border",
-										)}
-									>
-										<Text
-											className={cn(
-												"text-sm font-medium",
-												isSelected
-													? "text-primary-foreground"
-													: "text-foreground",
-											)}
-										>
-											{DAY_LABELS[idx]}
-										</Text>
-									</Pressable>
-								);
-							})}
-						</View>
-					)}
-					{/* Meal type options */}
-					{STEP_IDS[currentStep] === "meals" && (
-						<View className="flex-row flex-wrap gap-2">
-							{MEAL_TYPE_OPTIONS.map(({ value, label }) => {
-								const isSelected = setup.mealTypes.includes(value);
-								return (
-									<Pressable
-										key={value}
-										onPress={() => toggleMealType(value)}
-										className={cn(
-											"px-3 py-1.5 rounded-full border",
-											isSelected
-												? "bg-primary border-primary"
-												: "bg-background border-border",
-										)}
-									>
-										<Text
-											className={cn(
-												"text-sm font-medium",
-												isSelected
-													? "text-primary-foreground"
-													: "text-foreground",
-											)}
-										>
-											{label}
-										</Text>
-									</Pressable>
-								);
-							})}
-						</View>
-					)}
-
-					{/* Profile options */}
-					{STEP_IDS[currentStep] === "profiles" && (
-						<View className="flex-row flex-wrap gap-2">
-							{profiles.map((profile) => {
-								const isSelected = setup.profileIds.includes(profile.id);
-								return (
-									<Pressable
-										key={profile.id}
-										onPress={() => toggleProfile(profile.id)}
-										className={cn(
-											"px-3 py-1.5 rounded-full border",
-											isSelected
-												? "bg-primary border-primary"
-												: "bg-background border-border",
-										)}
-									>
-										<Text
-											className={cn(
-												"text-sm font-medium",
-												isSelected
-													? "text-primary-foreground"
-													: "text-foreground",
-											)}
-										>
-											{profile.name}
-										</Text>
-									</Pressable>
-								);
-							})}
-						</View>
-					)}
-
-					{/* Source options */}
-					{STEP_IDS[currentStep] === "sources" && (
-						<View className="flex-row gap-2">
-							{(
-								[
-									{ value: "library" as RecipeSource, label: "My Library" },
-									{
-										value: "catalog" as RecipeSource,
-										label: "Recipe Catalogue",
-									},
-								] as const
-							).map(({ value, label }) => {
-								const isSelected = setup.recipeSources.includes(value);
-								return (
-									<Pressable
-										key={value}
-										onPress={() => toggleSource(value)}
-										className={cn(
-											"flex-1 px-3 py-2 rounded-xl border items-center",
-											isSelected
-												? "bg-primary border-primary"
-												: "bg-background border-border",
-										)}
-									>
-										<Text
-											className={cn(
-												"text-sm font-semibold",
-												isSelected
-													? "text-primary-foreground"
-													: "text-foreground",
-											)}
-										>
-											{label}
-										</Text>
-									</Pressable>
-								);
-							})}
-						</View>
-					)}
-
-					{/* Behavior options */}
-					{STEP_IDS[currentStep] === "behavior" && (
-						<View className="flex-row gap-2">
-							{(
-								[
-									{
-										value: "keep" as ExistingBehavior,
-										label: "Keep",
-										desc: "Lock existing, fill empty slots",
-									},
-									{
-										value: "replace" as ExistingBehavior,
-										label: "Replace",
-										desc: "Start fresh for selected days",
-									},
-								] as const
-							).map(({ value, label, desc }) => {
-								const isSelected = setup.existingBehavior === value;
-								return (
-									<Pressable
-										key={value}
-										onPress={() =>
-											onSetupChange({ ...setup, existingBehavior: value })
-										}
-										className={cn(
-											"flex-1 px-3 py-2.5 rounded-xl border",
-											isSelected
-												? "bg-primary border-primary"
-												: "bg-background border-border",
-										)}
-									>
-										<Text
-											className={cn(
-												"text-sm font-semibold",
-												isSelected
-													? "text-primary-foreground"
-													: "text-foreground",
-											)}
-										>
-											{label}
-										</Text>
-										<Text
-											className={cn(
-												"text-xs mt-0.5",
-												isSelected
-													? "text-primary-foreground/70"
-													: "text-muted-foreground",
-											)}
-										>
-											{desc}
-										</Text>
-									</Pressable>
-								);
-							})}
-						</View>
-					)}
-
-					{/* Navigation buttons */}
-					<View className="flex-row gap-2 mt-1">
-						{currentStep > 0 && (
-							<Button
-								variant="outline"
-								onPress={() => onStepChange(currentStep - 1)}
-								disabled={isGenerating}
-								className="flex-1"
-							>
-								<Text>← Back</Text>
-							</Button>
-						)}
-						{isLastStep ? (
-							<Button
-								onPress={onGenerate}
-								disabled={!canAdvance() || isGenerating}
-								className="flex-1"
-							>
-								{isGenerating ? (
-									<View className="flex-row items-center gap-2">
-										<ActivityIndicator size="small" color="white" />
-										<Text className="text-primary-foreground font-semibold">
-											Generating…
-										</Text>
-									</View>
-								) : (
-									<Text className="text-primary-foreground font-semibold">
-										Generate →
-									</Text>
-								)}
-							</Button>
-						) : (
-							<Button
-								onPress={() => onStepChange(currentStep + 1)}
-								disabled={!canAdvance()}
-								className="flex-1"
-							>
-								<Text className="text-primary-foreground font-semibold">
-									Continue →
+		<View className="flex-1">
+			<ScrollView
+				ref={scrollRef}
+				showsVerticalScrollIndicator={false}
+				keyboardShouldPersistTaps="handled"
+			>
+				<View className="gap-3 pb-2">
+					{/* Answered steps */}
+					{STEP_IDS.slice(0, currentStep).map((stepId, idx) => (
+						<Pressable key={stepId} onPress={() => onStepChange(idx)}>
+							<View className="px-3 py-2 rounded-xl bg-muted/50 flex-row items-center gap-2.5">
+								<View className="w-5 h-5 rounded-full bg-primary/15 items-center justify-center flex-shrink-0">
+									<Check size={11} className="text-primary" />
+								</View>
+								<Text
+									className="text-xs text-muted-foreground flex-shrink-0"
+									numberOfLines={1}
+								>
+									{STEP_QUESTIONS[stepId]}
 								</Text>
-							</Button>
-						)}
+								<Text
+									className="text-xs font-semibold text-foreground flex-1 text-right"
+									numberOfLines={1}
+								>
+									{getSummary(stepId)}
+								</Text>
+							</View>
+						</Pressable>
+					))}
+				</View>
+			</ScrollView>
+			{/* Current step */}
+			<View className="gap-3 pt-2">
+				<Text className="text-base font-semibold text-foreground">
+					{STEP_QUESTIONS[STEP_IDS[currentStep]]}
+				</Text>
+
+				{/* Days options */}
+				{STEP_IDS[currentStep] === "days" && (
+					<View className="flex-row flex-wrap gap-2">
+						{weekDates.map((date, idx) => {
+							const dateString = format(date, "yyyy-MM-dd");
+							const isSelected = setup.dateStrings.includes(dateString);
+							return (
+								<Pressable
+									key={dateString}
+									onPress={() => toggleDate(dateString)}
+									className={cn(
+										"px-3 py-1.5 rounded-full border",
+										isSelected
+											? "bg-primary border-primary"
+											: "bg-background border-border",
+									)}
+								>
+									<Text
+										className={cn(
+											"text-sm font-medium",
+											isSelected
+												? "text-primary-foreground"
+												: "text-foreground",
+										)}
+									>
+										{DAY_LABELS[idx]}
+									</Text>
+								</Pressable>
+							);
+						})}
 					</View>
+				)}
+				{/* Meal type options */}
+				{STEP_IDS[currentStep] === "meals" && (
+					<View className="flex-row flex-wrap gap-2">
+						{MEAL_TYPE_OPTIONS.map(({ value, label }) => {
+							const isSelected = setup.mealTypes.includes(value);
+							return (
+								<Pressable
+									key={value}
+									onPress={() => toggleMealType(value)}
+									className={cn(
+										"px-3 py-1.5 rounded-full border",
+										isSelected
+											? "bg-primary border-primary"
+											: "bg-background border-border",
+									)}
+								>
+									<Text
+										className={cn(
+											"text-sm font-medium",
+											isSelected
+												? "text-primary-foreground"
+												: "text-foreground",
+										)}
+									>
+										{label}
+									</Text>
+								</Pressable>
+							);
+						})}
+					</View>
+				)}
+
+				{/* Profile options */}
+				{STEP_IDS[currentStep] === "profiles" && (
+					<View className="flex-row flex-wrap gap-2">
+						{profiles.map((profile) => {
+							const isSelected = setup.profileIds.includes(profile.id);
+							return (
+								<Pressable
+									key={profile.id}
+									onPress={() => toggleProfile(profile.id)}
+									className={cn(
+										"px-3 py-1.5 rounded-full border",
+										isSelected
+											? "bg-primary border-primary"
+											: "bg-background border-border",
+									)}
+								>
+									<Text
+										className={cn(
+											"text-sm font-medium",
+											isSelected
+												? "text-primary-foreground"
+												: "text-foreground",
+										)}
+									>
+										{profile.name}
+									</Text>
+								</Pressable>
+							);
+						})}
+					</View>
+				)}
+
+				{/* Source options */}
+				{STEP_IDS[currentStep] === "sources" && (
+					<View className="flex-row gap-2">
+						{(
+							[
+								{
+									value: "library" as RecipeSource,
+									label: "My Library",
+									desc: "Recipes you've already saved",
+								},
+								{
+									value: "catalog" as RecipeSource,
+									label: "Mustrd Catalog",
+									desc: "Discover new recipes to try",
+								},
+							] as const
+						).map(({ value, label, desc }) => {
+							const isSelected = setup.recipeSources.includes(value);
+							return (
+								<Pressable
+									key={value}
+									onPress={() => toggleSource(value)}
+									className={cn(
+										"flex-1 px-3 py-2.5 rounded-xl border",
+										isSelected
+											? "bg-primary border-primary"
+											: "bg-background border-border",
+									)}
+								>
+									<Text
+										className={cn(
+											"text-sm font-semibold",
+											isSelected
+												? "text-primary-foreground"
+												: "text-foreground",
+										)}
+									>
+										{label}
+									</Text>
+									<Text
+										className={cn(
+											"text-xs mt-0.5",
+											isSelected
+												? "text-primary-foreground/70"
+												: "text-muted-foreground",
+										)}
+									>
+										{desc}
+									</Text>
+								</Pressable>
+							);
+						})}
+					</View>
+				)}
+
+				{/* Behavior options */}
+				{STEP_IDS[currentStep] === "behavior" && (
+					<View className="flex-row gap-2">
+						{(
+							[
+								{
+									value: "keep" as ExistingBehavior,
+									label: "Keep",
+									desc: "Lock existing, fill empty slots",
+								},
+								{
+									value: "replace" as ExistingBehavior,
+									label: "Replace",
+									desc: "Start fresh for selected days",
+								},
+							] as const
+						).map(({ value, label, desc }) => {
+							const isSelected = setup.existingBehavior === value;
+							return (
+								<Pressable
+									key={value}
+									onPress={() =>
+										onSetupChange({ ...setup, existingBehavior: value })
+									}
+									className={cn(
+										"flex-1 px-3 py-2.5 rounded-xl border",
+										isSelected
+											? "bg-primary border-primary"
+											: "bg-background border-border",
+									)}
+								>
+									<Text
+										className={cn(
+											"text-sm font-semibold",
+											isSelected
+												? "text-primary-foreground"
+												: "text-foreground",
+										)}
+									>
+										{label}
+									</Text>
+									<Text
+										className={cn(
+											"text-xs mt-0.5",
+											isSelected
+												? "text-primary-foreground/70"
+												: "text-muted-foreground",
+										)}
+									>
+										{desc}
+									</Text>
+								</Pressable>
+							);
+						})}
+					</View>
+				)}
+
+				{/* Navigation buttons */}
+				<View className="flex-row gap-2 mt-1">
+					{currentStep > 0 && (
+						<Button
+							variant="outline"
+							onPress={() => onStepChange(currentStep - 1)}
+							disabled={isGenerating}
+							className="flex-1"
+						>
+							<Text>← Back</Text>
+						</Button>
+					)}
+					{isLastStep ? (
+						<Button
+							onPress={onGenerate}
+							disabled={!canAdvance() || isGenerating}
+							className="flex-1"
+						>
+							{isGenerating ? (
+								<View className="flex-row items-center gap-2">
+									<LoadingIndicator />
+									<Text className="text-primary-foreground font-semibold">
+										Generating…
+									</Text>
+								</View>
+							) : (
+								<Text className="text-primary-foreground font-semibold">
+									Generate →
+								</Text>
+							)}
+						</Button>
+					) : (
+						<Button
+							onPress={() => onStepChange(currentStep + 1)}
+							disabled={!canAdvance()}
+							className="flex-1"
+						>
+							<Text className="text-primary-foreground font-semibold">
+								Continue →
+							</Text>
+						</Button>
+					)}
 				</View>
 			</View>
-		</ScrollView>
+		</View>
 	);
 }

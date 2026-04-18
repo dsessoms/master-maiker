@@ -27,7 +27,7 @@ import type {
 	PrefScope,
 	SlotKey,
 	WeightSignal,
-} from "./types";
+} from "@/lib/schemas/meal-plans/generate/draft-schema";
 import { format, parseISO } from "date-fns";
 
 // ==========================================

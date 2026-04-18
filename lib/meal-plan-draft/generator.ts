@@ -29,7 +29,7 @@ import type {
 	SlotError,
 	SlotKey,
 	WeightSignal,
-} from "./types";
+} from "@/lib/schemas/meal-plans/generate/draft-schema";
 
 import { addDays as dateFnsAddDays } from "date-fns";
 

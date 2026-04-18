@@ -3,7 +3,7 @@ import { useContext, useMemo } from "react";
 
 import { Dot } from "@/lib/icons";
 import { FoodEntry } from "@/app/api/food-entries/index+api";
-import { MEAL_TYPES } from "@/lib/meal-plan-draft/types";
+import { MealTypes } from "@/lib/schemas/meal-plans/generate/draft-schema";
 import { MacroDisplay } from "./macro-display";
 import { MealPlanContext } from "@/context/meal-plan-context";
 import { MealSection } from "./meal-section";
@@ -64,7 +64,7 @@ export const DaySection = ({
 				</View>
 			</View>
 			<View>
-				{MEAL_TYPES.map((mealType) => (
+				{MealTypes.map((mealType) => (
 					<MealSection
 						key={mealType}
 						mealType={mealType}

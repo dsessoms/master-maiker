@@ -32,7 +32,7 @@ import { MustrdButton } from "@/components/mustrd-button";
 import { NotesModal } from "@/components/meal-plan/notes-modal";
 import { ProfileDropdown } from "@/components//user-dropdown";
 import { SafeAreaView } from "@/components//safe-area-view";
-import type { SlotKey } from "@/lib/meal-plan-draft/types";
+import type { SlotKey } from "@/lib/schemas/meal-plans/generate/draft-schema";
 import { Text } from "@/components/ui/text";
 import { View } from "react-native";
 import { WeekSelector } from "@/components//week-selector";

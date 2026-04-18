@@ -13,7 +13,7 @@ import { FoodEntry } from "./food-entry";
 import type { FoodEntry as FoodEntryData } from "@/app/api/food-entries/index+api";
 import { MacroDisplay } from "./macro-display";
 import { MealPlanContext } from "@/context/meal-plan-context";
-import type { MealType } from "@/lib/meal-plan-draft/types";
+import type { MealType } from "@/lib/schemas/meal-plans/generate/draft-schema";
 import { MealTypeIcon } from "./meal-type-icon";
 import { NotesList } from "./notes-list";
 import { Text } from "../ui/text";

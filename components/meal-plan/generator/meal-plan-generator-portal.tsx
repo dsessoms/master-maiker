@@ -14,16 +14,17 @@ import type {
 	MealType,
 	PrefPatchOp,
 	SlotKey,
-} from "@/lib/meal-plan-draft/types";
-import { Pressable, ScrollView, View, useWindowDimensions } from "react-native";
+} from "@/lib/schemas/meal-plans/generate/draft-schema";
+import { Pressable, View, useWindowDimensions } from "react-native";
 import { format, parseISO } from "date-fns";
 import { useEffect, useState } from "react";
+
+import { useUndoRedo } from "./use-undo-redo";
 
 import { ChatBar } from "./chat-panel";
 import type { GeneratedMealPlan } from "@/lib/schemas/meal-plans/generate/chat-schema";
 import type { GetFoodEntriesResponse } from "@/app/api/food-entries/index+api";
 import { LoadingIndicator } from "@/components/ui/loading-indicator";
-import type { PostChatRequest } from "@/app/api/meal-plans/generate/chat/index+api";
 import { SetupWizard } from "./setup-wizard";
 import { Text } from "@/components/ui/text";
 import { X } from "@/lib/icons";
@@ -31,14 +32,6 @@ import { useClearMealPlan } from "@/hooks/meal-plans/use-clear-meal-plan";
 import { useGenerateMealPlanChat } from "@/hooks/meal-plans/use-generate-meal-plan-chat";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSaveMealPlan } from "@/hooks/meal-plans/use-save-meal-plan";
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 type FoodEntry = GetFoodEntriesResponse["foodEntries"][0];
 
@@ -211,7 +204,7 @@ export function MealPlanGeneratorPortal({
 		recipeSources: ["library", "catalog"] as RecipeSource[],
 		existingBehavior: "keep" as ExistingBehavior,
 	}));
-	const [undoStack, setUndoStack] = useState<ActiveDraft[]>([]);
+	const history = useUndoRedo<ActiveDraft>();
 	const [input, setInput] = useState("");
 	const [lastMessage, setLastMessage] = useState<string | undefined>(undefined);
 
@@ -228,7 +221,7 @@ export function MealPlanGeneratorPortal({
 
 	/** Push old draft to undo stack then propagate the new draft up */
 	const updateDraft = (newDraft: ActiveDraft) => {
-		setUndoStack((prev) => (draft ? [...prev, draft] : prev));
+		if (draft) history.push(draft);
 		onDraftChange(newDraft);
 	};
 
@@ -264,7 +257,7 @@ export function MealPlanGeneratorPortal({
 
 		try {
 			const result = await sendMessage({
-				draft: newDraft as unknown as PostChatRequest["draft"],
+				draft: newDraft,
 				generate_all: true,
 			});
 
@@ -272,8 +265,7 @@ export function MealPlanGeneratorPortal({
 				const updatedDraft: ActiveDraft = {
 					...newDraft,
 					slots: result.updated_slots as ActiveDraft["slots"],
-					preference_patch_stack:
-						result.preference_patch_stack as unknown as PrefPatchOp[],
+					preference_patch_stack: result.preference_patch_stack,
 				};
 				onDraftChange(updatedDraft);
 				setPhase("chat");
@@ -291,7 +283,7 @@ export function MealPlanGeneratorPortal({
 		try {
 			const response = await sendMessage({
 				user_message: trimmed,
-				draft: draft as unknown as PostChatRequest["draft"],
+				draft: draft,
 				profiles: profiles.map((p) => ({ id: p.id, name: p.name })),
 			});
 
@@ -299,8 +291,7 @@ export function MealPlanGeneratorPortal({
 				const updatedDraft: ActiveDraft = {
 					...draft,
 					slots: response.updated_slots as ActiveDraft["slots"],
-					preference_patch_stack:
-						response.preference_patch_stack as unknown as PrefPatchOp[],
+					preference_patch_stack: response.preference_patch_stack,
 				};
 				updateDraft(updatedDraft);
 				if (response.interpretation_summary) {
@@ -316,15 +307,14 @@ export function MealPlanGeneratorPortal({
 		if (!draft || isPending) return;
 		try {
 			const result = await sendMessage({
-				draft: draft as unknown as PostChatRequest["draft"],
+				draft: draft,
 				generate_all: true,
 			});
 			if ("updated_slots" in result) {
 				const updatedDraft: ActiveDraft = {
 					...draft,
 					slots: result.updated_slots as ActiveDraft["slots"],
-					preference_patch_stack:
-						result.preference_patch_stack as unknown as PrefPatchOp[],
+					preference_patch_stack: result.preference_patch_stack,
 				};
 				updateDraft(updatedDraft);
 			}
@@ -334,10 +324,15 @@ export function MealPlanGeneratorPortal({
 	};
 
 	const handleUndo = () => {
-		if (undoStack.length === 0) return;
-		const prev = undoStack[undoStack.length - 1];
-		setUndoStack(undoStack.slice(0, -1));
-		onDraftChange(prev);
+		if (!draft) return;
+		const prev = history.undo(draft);
+		if (prev) onDraftChange(prev);
+	};
+
+	const handleRedo = () => {
+		if (!draft) return;
+		const next = history.redo(draft);
+		if (next) onDraftChange(next);
 	};
 
 	const handleKeep = async () => {
@@ -361,7 +356,7 @@ export function MealPlanGeneratorPortal({
 
 	const handleClose = () => {
 		onDraftChange(null);
-		setUndoStack([]);
+		history.clear();
 		setPhase("setup");
 		setCurrentStep(0);
 		setInput("");
@@ -396,9 +391,7 @@ export function MealPlanGeneratorPortal({
 					>
 						<View className="flex-row items-center justify-between px-4 py-2 border-b border-border">
 							<Text className="text-base font-semibold text-foreground">
-								{phase === "generating"
-									? "Generating\u2026"
-									: "Generate Meal Plan"}
+								{phase === "generating" ? "Generating" : "Generate Meal Plan"}
 							</Text>
 							<Pressable
 								onPress={handleClose}
@@ -418,24 +411,18 @@ export function MealPlanGeneratorPortal({
 								</Text>
 							</View>
 						) : (
-							<ScrollView
-								className="flex-1"
-								keyboardShouldPersistTaps="handled"
-								showsVerticalScrollIndicator={false}
-							>
-								<View className="px-4 pt-3 pb-6">
-									<SetupWizard
-										weekDates={weekDates}
-										profiles={profiles}
-										setup={setup}
-										onSetupChange={setSetup}
-										onGenerate={handleGenerate}
-										isGenerating={false}
-										currentStep={currentStep}
-										onStepChange={setCurrentStep}
-									/>
-								</View>
-							</ScrollView>
+							<View className="flex-1 px-4 pt-3 pb-4">
+								<SetupWizard
+									weekDates={weekDates}
+									profiles={profiles}
+									setup={setup}
+									onSetupChange={setSetup}
+									onGenerate={handleGenerate}
+									isGenerating={false}
+									currentStep={currentStep}
+									onStepChange={setCurrentStep}
+								/>
+							</View>
 						)}
 					</View>
 				)}
@@ -451,7 +438,9 @@ export function MealPlanGeneratorPortal({
 						onKeep={handleKeep}
 						onDiscard={handleDiscard}
 						onUndo={handleUndo}
-						canUndo={undoStack.length > 0}
+						canUndo={history.canUndo}
+						onRedo={handleRedo}
+						canRedo={history.canRedo}
 						isPending={isPending}
 						isSaving={isSaving}
 					/>

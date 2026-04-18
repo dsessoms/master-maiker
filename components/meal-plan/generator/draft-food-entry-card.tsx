@@ -1,15 +1,12 @@
 import { Pressable, View } from "react-native";
 
-import type { DraftFoodEntry } from "@/lib/meal-plan-draft/types";
+import type { DraftFoodEntry } from "@/lib/schemas/meal-plans/generate/draft-schema";
 import { Icon } from "@/components/ui/icon";
 import { Image } from "@/components/image";
 import { Lock } from "@/lib/icons";
 import { LockOpen } from "lucide-react-native";
-import { MacroDisplay } from "@/components/meal-plan/macro-display";
-import { MealPlanContext } from "@/context/meal-plan-context";
 import { ProfileServingBadge } from "@/components/meal-plan/profile-serving-badge";
 import { Text } from "@/components/ui/text";
-import { useContext } from "react";
 import { useRecipeImage } from "@/hooks/recipes/use-recipe-image";
 
 interface DraftFoodEntryCardProps {
@@ -22,23 +19,6 @@ export function DraftFoodEntryCard({
 	entry,
 	onToggleLock,
 }: DraftFoodEntryCardProps) {
-	const { selectedProfileIds } = useContext(MealPlanContext);
-	const totalServings = entry.profile_food_entries.reduce(
-		(sum, pfe) => sum + pfe.number_of_servings,
-		0,
-	);
-
-	const nutrition = {
-		calories: Math.round(entry.recipe.calories_per_serving * totalServings),
-		protein: Math.round(
-			entry.recipe.macros_per_serving.protein_g * totalServings,
-		),
-		carbohydrate: Math.round(
-			entry.recipe.macros_per_serving.carbs_g * totalServings,
-		),
-		fat: Math.round(entry.recipe.macros_per_serving.fat_g * totalServings),
-	};
-
 	// Use first two letters of recipe name as the image placeholder text
 	const initials = entry.recipe.name.slice(0, 2).toUpperCase();
 	const imageUrl = useRecipeImage(entry.recipe.image_id);
@@ -105,14 +85,6 @@ export function DraftFoodEntryCard({
 							))}
 					</View>
 				)}
-
-				{/* Macros - show when nutrition is non-zero */}
-				<MacroDisplay
-					show={selectedProfileIds.size === 1}
-					nutrition={nutrition}
-					size="sm"
-					className="mt-2"
-				/>
 			</View>
 		</View>
 	);

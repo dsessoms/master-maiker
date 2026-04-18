@@ -3,7 +3,7 @@ import type {
 	MealPlanDraft,
 	RegenerateSlotsOp,
 	SlotKey,
-} from "@/lib/meal-plan-draft/types";
+} from "@/lib/schemas/meal-plans/generate/draft-schema";
 
 import type { SlotAssignment } from "@/lib/meal-plan-draft/preference-compiler";
 import { randomUUID } from "crypto";

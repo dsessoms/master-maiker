@@ -40,3 +40,7 @@ export * from "./bug";
 export * from "./dot";
 export * from "./loader-2";
 export * from "./cooking-pot";
+export * from "./rotate-ccw";
+export * from "./shuffle";
+export * from "./undo2";
+export * from "./redo2";

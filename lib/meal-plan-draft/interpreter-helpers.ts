@@ -2,6 +2,7 @@ import type {
 	InterpreterFinalResponse,
 	ResolvedRecipe,
 } from "@/lib/meal-plan-draft/interpreter-schema";
+import type { PrefPatchOp } from "@/lib/schemas/meal-plans/generate/draft-schema";
 
 import { Spoonacular } from "@/lib/server/spoonacular/spoonacular-helper";
 import { dayOfWeekFromDate } from "@/lib/meal-plan-draft";
@@ -26,7 +27,7 @@ export interface DraftContextInput {
 			}[];
 		}
 	>;
-	preference_patch_stack: Record<string, unknown>[];
+	preference_patch_stack: PrefPatchOp[];
 }
 
 // ==========================================
