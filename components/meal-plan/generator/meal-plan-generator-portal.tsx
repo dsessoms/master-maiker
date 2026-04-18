@@ -204,7 +204,10 @@ export function MealPlanGeneratorPortal({
 		recipeSources: ["library", "catalog"] as RecipeSource[],
 		existingBehavior: "keep" as ExistingBehavior,
 	}));
-	const history = useUndoRedo<ActiveDraft>();
+	const history = useUndoRedo<{
+		draft: ActiveDraft;
+		message: string | undefined;
+	}>();
 	const [input, setInput] = useState("");
 	const [lastMessage, setLastMessage] = useState<string | undefined>(undefined);
 
@@ -219,10 +222,11 @@ export function MealPlanGeneratorPortal({
 	// Handlers
 	// ---------------------------------------------------------------------------
 
-	/** Push old draft to undo stack then propagate the new draft up */
-	const updateDraft = (newDraft: ActiveDraft) => {
-		if (draft) history.push(draft);
+	/** Push old draft+message to undo stack then propagate the new draft up */
+	const updateDraft = (newDraft: ActiveDraft, newMessage?: string) => {
+		if (draft) history.push({ draft, message: lastMessage });
 		onDraftChange(newDraft);
+		setLastMessage(newMessage);
 	};
 
 	const handleGenerate = async () => {
@@ -293,10 +297,7 @@ export function MealPlanGeneratorPortal({
 					slots: response.updated_slots as ActiveDraft["slots"],
 					preference_patch_stack: response.preference_patch_stack,
 				};
-				updateDraft(updatedDraft);
-				if (response.interpretation_summary) {
-					setLastMessage(response.interpretation_summary);
-				}
+				updateDraft(updatedDraft, response.interpretation_summary);
 			}
 		} catch {
 			// silent — draft stays unchanged
@@ -325,14 +326,20 @@ export function MealPlanGeneratorPortal({
 
 	const handleUndo = () => {
 		if (!draft) return;
-		const prev = history.undo(draft);
-		if (prev) onDraftChange(prev);
+		const prev = history.undo({ draft, message: lastMessage });
+		if (prev) {
+			onDraftChange(prev.draft);
+			setLastMessage(prev.message);
+		}
 	};
 
 	const handleRedo = () => {
 		if (!draft) return;
-		const next = history.redo(draft);
-		if (next) onDraftChange(next);
+		const next = history.redo({ draft, message: lastMessage });
+		if (next) {
+			onDraftChange(next.draft);
+			setLastMessage(next.message);
+		}
 	};
 
 	const handleKeep = async () => {
