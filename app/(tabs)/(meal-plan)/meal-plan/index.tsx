@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ShoppingCart, Trash2Icon, WandSparkles } from "@/lib/icons";
 import { Stack, useRouter } from "expo-router";
-import { View, useWindowDimensions } from "react-native";
 import { eachDayOfInterval, format } from "date-fns";
 import { useCallback, useContext, useMemo, useState } from "react";
 
@@ -35,12 +34,12 @@ import { ProfileDropdown } from "@/components//user-dropdown";
 import { SafeAreaView } from "@/components//safe-area-view";
 import type { SlotKey } from "@/lib/meal-plan-draft/types";
 import { Text } from "@/components/ui/text";
+import { View } from "react-native";
 import { WeekSelector } from "@/components//week-selector";
 import { useClearMealPlan } from "@/hooks/meal-plans/use-clear-meal-plan";
 
 export default function MealPlanScreen() {
 	const router = useRouter();
-	const { height: windowHeight } = useWindowDimensions();
 	const {
 		startDate,
 		endDate,
@@ -62,15 +61,7 @@ export default function MealPlanScreen() {
 		useState(false);
 	const [showGeneratorPortal, setShowGeneratorPortal] = useState(false);
 	const [activeDraft, setActiveDraft] = useState<ActiveDraft | null>(null);
-
-	// Bottom padding: setup panel is bottom-anchored (~SETUP_HEIGHT), chat bar is shorter (~150px with message)
-	const SETUP_PANEL_HEIGHT = Math.min(Math.round(windowHeight * 0.58), 480);
-	const CHAT_BAR_HEIGHT = 160;
-	const portalPaddingBottom = showGeneratorPortal
-		? activeDraft
-			? CHAT_BAR_HEIGHT
-			: SETUP_PANEL_HEIGHT
-		: 0;
+	const [portalHeight, setPortalHeight] = useState(0);
 
 	const weekDates = useMemo(
 		() =>
@@ -200,11 +191,13 @@ export default function MealPlanScreen() {
 				<DnDScrollView
 					contentContainerStyle={{
 						flexGrow: 1,
-						paddingBottom: portalPaddingBottom,
 					}}
 					style={{ flex: 1 }}
 				>
-					<View className="w-full max-w-3xl mx-auto bg-muted-background px-4">
+					<View
+						className="w-full max-w-3xl mx-auto bg-muted-background px-4"
+						style={{ paddingBottom: portalHeight || 50 }}
+					>
 						{weekDates.map((date) => {
 							const dateString = format(date, "yyyy-MM-dd");
 							if (activeDraft && draftDates.has(dateString)) {
@@ -232,6 +225,19 @@ export default function MealPlanScreen() {
 						})}
 					</View>
 				</DnDScrollView>
+				<MealPlanGeneratorPortal
+					isOpen={showGeneratorPortal}
+					onClose={() => {
+						setShowGeneratorPortal(false);
+						setPortalHeight(0);
+					}}
+					weekDates={weekDates}
+					profiles={profileList}
+					foodEntriesByDay={foodEntriesByDay}
+					draft={activeDraft}
+					onDraftChange={setActiveDraft}
+					onHeightChange={setPortalHeight}
+				/>
 			</View>
 			{notesModalState && (
 				<NotesModal
@@ -245,15 +251,6 @@ export default function MealPlanScreen() {
 				isOpen={showAddToShoppingListModal}
 				onClose={() => setShowAddToShoppingListModal(false)}
 				itemsToAdd={shoppingItemsData}
-			/>
-			<MealPlanGeneratorPortal
-				isOpen={showGeneratorPortal}
-				onClose={() => setShowGeneratorPortal(false)}
-				weekDates={weekDates}
-				profiles={profileList}
-				foodEntriesByDay={foodEntriesByDay}
-				draft={activeDraft}
-				onDraftChange={setActiveDraft}
 			/>
 			<Dialog open={showClearDialog} onOpenChange={setShowClearDialog}>
 				<DialogContent>

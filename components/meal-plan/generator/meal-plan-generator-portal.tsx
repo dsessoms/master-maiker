@@ -176,6 +176,8 @@ interface MealPlanGeneratorPortalProps {
 	/** Controlled draft — portal calls onDraftChange to update it */
 	draft: ActiveDraft | null;
 	onDraftChange: (draft: ActiveDraft | null) => void;
+	/** Called with the portal's measured height so the parent can add matching bottom padding */
+	onHeightChange?: (height: number) => void;
 }
 
 export function MealPlanGeneratorPortal({
@@ -186,6 +188,7 @@ export function MealPlanGeneratorPortal({
 	foodEntriesByDay,
 	draft,
 	onDraftChange,
+	onHeightChange,
 }: MealPlanGeneratorPortalProps) {
 	const { height: windowHeight } = useWindowDimensions();
 	const SETUP_HEIGHT = Math.min(Math.round(windowHeight * 0.58), 480);
@@ -382,6 +385,7 @@ export function MealPlanGeneratorPortal({
 				zIndex: 50,
 			}}
 			className="items-center"
+			onLayout={(e) => onHeightChange?.(e.nativeEvent.layout.height)}
 		>
 			<View className="w-full max-w-3xl">
 				{/* ── Setup / Generating panel ─────────────────────────── */}
