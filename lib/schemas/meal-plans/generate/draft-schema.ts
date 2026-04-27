@@ -8,7 +8,6 @@ import {
 	PlanEditOpSchema,
 	PrefPatchOpSchema,
 	PrefScopeSchema,
-	RegenerateSlotsOpSchema,
 	SlotTargetSchema,
 	WeightSignalSchema,
 } from "@/lib/meal-plan-draft/interpreter-schema";
@@ -29,7 +28,6 @@ export type PrefScope = z.infer<typeof PrefScopeSchema>;
 export type PrefPatchOp = z.infer<typeof PrefPatchOpSchema>;
 export type SlotTarget = z.infer<typeof SlotTargetSchema>;
 export type PlanEditOp = z.infer<typeof PlanEditOpSchema>;
-export type RegenerateSlotsOp = z.infer<typeof RegenerateSlotsOpSchema>;
 export type InterpreterOperation = z.infer<typeof InterpreterOperationSchema>;
 export type InterpreterResponse = z.infer<typeof InterpreterResponseSchema>;
 
@@ -158,7 +156,6 @@ export const ChatRequestSchema = z.object({
 			}),
 		)
 		.optional(),
-	generate_all: z.boolean().optional(),
 	variety: z.enum(["high", "medium", "low"]).optional(),
 });
 

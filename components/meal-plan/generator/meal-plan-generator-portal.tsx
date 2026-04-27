@@ -262,7 +262,6 @@ export function MealPlanGeneratorPortal({
 		try {
 			const result = await sendMessage({
 				draft: newDraft,
-				generate_all: true,
 				variety: setup.variety,
 			});
 
@@ -310,7 +309,6 @@ export function MealPlanGeneratorPortal({
 		try {
 			const result = await sendMessage({
 				draft: draft,
-				generate_all: true,
 			});
 			if ("updated_slots" in result) {
 				const updatedDraft: ActiveDraft = {

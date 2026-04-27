@@ -3,12 +3,12 @@
  *
  * Unified interpret-and-generate endpoint. Handles two modes:
  *
- *   generate_all: true  — skip LLM, go directly to slot generation for all
- *                         unlocked slots using the compiled draft preferences.
+ *   user_message absent/empty — skip LLM, go directly to slot generation for all
+ *                               unlocked slots using the compiled draft preferences.
  *
- *   generate_all: false (default) — run the Gemini interpreter tool-call loop,
- *                         apply the resulting operations to the draft, then run
- *                         generateSlots for any regenerate_slots operations.
+ *   user_message present      — run the Gemini interpreter tool-call loop,
+ *                               apply the resulting operations to the draft, then
+ *                               regenerate ALL unlocked slots.
  *
  * Returns updated_slots, interpretation_summary, and is_ambiguous.
  */
@@ -23,10 +23,7 @@ import {
 	generateSlots,
 	type GeneratorInput,
 } from "@/lib/meal-plan-draft/generator";
-import {
-	compilePreferences,
-	type SlotAssignment,
-} from "@/lib/meal-plan-draft/preference-compiler";
+import { compilePreferences } from "@/lib/meal-plan-draft/preference-compiler";
 import { ChatRequestSchema } from "@/lib/schemas/meal-plans/generate/draft-schema";
 import type {
 	DraftSlot,
@@ -85,17 +82,9 @@ export async function POST(req: Request) {
 		return jsonResponse({ error: "Malformed JSON" }, { status: 400 });
 	}
 
-	// ---- generate_all fast path ----------------------------------------
-	if (body.generate_all) {
-		return handleGenerateAll(session.user.id, body.draft, body.variety);
-	}
-
-	// ---- chat + interpret + generate path --------------------------------
+	// ---- generate all fast path (no user_message) ---------------------
 	if (!body.user_message) {
-		return jsonResponse(
-			{ error: "user_message is required when generate_all is not true" },
-			{ status: 400 },
-		);
+		return handleGenerateAll(session.user.id, body.draft, body.variety);
 	}
 
 	return handleChat(session.user.id, body);
@@ -387,61 +376,42 @@ ${buildDraftContext(draft, profiles ?? [])}`;
 				);
 
 				// Apply operations to the draft
-				const {
-					draft: updatedDraft,
-					regenerateOps,
+				const { draft: updatedDraft, slotAssignments } = applyOperationsToDraft(
+					draft,
+					enriched.operations,
+				);
+
+				// Always regenerate all unlocked slots after applying operations
+				const [libraryRecipes, catalogRecipes, profileTargets] =
+					await Promise.all([
+						fetchLibraryRecipes(userId),
+						fetchCatalogRecipes(),
+						fetchProfileTargets(updatedDraft.included_profile_ids),
+					]);
+
+				const candidates = deduplicateCandidates(
+					libraryRecipes,
+					catalogRecipes,
+				);
+
+				const compiledPrefs = compilePreferences(
+					updatedDraft,
+					undefined,
 					slotAssignments,
-				} = applyOperationsToDraft(draft, enriched.operations);
+				);
 
-				// Run generation for any regenerate_slots operations
-				const mergedSlots = { ...updatedDraft.slots };
-
-				if (regenerateOps.length > 0) {
-					const [libraryRecipes, catalogRecipes, profileTargets] =
-						await Promise.all([
-							fetchLibraryRecipes(userId),
-							fetchCatalogRecipes(),
-							fetchProfileTargets(updatedDraft.included_profile_ids),
-						]);
-
-					const candidates = deduplicateCandidates(
-						libraryRecipes,
-						catalogRecipes,
-					);
-
-					for (const regenOp of regenerateOps) {
-						const targetSlotKeys = regenOp.target
-							? regenOp.target.map((t) => `${t.date}.${t.meal_type}` as SlotKey)
-							: undefined;
-
-						const relevantAssignments: SlotAssignment[] = targetSlotKeys
-							? slotAssignments.filter((a) =>
-									targetSlotKeys.includes(
-										`${a.date}.${a.meal_type}` as SlotKey,
-									),
-								)
-							: slotAssignments;
-
-						const compiledPrefs = compilePreferences(
-							updatedDraft,
-							undefined,
-							relevantAssignments,
-						);
-
-						const output = generateSlots({
-							draft: updatedDraft,
-							compiled_prefs: compiledPrefs,
-							candidates,
-							profile_targets: profileTargets,
-							target_slot_keys: targetSlotKeys,
-						} satisfies GeneratorInput);
-
-						Object.assign(mergedSlots, output.updated_slots);
-					}
-				}
+				const output = generateSlots({
+					draft: updatedDraft,
+					compiled_prefs: compiledPrefs,
+					candidates,
+					profile_targets: profileTargets,
+				} satisfies GeneratorInput);
 
 				finalResult = {
-					updated_slots: mergedSlots as Record<SlotKey, DraftSlot>,
+					updated_slots: {
+						...updatedDraft.slots,
+						...output.updated_slots,
+					} as Record<SlotKey, DraftSlot>,
 					preference_patch_stack: updatedDraft.preference_patch_stack,
 					interpretation_summary: enriched.interpretation_summary,
 					is_ambiguous: enriched.is_ambiguous,

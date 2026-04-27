@@ -21,9 +21,9 @@ import type {
 	DraftSlot,
 	MealPlanDraft,
 	MealType,
+	PostChatRequest,
 	PrefPatchOp,
 	SlotKey,
-	PostChatRequest,
 } from "@/lib/schemas/meal-plans/generate/draft-schema";
 import { addDays, format, parseISO, startOfWeek } from "date-fns";
 import { useEffect, useMemo, useState } from "react";
@@ -596,7 +596,6 @@ export default function InterpreterTestHarness() {
 		try {
 			const result = await sendMessage({
 				draft: draft as unknown as PostChatRequest["draft"],
-				generate_all: true,
 			});
 			if ("updated_slots" in result) {
 				setDraft((prev) => ({

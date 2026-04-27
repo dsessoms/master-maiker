@@ -1,7 +1,6 @@
 import type {
 	InterpreterOperation,
 	MealPlanDraft,
-	RegenerateSlotsOp,
 	SlotKey,
 } from "@/lib/schemas/meal-plans/generate/draft-schema";
 
@@ -10,7 +9,6 @@ import { randomUUID } from "crypto";
 
 export interface ApplyResult {
 	draft: Omit<MealPlanDraft, "undo_stack">;
-	regenerateOps: RegenerateSlotsOp[];
 	slotAssignments: SlotAssignment[];
 }
 
@@ -29,7 +27,6 @@ export function applyOperationsToDraft(
 		preference_patch_stack: [...draft.preference_patch_stack],
 	};
 
-	const regenerateOps: RegenerateSlotsOp[] = [];
 	const slotAssignments: SlotAssignment[] = [];
 
 	for (const op of operations) {
@@ -171,10 +168,6 @@ export function applyOperationsToDraft(
 					? op.payload.target[0]
 					: op.payload.target;
 				if (rawTarget && rawTarget !== "all" && op.payload.recipe_id) {
-					regenerateOps.push({
-						op: "regenerate_slots",
-						target: [rawTarget],
-					});
 					slotAssignments.push({
 						date: rawTarget.date,
 						meal_type: rawTarget.meal_type,
@@ -218,10 +211,8 @@ export function applyOperationsToDraft(
 				}
 				next.slots = newSlots;
 			}
-		} else if (op.op === "regenerate_slots") {
-			regenerateOps.push(op);
 		}
 	}
 
-	return { draft: next, regenerateOps, slotAssignments };
+	return { draft: next, slotAssignments };
 }

@@ -234,21 +234,9 @@ export const PlanEditOpSchema = z
 		"Structural edits to the draft layout and slot-level state changes",
 	);
 
-export const RegenerateSlotsOpSchema = z
-	.object({
-		op: z.literal("regenerate_slots"),
-		target: z
-			.union([z.array(SlotTargetSchema), z.null()])
-			.describe(
-				"Specific slots to regenerate, or null to regenerate all unlocked slots",
-			),
-	})
-	.describe("Triggers the generator on the specified slots");
-
 export const InterpreterOperationSchema = z.discriminatedUnion("op", [
 	PrefPatchOpSchema,
 	PlanEditOpSchema,
-	RegenerateSlotsOpSchema,
 ]);
 
 // ==========================================
@@ -260,8 +248,7 @@ export const InterpreterResponseSchema = z.object({
 		.array(InterpreterOperationSchema)
 		.describe(
 			"Ordered list of operations to execute this turn. " +
-				"Structural edits (plan_edit) must precede regenerate_slots. " +
-				"Lock/unlock operations must precede regenerate_slots.",
+				"Structural edits (plan_edit) should follow lock/unlock operations.",
 		),
 	interpretation_summary: z
 		.string()
@@ -303,9 +290,6 @@ export type InterpreterOperationFromSchema = z.infer<
 >;
 export type PrefPatchOpFromSchema = z.infer<typeof PrefPatchOpSchema>;
 export type PlanEditOpFromSchema = z.infer<typeof PlanEditOpSchema>;
-export type RegenerateSlotsOpFromSchema = z.infer<
-	typeof RegenerateSlotsOpSchema
->;
 export type HardFilterFromSchema = z.infer<typeof HardFilterSchema>;
 export type ResolvedRecipe = z.infer<typeof ResolvedRecipeSchema>;
 export type InterpreterFinalResponse = z.infer<
