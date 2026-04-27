@@ -1,5 +1,5 @@
-import { Pressable, ScrollView, View } from "react-native";
 import type { ExistingBehavior, GeneratorSetup, RecipeSource } from "./types";
+import { Pressable, ScrollView, View } from "react-native";
 import { useEffect, useRef } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { Check } from "@/lib/icons";
 import { LoadingIndicator } from "@/components/ui/loading-indicator";
 import type { MealType } from "@/lib/schemas/meal-plans/generate/draft-schema";
 import { Text } from "@/components/ui/text";
+import type { VarietyLevel } from "@/lib/meal-plan-draft/generator";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
@@ -19,8 +20,21 @@ const MEAL_TYPE_OPTIONS: { value: MealType; label: string }[] = [
 	{ value: "Snack", label: "Snack" },
 ];
 
-type StepId = "days" | "meals" | "profiles" | "sources" | "behavior";
-const STEP_IDS: StepId[] = ["days", "meals", "profiles", "sources", "behavior"];
+type StepId =
+	| "days"
+	| "meals"
+	| "profiles"
+	| "sources"
+	| "behavior"
+	| "variety";
+const STEP_IDS: StepId[] = [
+	"days",
+	"meals",
+	"profiles",
+	"sources",
+	"behavior",
+	"variety",
+];
 
 const STEP_QUESTIONS: Record<StepId, string> = {
 	days: "Which days should I plan?",
@@ -28,6 +42,7 @@ const STEP_QUESTIONS: Record<StepId, string> = {
 	profiles: "Who should I plan for?",
 	sources: "Which recipe sources should I use?",
 	behavior: "What should I do with existing entries?",
+	variety: "How much variety do you want?",
 };
 
 interface SetupWizardProps {
@@ -130,6 +145,14 @@ export function SetupWizard({
 				return setup.existingBehavior === "keep"
 					? "Keep existing"
 					: "Replace all";
+			case "variety": {
+				const labels: Record<VarietyLevel, string> = {
+					high: "High",
+					medium: "Medium",
+					low: "Low",
+				};
+				return labels[setup.variety];
+			}
 		}
 	};
 
@@ -145,6 +168,8 @@ export function SetupWizard({
 			case "sources":
 				return setup.recipeSources.length > 0;
 			case "behavior":
+				return true;
+			case "variety":
 				return true;
 		}
 	};
@@ -364,6 +389,66 @@ export function SetupWizard({
 									onPress={() =>
 										onSetupChange({ ...setup, existingBehavior: value })
 									}
+									className={cn(
+										"flex-1 px-3 py-2.5 rounded-xl border",
+										isSelected
+											? "bg-primary border-primary"
+											: "bg-background border-border",
+									)}
+								>
+									<Text
+										className={cn(
+											"text-sm font-semibold",
+											isSelected
+												? "text-primary-foreground"
+												: "text-foreground",
+										)}
+									>
+										{label}
+									</Text>
+									<Text
+										className={cn(
+											"text-xs mt-0.5",
+											isSelected
+												? "text-primary-foreground/70"
+												: "text-muted-foreground",
+										)}
+									>
+										{desc}
+									</Text>
+								</Pressable>
+							);
+						})}
+					</View>
+				)}
+
+				{/* Variety options */}
+				{STEP_IDS[currentStep] === "variety" && (
+					<View className="flex-row gap-2">
+						{(
+							[
+								{
+									value: "high" as VarietyLevel,
+									label: "High",
+									desc: "Every slot gets a unique recipe",
+								},
+								{
+									value: "medium" as VarietyLevel,
+									label: "Medium",
+									desc: "Up to 3 uses per recipe",
+								},
+								{
+									value: "low" as VarietyLevel,
+									label: "Low",
+									desc: "Batch-cooking friendly",
+								},
+							] as const
+						).map(({ value, label, desc }) => {
+							const isSelected = setup.variety === value;
+							return (
+								<Pressable
+									key={value}
+									onPress={() => onSetupChange({ ...setup, variety: value })}
 									className={cn(
 										"flex-1 px-3 py-2.5 rounded-xl border",
 										isSelected

@@ -78,12 +78,8 @@ export const HardFilterSchema = z.object({
 
 export const WeightSignalSchema = z.enum([
 	"protein_ratio",
-	"calorie_density",
 	"prep_time",
-	"novelty",
 	"source_preference",
-	"ingredient_overlap",
-	"leftover",
 ]);
 
 // ==========================================

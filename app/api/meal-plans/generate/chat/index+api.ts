@@ -87,7 +87,7 @@ export async function POST(req: Request) {
 
 	// ---- generate_all fast path ----------------------------------------
 	if (body.generate_all) {
-		return handleGenerateAll(session.user.id, body.draft);
+		return handleGenerateAll(session.user.id, body.draft, body.variety);
 	}
 
 	// ---- chat + interpret + generate path --------------------------------
@@ -108,6 +108,7 @@ export async function POST(req: Request) {
 async function handleGenerateAll(
 	userId: string,
 	draft: PostChatRequest["draft"],
+	variety?: PostChatRequest["variety"],
 ) {
 	// Zod's z.record() always infers Record<string, ...>; the values are fully typed,
 	// only the key type differs from the SlotKey template literal. Cast once here.
@@ -127,6 +128,7 @@ async function handleGenerateAll(
 		compiled_prefs: compiledPrefs,
 		candidates,
 		profile_targets: profileTargets,
+		variety,
 	} satisfies GeneratorInput);
 
 	return jsonResponse({

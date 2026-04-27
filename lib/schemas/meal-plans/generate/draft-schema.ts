@@ -1,19 +1,19 @@
-import { z } from "zod";
-
 import {
-	MealTypeSchema,
 	DayOfWeekSchema,
-	HardFilterTypeSchema,
 	HardFilterSchema,
-	WeightSignalSchema,
-	PrefScopeSchema,
-	PrefPatchOpSchema,
-	SlotTargetSchema,
-	PlanEditOpSchema,
-	RegenerateSlotsOpSchema,
+	HardFilterTypeSchema,
 	InterpreterOperationSchema,
 	InterpreterResponseSchema,
+	MealTypeSchema,
+	PlanEditOpSchema,
+	PrefPatchOpSchema,
+	PrefScopeSchema,
+	RegenerateSlotsOpSchema,
+	SlotTargetSchema,
+	WeightSignalSchema,
 } from "@/lib/meal-plan-draft/interpreter-schema";
+
+import { z } from "zod";
 
 // ==========================================
 // Derived types — source of truth for the entire app
@@ -112,12 +112,8 @@ export type MealPlanDraft = z.infer<typeof MealPlanDraftBaseSchema> & {
 // Explicit object schema for weights so all keys are required (not Partial)
 const WeightsSchema = z.object({
 	protein_ratio: z.number(),
-	calorie_density: z.number(),
 	prep_time: z.number(),
-	novelty: z.number(),
 	source_preference: z.number(),
-	ingredient_overlap: z.number(),
-	leftover: z.number(),
 });
 
 export const CompiledSlotPreferencesSchema = z.object({
@@ -163,6 +159,7 @@ export const ChatRequestSchema = z.object({
 		)
 		.optional(),
 	generate_all: z.boolean().optional(),
+	variety: z.enum(["high", "medium", "low"]).optional(),
 });
 
 export type PostChatRequest = z.infer<typeof ChatRequestSchema>;

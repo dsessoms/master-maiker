@@ -19,8 +19,6 @@ import { Pressable, View, useWindowDimensions } from "react-native";
 import { format, parseISO } from "date-fns";
 import { useEffect, useState } from "react";
 
-import { useUndoRedo } from "./use-undo-redo";
-
 import { ChatBar } from "./chat-panel";
 import type { GeneratedMealPlan } from "@/lib/schemas/meal-plans/generate/chat-schema";
 import type { GetFoodEntriesResponse } from "@/app/api/food-entries/index+api";
@@ -32,6 +30,7 @@ import { useClearMealPlan } from "@/hooks/meal-plans/use-clear-meal-plan";
 import { useGenerateMealPlanChat } from "@/hooks/meal-plans/use-generate-meal-plan-chat";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSaveMealPlan } from "@/hooks/meal-plans/use-save-meal-plan";
+import { useUndoRedo } from "./use-undo-redo";
 
 type FoodEntry = GetFoodEntriesResponse["foodEntries"][0];
 
@@ -203,6 +202,7 @@ export function MealPlanGeneratorPortal({
 		mealTypes: ["Breakfast", "Lunch", "Dinner", "Snack"] as MealType[],
 		recipeSources: ["library", "catalog"] as RecipeSource[],
 		existingBehavior: "keep" as ExistingBehavior,
+		variety: "medium",
 	}));
 	const history = useUndoRedo<{
 		draft: ActiveDraft;
@@ -263,6 +263,7 @@ export function MealPlanGeneratorPortal({
 			const result = await sendMessage({
 				draft: newDraft,
 				generate_all: true,
+				variety: setup.variety,
 			});
 
 			if ("updated_slots" in result) {

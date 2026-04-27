@@ -10,10 +10,10 @@
  *      that apply to every slot (scope:null patches).
  *   2. Eligible counts + pool stats  — per-slot eligible candidate lists
  *      (accurate tightness for processing order) and normalization stats.
- *   3. Serving-first selection  — most-constrained-first slot loop. Prefers
- *      consuming existing servings (leftovers), applies variety caps, enforces
- *      same-day uniqueness, promotes retroactive cook days, and uses seeded
- *      top-K weighted-random sampling for plan variety.
+ *   3. Greedy selection + forward-fill  — most-constrained-first slot loop.
+ *      Prefers reusing already-selected recipes (up to the variety cap),
+ *      enforces same-day uniqueness, and forward-fills leftover servings into
+ *      subsequent eligible slots within the freshness window.
  *   4. Placement pass  — converts slot assignments to `DraftFoodEntry` values
  *      with per-profile serving distributions.
  */
@@ -138,11 +138,11 @@ export interface GeneratorInput {
 	top_k?: number;
 
 	/**
-	 * Controls the maximum number of distinct recipes per meal type per week.
+	 * Controls the maximum number of times a recipe may appear in the plan.
 	 *
-	 *   high   — unrestricted (maximum novelty).
-	 *   medium — moderate repetition (default): 2 Breakfasts, 3 Lunches, 5 Dinners, 2 Snacks.
-	 *   low    — batch-cooking mode: 1 Breakfast, 2 Lunches, 3 Dinners, 1 Snack.
+	 *   high   — 1 appearance per recipe (every slot gets a unique recipe).
+	 *   medium — up to 3 appearances per recipe (default).
+	 *   low    — unlimited reuse (batch-cooking mode).
 	 */
 	variety?: VarietyLevel;
 }
@@ -163,12 +163,6 @@ export interface GeneratorOutput {
 // ==========================================
 // Internal selection types
 // ==========================================
-
-interface ChosenEntry {
-	candidate: GeneratorCandidate;
-	remaining_servings: number;
-	cook_date: string; // ISO date of the slot where this recipe was (or will be) cooked
-}
 
 interface SlotAssignment {
 	candidate: GeneratorCandidate;
@@ -207,19 +201,17 @@ const MEAL_TYPE_DISH_TYPES: Record<MealType, string[]> = {
 };
 
 /**
- * Maximum number of distinct recipes per meal type at each variety level.
- * At "high" there is no cap. At "low" the generator consolidates around a
- * handful of batch-cooked recipes and fills remaining slots with leftovers.
+ * Maximum number of times a single recipe may appear across the whole plan
+ * (across all meal types) at each variety level.
+ *
+ *   high   — 1 appearance per recipe (every slot gets a unique recipe).
+ *   medium — up to 3 appearances per recipe.
+ *   low    — unlimited reuse (batch-cooking mode).
  */
-const VARIETY_CAPS: Record<VarietyLevel, Record<MealType, number>> = {
-	high: {
-		Breakfast: Infinity,
-		Lunch: Infinity,
-		Dinner: Infinity,
-		Snack: Infinity,
-	},
-	medium: { Breakfast: 2, Lunch: 3, Dinner: 5, Snack: 2 },
-	low: { Breakfast: 1, Lunch: 2, Dinner: 3, Snack: 1 },
+const MAX_USES_PER_RECIPE: Record<VarietyLevel, number> = {
+	high: 1,
+	medium: 3,
+	low: Infinity,
 };
 
 // ==========================================
@@ -410,6 +402,8 @@ function passesHardFilters(
  * identically in every compiled slot (i.e. filters from scope:null patches).
  * Applied once to the full candidate pool before per-slot filtering begins.
  */
+
+// TODO: pull this into the preference parser since we have that information available and in a less hacky way
 function extractGlobalFilters(compiled_prefs: CompilerOutput): HardFilter[] {
 	const entries = Object.values(compiled_prefs);
 	if (entries.length === 0) return [];
@@ -433,9 +427,6 @@ function extractGlobalFilters(compiled_prefs: CompilerOutput): HardFilter[] {
 /**
  * For each slot key, returns the subset of `globalFilteredPool` that passes
  * the slot's full hard filters (including dish-type gate).
- *
- * Computed over ALL slot keys — not just slotsToProcess — so the retroactive
- * cook-day search can check eligibility for any earlier slot in the plan.
  */
 function computeEligibleCandidates(
 	slotKeys: SlotKey[],
@@ -464,14 +455,13 @@ function computeEligibleCandidates(
 
 interface PoolStats {
 	protein_ratio: { min: number; max: number };
-	calorie_density: { min: number; max: number };
 	prep_time: { min: number; max: number };
 }
 
 function computePoolStats(candidates: GeneratorCandidate[]): PoolStats {
 	if (candidates.length === 0) {
 		const zero = { min: 0, max: 0 };
-		return { protein_ratio: zero, calorie_density: zero, prep_time: zero };
+		return { protein_ratio: zero, prep_time: zero };
 	}
 
 	const ratios = candidates.map((c) =>
@@ -479,7 +469,6 @@ function computePoolStats(candidates: GeneratorCandidate[]): PoolStats {
 			? c.macros_per_serving.protein_g / c.calories_per_serving
 			: 0,
 	);
-	const calories = candidates.map((c) => c.calories_per_serving);
 	const preps = candidates.map((c) => c.prep_time_minutes);
 
 	const minMax = (arr: number[]) => ({
@@ -489,7 +478,6 @@ function computePoolStats(candidates: GeneratorCandidate[]): PoolStats {
 
 	return {
 		protein_ratio: minMax(ratios),
-		calorie_density: minMax(calories),
 		prep_time: minMax(preps),
 	};
 }
@@ -505,21 +493,16 @@ function normalize(value: number, min: number, max: number): number {
 // ==========================================
 
 /**
- * Scores a candidate against weight signals and the current plan state.
- * Higher score = more preferred.
+ * Scores a candidate against weight signals. Higher score = more preferred.
  *
  * Signals:
  *   protein_ratio    — higher protein % of calories is better (ascending)
- *   calorie_density  — lower calories per serving is better (descending)
  *   prep_time        — lower prep time is better (descending)
  *   source_preference — library recipes preferred over catalog
- *   ingredient_overlap — shares ingredients with already-placed recipes
- *   leftover         — extra boost for consuming committed surplus servings
  */
 function scoreCandidate(
 	candidate: GeneratorCandidate,
 	stats: PoolStats,
-	ingredientBasket: Set<string>,
 	weights: Record<WeightSignal, number>,
 ): number {
 	let score = 0;
@@ -533,15 +516,6 @@ function scoreCandidate(
 		normalize(proteinRatio, stats.protein_ratio.min, stats.protein_ratio.max);
 
 	score +=
-		weights.calorie_density *
-		(1 -
-			normalize(
-				candidate.calories_per_serving,
-				stats.calorie_density.min,
-				stats.calorie_density.max,
-			));
-
-	score +=
 		weights.prep_time *
 		(1 -
 			normalize(
@@ -551,21 +525,6 @@ function scoreCandidate(
 			));
 
 	score += weights.source_preference * (candidate.source === "library" ? 1 : 0);
-
-	const overlapCount =
-		ingredientBasket.size > 0
-			? candidate.core_ingredients.filter((ci) => ingredientBasket.has(ci))
-					.length
-			: 0;
-	const overlapRatio =
-		candidate.core_ingredients.length > 0
-			? overlapCount / candidate.core_ingredients.length
-			: 0;
-	score += weights.ingredient_overlap * overlapRatio;
-
-	if (candidate.is_leftover) {
-		score += weights.leftover * 1;
-	}
 
 	return score;
 }
@@ -587,129 +546,113 @@ function computeNeededServings(
 	return Math.round(raw);
 }
 
+// ==========================================
+// Remaining daily budget helpers
+// ==========================================
+
 /**
- * Computes the per-slot calorie target by splitting each profile's daily goal
- * across all active meal types. Falls back to FALLBACK_CALORIES_PER_SLOT when
- * a profile target is unavailable.
+ * Pre-computes calories already consumed from locked entries, keyed by
+ * date -> profile_id -> total calories. Used to cap per-slot calorie targets
+ * at each profile's remaining daily budget.
  */
-function slotCalorieTarget(
+function buildDailyCaloriesConsumed(
+	draft: Omit<MealPlanDraft, "undo_stack">,
+): Map<string, Map<string, number>> {
+	const consumed = new Map<string, Map<string, number>>();
+	for (const slot of Object.values(draft.slots)) {
+		for (const entry of slot.entries) {
+			if (!entry.locked) continue;
+			if (!consumed.has(slot.date)) consumed.set(slot.date, new Map());
+			const dayMap = consumed.get(slot.date)!;
+			for (const pfe of entry.profile_food_entries) {
+				dayMap.set(
+					pfe.profile_id,
+					(dayMap.get(pfe.profile_id) ?? 0) +
+						pfe.number_of_servings * entry.recipe.calories_per_serving,
+				);
+			}
+		}
+	}
+	return consumed;
+}
+
+/**
+ * Returns per-profile effective calorie goals for a slot. Each profile's goal
+ * is capped at `min(ideal_per_slot, remaining_daily_budget)` so that
+ * already-consumed calories are respected.
+ */
+function computePerProfileEffectiveGoals(
 	profileTargets: ProfileCalorieTarget[],
 	includedProfileIds: string[],
 	activeMealTypes: MealType[],
-): number {
-	const totalCalories = includedProfileIds.reduce((sum, pid) => {
-		const target = profileTargets.find((p) => p.profile_id === pid);
-		return (
-			sum +
-			(target?.daily_calorie_goal ??
-				FALLBACK_CALORIES_PER_SLOT * activeMealTypes.length)
-		);
-	}, 0);
-
+	date: string,
+	dailyCaloriesConsumed: Map<string, Map<string, number>>,
+): { profile_id: string; effective_goal: number }[] {
 	const mealCount = activeMealTypes.length > 0 ? activeMealTypes.length : 3;
-	return totalCalories / mealCount;
+	const dayMap = dailyCaloriesConsumed.get(date);
+	return includedProfileIds.map((pid) => {
+		const target = profileTargets.find((p) => p.profile_id === pid);
+		const dailyGoal =
+			target?.daily_calorie_goal ?? FALLBACK_CALORIES_PER_SLOT * mealCount;
+		const idealPerSlot = dailyGoal / mealCount;
+		const consumed = dayMap?.get(pid) ?? 0;
+		const remaining = Math.max(0, dailyGoal - consumed);
+		return {
+			profile_id: pid,
+			effective_goal: Math.min(idealPerSlot, remaining),
+		};
+	});
 }
 
-// ==========================================
-// Retroactive cook-day promotion
-// ==========================================
-
 /**
- * Given a newly selected recipe and its constrained target slot, searches for
- * the best earlier unassigned slot to act as the cook day, so the constrained
- * slot can eat leftovers instead.
- *
- * Eligibility criteria for a cook-day candidate:
- *   - Chronologically before targetSlot.date
- *   - Not already committed or assigned
- *   - The recipe is eligible for that slot (passes eligibleCandidates check)
- *   - Freshness window is satisfiable: targetDate <= cookDate + LEFTOVER_FRESHNESS_DAYS
- *   - No same-day uniqueness conflict on either the cook day or the target day
- *
- * Tie-breaking: prefer the earliest valid cook date (maximizes freshness window
- * coverage and keeps leftover chains predictable).
- *
- * Returns the slot key of the chosen cook day, or null if none is found.
+ * Total calorie target for a slot: sum of each profile's effective goal
+ * (ideal per-slot, capped at remaining daily budget).
  */
-function findCookDaySlot(
-	selectedId: string,
-	targetSlotKey: SlotKey,
-	allSlotKeys: SlotKey[],
-	draft: Omit<MealPlanDraft, "undo_stack">,
-	eligibleCandidates: Record<SlotKey, GeneratorCandidate[]>,
-	committedSlots: Set<SlotKey>,
-	slotAssignments: Map<SlotKey, SlotAssignment>,
-	dailyAssignments: Map<string, Set<string>>,
-): SlotKey | null {
-	const targetDate = draft.slots[targetSlotKey].date;
-	const valid: { key: SlotKey; date: string }[] = [];
-
-	for (const key of allSlotKeys) {
-		if (key === targetSlotKey) continue;
-		if (committedSlots.has(key)) continue;
-		if (slotAssignments.has(key)) continue;
-
-		const slot = draft.slots[key];
-		if (!slot) continue;
-
-		// Only promote empty slots as cook days — slots with any existing entries
-		// (locked or unlocked) are already occupied and must not receive a new
-		// stacked entry from retroactive cook-day promotion.
-		if (slot.entries.length > 0) continue;
-
-		if (slot.date >= targetDate) continue;
-		if (targetDate > addDays(slot.date, LEFTOVER_FRESHNESS_DAYS)) continue;
-		if (!eligibleCandidates[key]?.some((c) => c.id === selectedId)) continue;
-		if (dailyAssignments.get(slot.date)?.has(selectedId)) continue;
-		if (dailyAssignments.get(targetDate)?.has(selectedId)) continue;
-
-		valid.push({ key, date: slot.date });
-	}
-
-	if (valid.length === 0) return null;
-
-	valid.sort((a, b) => a.date.localeCompare(b.date));
-	return valid[0].key;
-}
-
-// ==========================================
-// Coverage potential bonus
-// ==========================================
-
-/**
- * Estimates what fraction of remaining uncovered slots a candidate could cover
- * with its leftover servings after the current slot, normalized to [0, 1].
- *
- * Rewards new recipes with high servings that can bridge multiple future slots —
- * reducing the total number of distinct recipes in the plan.
- */
-function coveragePotential(
-	candidate: GeneratorCandidate,
-	estimatedServings: number,
-	currentSlotDate: string,
-	remainingSlotKeys: SlotKey[],
-	draft: Omit<MealPlanDraft, "undo_stack">,
-	eligibleCandidates: Record<SlotKey, GeneratorCandidate[]>,
-	dailyAssignments: Map<string, Set<string>>,
+function computeRemainingSlotTarget(
+	profileTargets: ProfileCalorieTarget[],
+	includedProfileIds: string[],
+	activeMealTypes: MealType[],
+	date: string,
+	dailyCaloriesConsumed: Map<string, Map<string, number>>,
 ): number {
-	if (candidate.servings <= estimatedServings) return 0;
+	return computePerProfileEffectiveGoals(
+		profileTargets,
+		includedProfileIds,
+		activeMealTypes,
+		date,
+		dailyCaloriesConsumed,
+	).reduce((sum, { effective_goal }) => sum + effective_goal, 0);
+}
 
-	const expiresAfter = addDays(currentSlotDate, LEFTOVER_FRESHNESS_DAYS);
-	let coverableCount = 0;
-
-	for (const key of remainingSlotKeys) {
-		const slot = draft.slots[key];
-		if (!slot) continue;
-		if (slot.date <= currentSlotDate) continue;
-		if (slot.date > expiresAfter) continue;
-		if (!eligibleCandidates[key]?.some((c) => c.id === candidate.id)) continue;
-		if (dailyAssignments.get(slot.date)?.has(candidate.id)) continue;
-		coverableCount++;
-	}
-
-	return remainingSlotKeys.length > 0
-		? coverableCount / remainingSlotKeys.length
-		: 0;
+/**
+ * Distributes `neededServings` across profiles proportional to each profile's
+ * effective calorie goal (already capped at their remaining daily budget).
+ */
+function computeProfileServingsForSlot(
+	neededServings: number,
+	profileTargets: ProfileCalorieTarget[],
+	includedProfileIds: string[],
+	activeMealTypes: MealType[],
+	date: string,
+	dailyCaloriesConsumed: Map<string, Map<string, number>>,
+): DraftProfileFoodEntry[] {
+	const goals = computePerProfileEffectiveGoals(
+		profileTargets,
+		includedProfileIds,
+		activeMealTypes,
+		date,
+		dailyCaloriesConsumed,
+	);
+	const totalGoal = goals.reduce((sum, g) => sum + g.effective_goal, 0);
+	return goals.map(({ profile_id, effective_goal }) => {
+		const proportion =
+			totalGoal > 0
+				? effective_goal / totalGoal
+				: 1 / includedProfileIds.length;
+		const raw = neededServings * proportion;
+		const servings = Math.max(0.5, Math.round(raw * 2) / 2);
+		return { profile_id, number_of_servings: servings };
+	});
 }
 
 // ==========================================
@@ -754,7 +697,7 @@ export function generateSlots(input: GeneratorInput): GeneratorOutput {
 	} = input;
 
 	const rng = seededRandom(seed ?? Date.now());
-	const varietyCap = VARIETY_CAPS[variety];
+	const maxUses = MAX_USES_PER_RECIPE[variety];
 
 	// ---- Slot layout ----
 	const allSlotKeys = Object.keys(draft.slots) as SlotKey[];
@@ -768,12 +711,6 @@ export function generateSlots(input: GeneratorInput): GeneratorOutput {
 	const activeMealTypes = [
 		...new Set(allSlotKeys.map((k) => draft.slots[k].meal_type)),
 	];
-
-	const calorieTarget = slotCalorieTarget(
-		profile_targets,
-		draft.included_profile_ids,
-		activeMealTypes,
-	);
 
 	// ==========================================
 	// Phase 1: Global pre-filter
@@ -790,10 +727,8 @@ export function generateSlots(input: GeneratorInput): GeneratorOutput {
 	// Phase 2: Per-slot eligible lists + pool stats
 	// ==========================================
 
-	// Compute for ALL slot keys (not just slotsToProcess) so the retroactive
-	// cook-day search can check eligibility against any earlier slot in the plan.
 	const eligibleCandidates = computeEligibleCandidates(
-		allSlotKeys,
+		slotsToProcess,
 		draft,
 		globalFilteredPool,
 		compiled_prefs,
@@ -801,10 +736,8 @@ export function generateSlots(input: GeneratorInput): GeneratorOutput {
 
 	const poolStats = computePoolStats(globalFilteredPool);
 
-	// Sort slots:
-	//   1. Locked / assigned first — seed ingredient basket and daily-assignment
-	//      state before unlocked slots score.
-	//   2. Among unlocked: ascending eligible count (fewest = most constrained = first).
+	// Sort slots: assigned/locked first (seed state), then by eligible count ascending
+	// (fewest eligible = most constrained = process first).
 	const orderedSlots = [...slotsToProcess].sort((a, b) => {
 		const slotA = draft.slots[a];
 		const slotB = draft.slots[b];
@@ -824,31 +757,22 @@ export function generateSlots(input: GeneratorInput): GeneratorOutput {
 	});
 
 	// ==========================================
-	// Phase 3: Serving-first selection
+	// Phase 3: Greedy selection + forward-fill
 	// ==========================================
 
-	// Registry of recipes committed to the plan with remaining consumable servings.
-	const chosenRegistry = new Map<string, ChosenEntry>();
+	// Total slot appearances per recipe ID — used to enforce variety caps and
+	// to identify candidates eligible for reuse.
+	const recipeUseCounts = new Map<string, number>();
 
-	// Final per-slot assignments — populated by both the selection loop and
-	// by retroactive cook-day promotion.
+	// Final per-slot assignments.
 	const slotAssignments = new Map<SlotKey, SlotAssignment>();
-
-	// Slots claimed via retroactive cook-day promotion — skipped when the loop
-	// reaches them normally.
-	const committedSlots = new Set<SlotKey>();
-
-	// Core ingredients of placed recipes — drives ingredient_overlap scoring.
-	const ingredientBasket = new Set<string>();
 
 	// Recipe IDs per date — enforces same-day meal uniqueness.
 	const dailyAssignments = new Map<string, Set<string>>();
 
-	// Distinct recipe IDs per meal type — enforces variety caps.
-	const distinctByMealType = new Map<MealType, Set<string>>();
-	for (const mt of activeMealTypes) {
-		distinctByMealType.set(mt, new Set<string>());
-	}
+	// Calories consumed per profile per day from locked entries.
+	// Used to cap each profile's per-slot calorie target at their remaining budget.
+	const dailyCaloriesConsumed = buildDailyCaloriesConsumed(draft);
 
 	const generatorErrors: GeneratorSlotResult[] = [];
 
@@ -857,26 +781,47 @@ export function generateSlots(input: GeneratorInput): GeneratorOutput {
 		dailyAssignments.get(date)!.add(recipeId);
 	}
 
-	// Pre-seed state from locked entries across ALL slots (including those being
-	// regenerated). Slots with [locked + unlocked] entries are in slotsToProcess,
-	// so without this, their locked recipe IDs are never recorded — allowing the
-	// generator to pick the same recipe again as the new unlocked entry (duplicate).
+	function incrementUseCount(recipeId: string): void {
+		recipeUseCounts.set(recipeId, (recipeUseCounts.get(recipeId) ?? 0) + 1);
+	}
+
+	/**
+	 * Updates dailyCaloriesConsumed after a slot is assigned so subsequent slots
+	 * on the same day see accurate remaining budgets.
+	 */
+	function recordCaloriesConsumed(
+		date: string,
+		profileServings: DraftProfileFoodEntry[],
+		caloriesPerServing: number,
+	): void {
+		if (!dailyCaloriesConsumed.has(date))
+			dailyCaloriesConsumed.set(date, new Map());
+		const dayMap = dailyCaloriesConsumed.get(date)!;
+		for (const pfe of profileServings) {
+			dayMap.set(
+				pfe.profile_id,
+				(dayMap.get(pfe.profile_id) ?? 0) +
+					pfe.number_of_servings * caloriesPerServing,
+			);
+		}
+	}
+
+	// Pre-seed state from locked entries across ALL slots so the generator
+	// treats them as already-used when computing reuse eligibility and
+	// same-day uniqueness.
 	for (const key of allSlotKeys) {
 		const slot = draft.slots[key];
 		for (const entry of slot.entries) {
 			if (!entry.locked) continue;
 			recordDailyAssignment(slot.date, entry.recipe.id);
-			distinctByMealType.get(slot.meal_type)?.add(entry.recipe.id);
-			for (const ci of entry.recipe.core_ingredients) {
-				ingredientBasket.add(ci);
-			}
+			incrementUseCount(entry.recipe.id);
 		}
 	}
 
 	// --- Main selection loop ---
 	for (const slotKey of orderedSlots) {
-		// Skip slots already committed by retroactive cook-day promotion
-		if (committedSlots.has(slotKey)) continue;
+		// Skip slots already filled by forward-fill from an earlier iteration.
+		if (slotAssignments.has(slotKey)) continue;
 
 		const slot = draft.slots[slotKey];
 		const prefs = compiled_prefs[slotKey];
@@ -906,217 +851,208 @@ export function generateSlots(input: GeneratorInput): GeneratorOutput {
 								0,
 							)
 						: computeNeededServings(
-								calorieTarget,
+								computeRemainingSlotTarget(
+									profile_targets,
+									draft.included_profile_ids,
+									activeMealTypes,
+									slot.date,
+									dailyCaloriesConsumed,
+								),
 								assignedCandidate.calories_per_serving,
 							);
+
+				const finalProfileServings =
+					resolvedServings ??
+					computeProfileServingsForSlot(
+						neededServings,
+						profile_targets,
+						draft.included_profile_ids,
+						activeMealTypes,
+						slot.date,
+						dailyCaloriesConsumed,
+					);
 
 				slotAssignments.set(slotKey, {
 					candidate: assignedCandidate,
 					estimated_servings: neededServings,
 					is_leftover_slot: false,
 					locked: true,
-					explicit_profile_servings: resolvedServings,
+					explicit_profile_servings: finalProfileServings,
 				});
 
-				const existingChosen = chosenRegistry.get(assignedCandidate.id);
-				chosenRegistry.set(assignedCandidate.id, {
-					candidate: assignedCandidate,
-					remaining_servings: Math.max(
-						0,
-						(existingChosen?.remaining_servings ?? assignedCandidate.servings) -
-							neededServings,
-					),
-					cook_date: slot.date,
-				});
-
+				incrementUseCount(assignedCandidate.id);
 				recordDailyAssignment(slot.date, assignedCandidate.id);
-				distinctByMealType.get(slot.meal_type)?.add(assignedCandidate.id);
-				for (const ci of assignedCandidate.core_ingredients) {
-					ingredientBasket.add(ci);
-				}
+				recordCaloriesConsumed(
+					slot.date,
+					finalProfileServings,
+					assignedCandidate.calories_per_serving,
+				);
 			}
 			// Whether or not the recipe was found, the assign op owns this slot.
 			continue;
 		}
 
-		// ---- Skip fully locked slots (seed state from them) ----
+		// ---- Skip fully locked slots (seed use-count from them) ----
 		const hasUnlocked =
 			slot.entries.length === 0 || slot.entries.some((e) => !e.locked);
 		if (!hasUnlocked) {
 			for (const entry of slot.entries) {
 				recordDailyAssignment(slot.date, entry.recipe.id);
-				distinctByMealType.get(slot.meal_type)?.add(entry.recipe.id);
-				for (const ci of entry.recipe.core_ingredients) {
-					ingredientBasket.add(ci);
-				}
+				incrementUseCount(entry.recipe.id);
 			}
 			continue;
 		}
 
-		// ---- Step 1: Build dynamic eligible set ----
+		// ---- Build dynamic eligible set (same-day filter only) ----
 		const staticEligible = eligibleCandidates[slotKey] ?? [];
-		const distinctForMealType =
-			distinctByMealType.get(slot.meal_type) ?? new Set<string>();
-		const capReached = distinctForMealType.size >= varietyCap[slot.meal_type];
-
-		const dynamicEligible = staticEligible.filter((c) => {
-			if (dailyAssignments.get(slot.date)?.has(c.id)) return false;
-			if (capReached && !distinctForMealType.has(c.id)) return false;
-			return true;
-		});
-
-		// ---- Step 2: Build merged candidate pool (leftovers + new) ----
-		const remainingSlotKeys = orderedSlots.filter(
-			(k) => k !== slotKey && !slotAssignments.has(k) && !committedSlots.has(k),
+		const dynamicEligible = staticEligible.filter(
+			(c) => !dailyAssignments.get(slot.date)?.has(c.id),
 		);
 
-		const scored: { item: GeneratorCandidate; score: number }[] = [];
-		const addedIds = new Set<string>();
+		// ---- Reuse check (absolute preference) ----
+		// Look for candidates already in the plan that haven't hit the variety cap.
+		const reusable = globalFilteredPool.filter(
+			(c) =>
+				recipeUseCounts.has(c.id) &&
+				(recipeUseCounts.get(c.id) ?? 0) < maxUses &&
+				passesHardFilters(c, prefs.hard_filters, slot.date, slot.meal_type) &&
+				!dailyAssignments.get(slot.date)?.has(c.id),
+		);
 
-		// Leftover candidates: surplus servings already committed in the plan
-		for (const [id, entry] of chosenRegistry) {
-			if (entry.remaining_servings <= 0) continue;
+		let selected: GeneratorCandidate;
 
-			const leftoverCandidate: GeneratorCandidate = {
-				...entry.candidate,
-				is_leftover: true,
-				available_servings: entry.remaining_servings,
-				expires_after: addDays(entry.cook_date, LEFTOVER_FRESHNESS_DAYS),
-			};
-
-			if (
-				!passesHardFilters(
-					leftoverCandidate,
-					prefs.hard_filters,
-					slot.date,
-					slot.meal_type,
-				)
-			)
-				continue;
-			if (dailyAssignments.get(slot.date)?.has(id)) continue;
-			if (capReached && !distinctForMealType.has(id)) continue;
-
-			scored.push({
-				item: leftoverCandidate,
-				score: scoreCandidate(
-					leftoverCandidate,
-					poolStats,
-					ingredientBasket,
-					prefs.weights,
-				),
-			});
-			addedIds.add(id);
-		}
-
-		// New candidates from the dynamic eligible set
-		for (const c of dynamicEligible) {
-			if (addedIds.has(c.id)) continue;
-
-			const estimatedServings = computeNeededServings(
-				calorieTarget,
-				c.calories_per_serving,
-			);
-			const potential = coveragePotential(
-				c,
-				estimatedServings,
-				slot.date,
-				remainingSlotKeys,
-				draft,
-				eligibleCandidates,
-				dailyAssignments,
-			);
-
-			scored.push({
+		if (reusable.length > 0) {
+			const scored = reusable.map((c) => ({
 				item: c,
-				score:
-					scoreCandidate(c, poolStats, ingredientBasket, prefs.weights) +
-					prefs.weights.leftover * potential,
-			});
-			addedIds.add(c.id);
-		}
-
-		// ---- Over-constrained ----
-		if (scored.length === 0) {
+				score: scoreCandidate(c, poolStats, prefs.weights),
+			}));
+			scored.sort((a, b) => b.score - a.score);
+			selected = weightedTopKPick(scored, top_k, rng);
+		} else if (dynamicEligible.length === 0) {
 			generatorErrors.push({
 				slot_key: slotKey,
 				entry: null,
 				errors: [{ reason: "over_constrained", filters: prefs.hard_filters }],
 			});
 			continue;
+		} else {
+			const scored = dynamicEligible.map((c) => ({
+				item: c,
+				score: scoreCandidate(c, poolStats, prefs.weights),
+			}));
+			scored.sort((a, b) => b.score - a.score);
+			selected = weightedTopKPick(scored, top_k, rng);
 		}
 
-		// ---- Step 3: Top-K seeded pick ----
-		scored.sort((a, b) => b.score - a.score);
-		const selected = weightedTopKPick(scored, top_k, rng);
 		const estimatedServings = computeNeededServings(
-			calorieTarget,
+			computeRemainingSlotTarget(
+				profile_targets,
+				draft.included_profile_ids,
+				activeMealTypes,
+				slot.date,
+				dailyCaloriesConsumed,
+			),
 			selected.calories_per_serving,
 		);
 
-		// ---- Step 4: Retroactive cook-day promotion ----
-		let isLeftoverSlot = selected.is_leftover === true;
-		let cookDaySlotKey: SlotKey | null = null;
+		const estimatedProfileServings = computeProfileServingsForSlot(
+			estimatedServings,
+			profile_targets,
+			draft.included_profile_ids,
+			activeMealTypes,
+			slot.date,
+			dailyCaloriesConsumed,
+		);
 
-		if (!selected.is_leftover && selected.servings > estimatedServings) {
-			cookDaySlotKey = findCookDaySlot(
-				selected.id,
-				slotKey,
-				allSlotKeys,
-				draft,
-				eligibleCandidates,
-				committedSlots,
-				slotAssignments,
-				dailyAssignments,
-			);
-
-			if (cookDaySlotKey !== null) {
-				slotAssignments.set(cookDaySlotKey, {
-					candidate: selected,
-					estimated_servings: estimatedServings,
-					is_leftover_slot: false,
-					locked: false,
-				});
-				committedSlots.add(cookDaySlotKey);
-				recordDailyAssignment(draft.slots[cookDaySlotKey].date, selected.id);
-				distinctByMealType
-					.get(draft.slots[cookDaySlotKey].meal_type)
-					?.add(selected.id);
-				isLeftoverSlot = true;
-			}
-		}
-
-		// ---- Step 5: Update state ----
+		// ---- Assign current slot ----
 		slotAssignments.set(slotKey, {
 			candidate: selected,
 			estimated_servings: estimatedServings,
-			is_leftover_slot: isLeftoverSlot,
+			is_leftover_slot: false,
 			locked: false,
+			explicit_profile_servings: estimatedProfileServings,
 		});
+		incrementUseCount(selected.id);
+		recordDailyAssignment(slot.date, selected.id);
+		recordCaloriesConsumed(
+			slot.date,
+			estimatedProfileServings,
+			selected.calories_per_serving,
+		);
 
-		if (selected.is_leftover) {
-			const existing = chosenRegistry.get(selected.id);
-			if (existing) {
-				existing.remaining_servings = Math.max(
-					0,
-					existing.remaining_servings - estimatedServings,
+		// ---- Forward-fill leftover slots ----
+		// A recipe with more servings than needed covers subsequent eligible slots
+		// within the freshness window, up to the variety cap.
+		const maxLeftoverSlots =
+			Math.floor(selected.servings / Math.max(1, estimatedServings)) - 1;
+
+		if (maxLeftoverSlots > 0) {
+			const expiresAfter = addDays(slot.date, LEFTOVER_FRESHNESS_DAYS);
+			let leftoverCount = 0;
+
+			// Iterate remaining unassigned slots in chronological order.
+			const remainingUnassigned = orderedSlots
+				.filter((k) => k !== slotKey && !slotAssignments.has(k))
+				.sort((a, b) => draft.slots[a].date.localeCompare(draft.slots[b].date));
+
+			for (const fillKey of remainingUnassigned) {
+				if (leftoverCount >= maxLeftoverSlots) break;
+				if ((recipeUseCounts.get(selected.id) ?? 0) >= maxUses) break;
+
+				const fillSlot = draft.slots[fillKey];
+				if (!fillSlot) continue;
+				if (fillSlot.date <= slot.date) continue;
+				if (fillSlot.date > expiresAfter) continue;
+
+				const fillPrefs = compiled_prefs[fillKey];
+				if (!fillPrefs) continue;
+
+				if (
+					!passesHardFilters(
+						selected,
+						fillPrefs.hard_filters,
+						fillSlot.date,
+						fillSlot.meal_type,
+					)
+				)
+					continue;
+				if (dailyAssignments.get(fillSlot.date)?.has(selected.id)) continue;
+
+				const fillServings = computeNeededServings(
+					computeRemainingSlotTarget(
+						profile_targets,
+						draft.included_profile_ids,
+						activeMealTypes,
+						fillSlot.date,
+						dailyCaloriesConsumed,
+					),
+					selected.calories_per_serving,
 				);
-			}
-		} else {
-			const cookDate = cookDaySlotKey
-				? draft.slots[cookDaySlotKey].date
-				: slot.date;
-			chosenRegistry.set(selected.id, {
-				candidate: selected,
-				remaining_servings: Math.max(0, selected.servings - estimatedServings),
-				cook_date: cookDate,
-			});
-			for (const ci of selected.core_ingredients) {
-				ingredientBasket.add(ci);
+				const fillProfileServings = computeProfileServingsForSlot(
+					fillServings,
+					profile_targets,
+					draft.included_profile_ids,
+					activeMealTypes,
+					fillSlot.date,
+					dailyCaloriesConsumed,
+				);
+				slotAssignments.set(fillKey, {
+					candidate: selected,
+					estimated_servings: fillServings,
+					is_leftover_slot: true,
+					locked: false,
+					explicit_profile_servings: fillProfileServings,
+				});
+				incrementUseCount(selected.id);
+				recordDailyAssignment(fillSlot.date, selected.id);
+				recordCaloriesConsumed(
+					fillSlot.date,
+					fillProfileServings,
+					selected.calories_per_serving,
+				);
+				leftoverCount++;
 			}
 		}
-
-		recordDailyAssignment(slot.date, selected.id);
-		distinctByMealType.get(slot.meal_type)?.add(selected.id);
 	}
 
 	// ==========================================

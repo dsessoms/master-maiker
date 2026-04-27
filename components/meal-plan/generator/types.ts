@@ -3,6 +3,8 @@ import type {
 	MealType,
 } from "@/lib/schemas/meal-plans/generate/draft-schema";
 
+import type { VarietyLevel } from "@/lib/meal-plan-draft/generator";
+
 export type RecipeSource = "library" | "catalog";
 export type ExistingBehavior = "keep" | "replace";
 
@@ -17,6 +19,8 @@ export interface GeneratorSetup {
 	recipeSources: RecipeSource[];
 	/** Whether to keep existing entries (lock them) or start fresh */
 	existingBehavior: ExistingBehavior;
+	/** How much recipe variety to enforce */
+	variety: VarietyLevel;
 }
 
 export type GeneratorPhase = "setup" | "generating" | "chat";

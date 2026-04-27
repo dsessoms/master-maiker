@@ -92,16 +92,13 @@ describe("dayOfWeekFromDate", () => {
 // ==========================================
 
 describe("compilePreferences — default weights", () => {
-	it("outputs all 6 weight signals defaulting to 1.0 when no patches are applied", () => {
+	it("outputs all 3 weight signals defaulting to 1.0 when no patches are applied", () => {
 		const result = compilePreferences(twoSlotDraft);
 		const weights = result[mondayDinnerKey].weights;
 
 		expect(weights.protein_ratio).toBe(1.0);
-		expect(weights.calorie_density).toBe(1.0);
 		expect(weights.prep_time).toBe(1.0);
 		expect(weights.source_preference).toBe(1.0);
-		expect(weights.ingredient_overlap).toBe(1.0);
-		expect(weights.leftover).toBe(1.0);
 	});
 
 	it("outputs empty hard_filters and null assigned_recipe_id by default", () => {
@@ -235,17 +232,17 @@ describe("compilePreferences — scoped patches", () => {
 				op: "pref_patch",
 				action: "set_weight",
 				scope: { meal_types: ["Dinner"] },
-				payload: { weight: { signal: "calorie_density", value: 0.5 } },
+				payload: { weight: { signal: "protein_ratio", value: 0.5 } },
 			},
 		]);
 
 		const result = compilePreferences(draft);
 
-		expect(result[mondayDinnerKey].weights.calorie_density).toBe(0.5);
-		expect(result[tuesdayDinnerKey].weights.calorie_density).toBe(0.5);
+		expect(result[mondayDinnerKey].weights.protein_ratio).toBe(0.5);
+		expect(result[tuesdayDinnerKey].weights.protein_ratio).toBe(0.5);
 		// Breakfast and Lunch are unaffected
-		expect(result[mondayBreakfastKey].weights.calorie_density).toBe(1.0);
-		expect(result[saturdayLunchKey].weights.calorie_density).toBe(1.0);
+		expect(result[mondayBreakfastKey].weights.protein_ratio).toBe(1.0);
+		expect(result[saturdayLunchKey].weights.protein_ratio).toBe(1.0);
 	});
 
 	it("day + meal_type scope applies only to that exact combination", () => {
@@ -334,20 +331,20 @@ describe("compilePreferences — scope precedence", () => {
 				op: "pref_patch",
 				action: "set_weight",
 				scope: null,
-				payload: { weight: { signal: "leftover", value: 0.2 } },
+				payload: { weight: { signal: "prep_time", value: 0.2 } },
 			},
 			{
 				op: "pref_patch",
 				action: "set_weight",
 				scope: { meal_types: ["Lunch"] },
-				payload: { weight: { signal: "leftover", value: 1.7 } },
+				payload: { weight: { signal: "prep_time", value: 1.7 } },
 			},
 		]);
 
 		const result = compilePreferences(draft);
 
-		expect(result[saturdayLunchKey].weights.leftover).toBe(1.7);
-		expect(result[mondayDinnerKey].weights.leftover).toBe(0.2);
+		expect(result[saturdayLunchKey].weights.prep_time).toBe(1.7);
+		expect(result[mondayDinnerKey].weights.prep_time).toBe(0.2);
 	});
 
 	it("day+meal_type overrides both day-only and meal_type-only scopes", () => {
@@ -357,41 +354,41 @@ describe("compilePreferences — scope precedence", () => {
 				op: "pref_patch",
 				action: "set_weight",
 				scope: null,
-				payload: { weight: { signal: "ingredient_overlap", value: 0.1 } },
+				payload: { weight: { signal: "source_preference", value: 0.1 } },
 			},
 			// Day-only (monday)
 			{
 				op: "pref_patch",
 				action: "set_weight",
 				scope: { days: ["monday"] },
-				payload: { weight: { signal: "ingredient_overlap", value: 0.5 } },
+				payload: { weight: { signal: "source_preference", value: 0.5 } },
 			},
 			// Meal-type-only (Dinner)
 			{
 				op: "pref_patch",
 				action: "set_weight",
 				scope: { meal_types: ["Dinner"] },
-				payload: { weight: { signal: "ingredient_overlap", value: 0.8 } },
+				payload: { weight: { signal: "source_preference", value: 0.8 } },
 			},
 			// Day + meal_type (monday.Dinner) — should win
 			{
 				op: "pref_patch",
 				action: "set_weight",
 				scope: { days: ["monday"], meal_types: ["Dinner"] },
-				payload: { weight: { signal: "ingredient_overlap", value: 2.0 } },
+				payload: { weight: { signal: "source_preference", value: 2.0 } },
 			},
 		]);
 
 		const result = compilePreferences(draft);
 
 		// monday.Dinner: day+meal_type wins
-		expect(result[mondayDinnerKey].weights.ingredient_overlap).toBe(2.0);
+		expect(result[mondayDinnerKey].weights.source_preference).toBe(2.0);
 		// monday.Breakfast: day-only wins over global
-		expect(result[mondayBreakfastKey].weights.ingredient_overlap).toBe(0.5);
+		expect(result[mondayBreakfastKey].weights.source_preference).toBe(0.5);
 		// tuesday.Dinner: meal_type-only wins over global
-		expect(result[tuesdayDinnerKey].weights.ingredient_overlap).toBe(0.8);
+		expect(result[tuesdayDinnerKey].weights.source_preference).toBe(0.8);
 		// saturday.Lunch: only global applies
-		expect(result[saturdayLunchKey].weights.ingredient_overlap).toBe(0.1);
+		expect(result[saturdayLunchKey].weights.source_preference).toBe(0.1);
 	});
 });
 
