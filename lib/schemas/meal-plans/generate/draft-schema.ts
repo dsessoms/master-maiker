@@ -139,14 +139,24 @@ export type InterpreterRequest = {
 };
 
 // ==========================================
+// GenerateSetupSchema (first-generation shorthand)
+// ==========================================
+
+export const GenerateSetupSchema = z.object({
+	dateStrings: z.array(z.string()).min(1),
+	profileIds: z.array(z.string()).min(1),
+	mealTypes: z.array(MealTypeSchema).min(1),
+	recipeSources: z.array(z.enum(["library", "catalog"])).min(1),
+	existingBehavior: z.enum(["keep", "replace"]),
+	variety: z.enum(["high", "medium", "low"]).optional(),
+});
+export type GenerateSetup = z.infer<typeof GenerateSetupSchema>;
+
+// ==========================================
 // ChatRequestSchema (API input validation)
 // ==========================================
 
-export const ChatRequestSchema = z.object({
-	user_message: z.string().min(1).optional(),
-	draft: MealPlanDraftBaseSchema.extend({
-		included_profile_ids: z.array(z.string()).min(1),
-	}),
+const _CommonChatFields = {
 	profiles: z.array(z.object({ id: z.string(), name: z.string() })).optional(),
 	conversation_history: z
 		.array(
@@ -156,7 +166,27 @@ export const ChatRequestSchema = z.object({
 			}),
 		)
 		.optional(),
+};
+
+/** Draft-based request: continuing an existing session (chat or re-shuffle) */
+const DraftRequestSchema = z.object({
+	..._CommonChatFields,
+	draft: MealPlanDraftBaseSchema.extend({
+		included_profile_ids: z.array(z.string()).min(1),
+	}),
+	user_message: z.string().min(1).optional(),
 	variety: z.enum(["high", "medium", "low"]).optional(),
 });
+
+/** Setup-based request: fresh generation — no pre-built draft required */
+const SetupRequestSchema = z.object({
+	..._CommonChatFields,
+	setup: GenerateSetupSchema,
+});
+
+export const ChatRequestSchema = z.union([
+	SetupRequestSchema,
+	DraftRequestSchema,
+]);
 
 export type PostChatRequest = z.infer<typeof ChatRequestSchema>;

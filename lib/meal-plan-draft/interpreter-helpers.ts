@@ -2,8 +2,8 @@ import type {
 	InterpreterFinalResponse,
 	ResolvedRecipe,
 } from "@/lib/meal-plan-draft/interpreter-schema";
-import type { PrefPatchOp } from "@/lib/schemas/meal-plans/generate/draft-schema";
 
+import type { PrefPatchOp } from "@/lib/schemas/meal-plans/generate/draft-schema";
 import { Spoonacular } from "@/lib/server/spoonacular/spoonacular-helper";
 import { dayOfWeekFromDate } from "@/lib/meal-plan-draft";
 import { supabase } from "@/config/supabase-server";
@@ -241,9 +241,33 @@ export async function searchRecipes(
 		]),
 	];
 
-	if (terms.length === 0) return [];
+	const STOP_WORDS = new Set([
+		"recipe",
+		"recipes",
+		"meal",
+		"meals",
+		"dish",
+		"dishes",
+		"food",
+		"foods",
+		"make",
+		"with",
+		"for",
+		"the",
+		"and",
+		"some",
+		"easy",
+		"quick",
+		"healthy",
+		"simple",
+		"best",
+		"good",
+	]);
+	const filteredTerms = terms.filter((t) => !STOP_WORDS.has(t));
 
-	const ilikeFilters = terms
+	if (filteredTerms.length === 0) return [];
+
+	const ilikeFilters = filteredTerms
 		.map((t) => `name.ilike.%${t}%,description.ilike.%${t}%`)
 		.join(",");
 

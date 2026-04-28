@@ -1,5 +1,3 @@
-import * as Crypto from "expo-crypto";
-
 import type {
 	ActiveDraft,
 	ExistingBehavior,
@@ -7,22 +5,14 @@ import type {
 	GeneratorSetup,
 	RecipeSource,
 } from "./types";
-import type {
-	DraftFoodEntry,
-	DraftSlot,
-	HardFilter,
-	MealType,
-	PrefPatchOp,
-	SlotKey,
-} from "@/lib/schemas/meal-plans/generate/draft-schema";
 import { Pressable, View, useWindowDimensions } from "react-native";
 import { format, parseISO } from "date-fns";
 import { useEffect, useState } from "react";
 
 import { ChatBar } from "./chat-panel";
 import type { GeneratedMealPlan } from "@/lib/schemas/meal-plans/generate/chat-schema";
-import type { GetFoodEntriesResponse } from "@/app/api/food-entries/index+api";
 import { LoadingIndicator } from "@/components/ui/loading-indicator";
+import type { MealType } from "@/lib/schemas/meal-plans/generate/draft-schema";
 import { SetupWizard } from "./setup-wizard";
 import { Text } from "@/components/ui/text";
 import { X } from "@/lib/icons";
@@ -31,73 +21,6 @@ import { useGenerateMealPlanChat } from "@/hooks/meal-plans/use-generate-meal-pl
 import { useQueryClient } from "@tanstack/react-query";
 import { useSaveMealPlan } from "@/hooks/meal-plans/use-save-meal-plan";
 import { useUndoRedo } from "./use-undo-redo";
-
-type FoodEntry = GetFoodEntriesResponse["foodEntries"][0];
-
-function buildEmptyDraft(
-	dates: string[],
-	profileIds: string[],
-	mealTypes: MealType[],
-): ActiveDraft {
-	const slots: Record<SlotKey, DraftSlot> = {};
-	for (const date of dates) {
-		for (const mealType of mealTypes) {
-			const key: SlotKey = `${date}.${mealType}`;
-			slots[key] = { date, meal_type: mealType, entries: [] };
-		}
-	}
-	return {
-		session_id: Crypto.randomUUID(),
-		included_profile_ids: profileIds,
-		slots,
-		preference_patch_stack: [],
-	};
-}
-
-function foodEntryToDraftEntry(entry: FoodEntry): DraftFoodEntry | null {
-	if (!entry.recipe || !entry.recipe_id) return null;
-	const macro = entry.recipe.macros?.[0];
-	return {
-		draft_entry_id: entry.id,
-		recipe: {
-			id: entry.recipe_id,
-			image_id: entry.recipe.image_id,
-			name: entry.recipe.name ?? "Unknown",
-			calories_per_serving: macro?.calories ?? 0,
-			macros_per_serving: {
-				protein_g: macro?.protein ?? 0,
-				carbs_g: macro?.carbohydrate ?? 0,
-				fat_g: macro?.fat ?? 0,
-			},
-			servings: entry.recipe.number_of_servings ?? 1,
-			core_ingredients: [],
-		},
-		locked: true,
-		profile_food_entries: (entry.profile_food_entry ?? [])
-			.filter((pfe) => pfe.number_of_servings > 0)
-			.map((pfe) => ({
-				profile_id: pfe.profile_id,
-				number_of_servings: pfe.number_of_servings,
-			})),
-	};
-}
-
-function buildSourcePatches(sources: RecipeSource[]): PrefPatchOp[] {
-	if (sources.includes("library") && sources.includes("catalog")) return [];
-	return [
-		{
-			op: "pref_patch",
-			action: "add_filter",
-			scope: null,
-			payload: {
-				filter: {
-					type: "source_restriction",
-					value: sources[0],
-				} as HardFilter,
-			},
-		},
-	];
-}
 
 function draftToGeneratedMealPlan(draft: ActiveDraft): GeneratedMealPlan {
 	const recipesMap = new Map<
@@ -164,7 +87,6 @@ interface MealPlanGeneratorPortalProps {
 	onClose: () => void;
 	weekDates: Date[];
 	profiles: { id: string; name: string; avatarUrl?: string }[];
-	foodEntriesByDay: { [key: string]: FoodEntry[] };
 	/** Controlled draft — portal calls onDraftChange to update it */
 	draft: ActiveDraft | null;
 	onDraftChange: (draft: ActiveDraft | null) => void;
@@ -177,7 +99,6 @@ export function MealPlanGeneratorPortal({
 	onClose,
 	weekDates,
 	profiles,
-	foodEntriesByDay,
 	draft,
 	onDraftChange,
 	onHeightChange,
@@ -210,6 +131,9 @@ export function MealPlanGeneratorPortal({
 	}>();
 	const [input, setInput] = useState("");
 	const [lastMessage, setLastMessage] = useState<string | undefined>(undefined);
+	const [conversationHistory, setConversationHistory] = useState<
+		{ role: "user" | "assistant"; content: string }[]
+	>([]);
 
 	// Sync default profile IDs when profiles first load
 	useEffect(() => {
@@ -232,42 +156,13 @@ export function MealPlanGeneratorPortal({
 	const handleGenerate = async () => {
 		setPhase("generating");
 
-		const newDraft = buildEmptyDraft(
-			setup.dateStrings,
-			setup.profileIds,
-			setup.mealTypes,
-		);
-
-		// Pre-populate locked entries when "keep" is selected
-		if (setup.existingBehavior === "keep") {
-			for (const dateString of setup.dateStrings) {
-				const entries = foodEntriesByDay[dateString] ?? [];
-				for (const entry of entries) {
-					if (!setup.mealTypes.includes(entry.meal_type as MealType)) continue;
-					const draftEntry = foodEntryToDraftEntry(entry);
-					if (!draftEntry) continue;
-					const key: SlotKey = `${dateString}.${entry.meal_type}`;
-					if (newDraft.slots[key]) {
-						newDraft.slots[key].entries.push(draftEntry);
-					}
-				}
-			}
-		}
-
-		const sourcePatches = buildSourcePatches(setup.recipeSources);
-		if (sourcePatches.length > 0) {
-			newDraft.preference_patch_stack.push(...sourcePatches);
-		}
-
 		try {
-			const result = await sendMessage({
-				draft: newDraft,
-				variety: setup.variety,
-			});
+			const result = await sendMessage({ setup });
 
-			if ("updated_slots" in result) {
+			if ("updated_slots" in result && "session_id" in result) {
 				const updatedDraft: ActiveDraft = {
-					...newDraft,
+					session_id: result.session_id,
+					included_profile_ids: setup.profileIds,
 					slots: result.updated_slots as ActiveDraft["slots"],
 					preference_patch_stack: result.preference_patch_stack,
 				};
@@ -289,15 +184,21 @@ export function MealPlanGeneratorPortal({
 				user_message: trimmed,
 				draft: draft,
 				profiles: profiles.map((p) => ({ id: p.id, name: p.name })),
+				conversation_history: conversationHistory,
 			});
 
-			if ("updated_slots" in response) {
+			if ("updated_slots" in response && "session_id" in response) {
 				const updatedDraft: ActiveDraft = {
 					...draft,
 					slots: response.updated_slots as ActiveDraft["slots"],
 					preference_patch_stack: response.preference_patch_stack,
 				};
 				updateDraft(updatedDraft, response.interpretation_summary);
+				setConversationHistory((prev) => [
+					...prev,
+					{ role: "user", content: trimmed },
+					{ role: "assistant", content: response.interpretation_summary },
+				]);
 			}
 		} catch {
 			// silent — draft stays unchanged
@@ -310,7 +211,7 @@ export function MealPlanGeneratorPortal({
 			const result = await sendMessage({
 				draft: draft,
 			});
-			if ("updated_slots" in result) {
+			if ("updated_slots" in result && "session_id" in result) {
 				const updatedDraft: ActiveDraft = {
 					...draft,
 					slots: result.updated_slots as ActiveDraft["slots"],
@@ -367,6 +268,7 @@ export function MealPlanGeneratorPortal({
 		setCurrentStep(0);
 		setInput("");
 		setLastMessage(undefined);
+		setConversationHistory([]);
 		onClose();
 	};
 

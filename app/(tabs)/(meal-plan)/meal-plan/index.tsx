@@ -233,7 +233,6 @@ export default function MealPlanScreen() {
 					}}
 					weekDates={weekDates}
 					profiles={profileList}
-					foodEntriesByDay={foodEntriesByDay}
 					draft={activeDraft}
 					onDraftChange={setActiveDraft}
 					onHeightChange={setPortalHeight}

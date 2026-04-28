@@ -12,6 +12,9 @@ export const FUNCTION_DECLARATIONS = [
 			"Only call this when the recipe is NOT already present in the current draft SLOTS. " +
 			"If the recipe is already in a slot, copy its recipe_id directly — no search needed. " +
 			"Never invent or guess a recipe_id. " +
+			"IMPORTANT: Queries must contain specific food or ingredient terms ONLY. " +
+			'Do NOT include generic words like "recipe", "recipes", "meal", "meals", "dish", "dishes", "food", "healthy", "easy", "quick". ' +
+			'Use the specific ingredient or dish name (e.g. "beef" not "beef recipes", "enchilada" not "enchilada recipe"). ' +
 			"Provide alternate phrasings as separate queries to handle: " +
 			'(1) hyphenation mismatches (e.g. "cottage cheese pancakes" AND "cottage-cheese pancakes"); ' +
 			'(2) plural/singular forms (e.g. "enchiladas" AND "enchilada"); ' +
