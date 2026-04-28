@@ -27,11 +27,6 @@ export function DraftFoodEntryCard({
 		<View className="flex-1 flex-row gap-2 mb-2 p-2 bg-background rounded-md">
 			{/* Image placeholder - mirrors the real FoodEntry layout */}
 			<View className="w-20 h-20 rounded-md overflow-hidden flex-shrink-0 relative">
-				{entry.recipe.is_leftover && (
-					<View className="absolute top-1 left-1 z-10 px-1.5 py-0.5 rounded bg-amber-500/80">
-						<Text className="text-xs text-white font-medium">leftover</Text>
-					</View>
-				)}
 				{imageUrl ? (
 					<Image
 						source={{ uri: imageUrl }}
@@ -43,6 +38,11 @@ export function DraftFoodEntryCard({
 						<Text className="text-lg font-bold text-muted-foreground opacity-20 px-1">
 							{initials}
 						</Text>
+					</View>
+				)}
+				{entry.recipe.is_leftover && (
+					<View className="absolute top-1 left-1 z-10 px-1.5 py-0.5 rounded bg-amber-500/80">
+						<Text className="text-xs text-white font-medium">leftover</Text>
 					</View>
 				)}
 			</View>
