@@ -1,3 +1,4 @@
+import { FeatureFlagService } from "@/lib/feature-flags/feature-flag-service";
 import { jsonResponse } from "@/lib/server/json-response";
 import { supabase } from "@/config/supabase-server";
 import { validateSession } from "@/lib/server/validate-session";
@@ -9,6 +10,16 @@ export async function GET(req: Request) {
 
 	if (!session.user) {
 		return jsonResponse({ recipes: undefined }, { status: 401 });
+	}
+
+	const featureFlagService = FeatureFlagService.getInstance(supabase);
+	const isAdmin = await featureFlagService.isEnabled(
+		"admin-user",
+		session.user.id,
+	);
+
+	if (!isAdmin) {
+		return jsonResponse({ recipes: undefined }, { status: 403 });
 	}
 
 	const url = new URL(req.url);
