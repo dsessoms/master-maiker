@@ -679,6 +679,41 @@ export class Spoonacular {
 		);
 	}
 
+	/**
+	 * Search for a single ingredient by name and return its Spoonacular ID.
+	 * Returns `null` if no match is found or the API call fails.
+	 *
+	 * Uses the `POST /recipes/parseIngredients` endpoint with `includeNutrition: false`
+	 * to resolve ingredient names to their Spoonacular IDs in a single API call.
+	 * Names are joined with newlines; the response array is in the same order.
+	 * Returns a Map from each input name to its resolved ID (or null on failure).
+	 */
+	static async lookupIngredientIds(
+		ingredientNames: string[],
+	): Promise<Map<string, number | null>> {
+		const result = new Map<string, number | null>();
+		if (ingredientNames.length === 0) return result;
+		try {
+			const formData = new URLSearchParams({
+				ingredientList: ingredientNames.join("\n"),
+				servings: "1",
+				includeNutrition: "false",
+			});
+			const parsed: SpoonacularIngredient[] = await this.makeApiCall(
+				"recipes/parseIngredients",
+				{},
+				formData.toString(),
+				"POST",
+			);
+			ingredientNames.forEach((name, index) => {
+				result.set(name, parsed[index]?.id ?? null);
+			});
+		} catch {
+			ingredientNames.forEach((name) => result.set(name, null));
+		}
+		return result;
+	}
+
 	static parseIngredients(params: {
 		ingredientList: string;
 	}): Promise<SpoonacularIngredient[]> {

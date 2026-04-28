@@ -1,50 +1,26 @@
 import {
-	Apple,
-	Egg,
-	Hamburger,
-	NotebookText,
-	Plus,
-	Salad,
-} from "../../lib/icons";
-import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
+import { NotebookText, Plus } from "../../lib/icons";
 import { useCallback, useContext, useMemo, useState } from "react";
 
 import { Button } from "../ui/button";
 import { DroppableArea } from "../ui/dnd/droppable-area";
 import { FoodEntry } from "./food-entry";
+import type { FoodEntry as FoodEntryData } from "@/app/api/food-entries/index+api";
 import { MacroDisplay } from "./macro-display";
 import { MealPlanContext } from "@/context/meal-plan-context";
-import { MealType } from "@/types";
+import type { MealType } from "@/lib/schemas/meal-plans/generate/draft-schema";
+import { MealTypeIcon } from "./meal-type-icon";
 import { NotesList } from "./notes-list";
 import { Text } from "../ui/text";
 import { View } from "react-native";
 import { calculateFoodEntriesNutrition } from "@/lib/utils/nutrition-calculator";
 import { cn } from "../../lib/utils";
 import { useUpdateFoodEntry } from "@/hooks/recipes/use-update-food-entry";
-
-const MealTypeIcon = ({
-	mealType,
-	className,
-}: {
-	mealType: MealType;
-	className?: string;
-}) => {
-	switch (mealType) {
-		case "Breakfast":
-			return <Egg className={className} />;
-		case "Lunch":
-			return <Hamburger className={className} />;
-		case "Dinner":
-			return <Salad className={className} />;
-		case "Snack":
-			return <Apple className={className} />;
-	}
-};
 
 export const MealSection = ({
 	mealType,
@@ -54,7 +30,7 @@ export const MealSection = ({
 }: {
 	mealType: MealType;
 	date: string;
-	foodEntries?: any[];
+	foodEntries?: FoodEntryData[];
 	onAdd: () => void;
 }) => {
 	const { selectedProfileIds, openNotesModal } = useContext(MealPlanContext);
@@ -62,9 +38,9 @@ export const MealSection = ({
 	const { mutate: updateFoodEntry } = useUpdateFoodEntry();
 
 	// Filter food entries to only show those with selected profiles
-	const filteredFoodEntries = foodEntries?.filter((entry: any) =>
+	const filteredFoodEntries = foodEntries?.filter((entry) =>
 		entry.profile_food_entry?.some(
-			(pfe: any) =>
+			(pfe) =>
 				pfe.number_of_servings > 0 && selectedProfileIds.has(pfe.profile_id),
 		),
 	);
@@ -174,7 +150,7 @@ export const MealSection = ({
 								No {mealType.toLowerCase()} items added
 							</Text>
 						)}
-						{filteredFoodEntries?.map((entry: any) => (
+						{filteredFoodEntries?.map((entry) => (
 							<FoodEntry key={entry.id} entry={entry} />
 						))}
 						<DropdownMenu>

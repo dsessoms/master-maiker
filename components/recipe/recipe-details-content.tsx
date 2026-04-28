@@ -224,6 +224,60 @@ export function RecipeDetailsContent({
 						</View>
 					</View>
 				)}
+
+				{/* Cuisines Section */}
+				{recipe.recipe_cuisines && recipe.recipe_cuisines.length > 0 && (
+					<View className="mb-6">
+						<Text className="text-xl font-semibold mb-4">Cuisines</Text>
+						<View className="flex-row flex-wrap gap-2">
+							{recipe.recipe_cuisines
+								.filter((rc) => rc.cuisines?.name)
+								.map((rc, index) => (
+									<View key={index} className="bg-muted rounded-md px-2 py-1">
+										<Text className="text-sm text-secondary-foreground">
+											{rc.cuisines!.name}
+										</Text>
+									</View>
+								))}
+						</View>
+					</View>
+				)}
+
+				{/* Diets Section */}
+				{recipe.recipe_diets && recipe.recipe_diets.length > 0 && (
+					<View className="mb-6">
+						<Text className="text-xl font-semibold mb-4">Diets</Text>
+						<View className="flex-row flex-wrap gap-2">
+							{recipe.recipe_diets
+								.filter((rd) => rd.diets?.name)
+								.map((rd, index) => (
+									<View key={index} className="bg-muted rounded-md px-2 py-1">
+										<Text className="text-sm text-secondary-foreground">
+											{rd.diets!.name}
+										</Text>
+									</View>
+								))}
+						</View>
+					</View>
+				)}
+
+				{/* Dish Types Section */}
+				{recipe.recipe_dish_types && recipe.recipe_dish_types.length > 0 && (
+					<View className="mb-6">
+						<Text className="text-xl font-semibold mb-4">Dish Types</Text>
+						<View className="flex-row flex-wrap gap-2">
+							{recipe.recipe_dish_types
+								.filter((rdt) => rdt.dish_types?.name)
+								.map((rdt, index) => (
+									<View key={index} className="bg-muted rounded-md px-2 py-1">
+										<Text className="text-sm text-secondary-foreground">
+											{rdt.dish_types!.name}
+										</Text>
+									</View>
+								))}
+						</View>
+					</View>
+				)}
 			</View>
 		</ScrollView>
 	);

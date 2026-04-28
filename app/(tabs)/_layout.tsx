@@ -1,4 +1,4 @@
-import { Bookmark, NotebookText, ShoppingCart, User } from "@/lib/icons";
+import { Bookmark, Lock, NotebookText, ShoppingCart, User } from "@/lib/icons";
 import { Redirect, Tabs } from "expo-router";
 
 import { MealPlanContextProvider } from "@/context/meal-plan-context";
@@ -6,11 +6,14 @@ import React from "react";
 import { colors } from "@/constants/colors";
 import { useAuth } from "@/context/supabase-provider";
 import { useColorScheme } from "@/lib/useColorScheme";
+import { useFeatureFlag } from "@/hooks/feature-flags/useFeatureFlag";
 
 export default function TabsLayout() {
 	const { colorScheme } = useColorScheme();
 
 	const { initialized, session } = useAuth();
+
+	const { enabled: isAdminUser } = useFeatureFlag("admin-user");
 
 	if (!initialized) {
 		return null;
@@ -68,6 +71,16 @@ export default function TabsLayout() {
 						tabBarIcon: ({ color }) => <User size={20} color={color} />,
 					}}
 				/>
+
+				<Tabs.Protected guard={isAdminUser}>
+					<Tabs.Screen
+						name="admin"
+						options={{
+							title: "Admin",
+							tabBarIcon: ({ color }) => <Lock size={20} color={color} />,
+						}}
+					/>
+				</Tabs.Protected>
 			</Tabs>
 		</MealPlanContextProvider>
 	);

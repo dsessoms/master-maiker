@@ -5,6 +5,7 @@ import {
 
 import { Recipe } from "../../../../lib/schemas/recipes/recipe-schema";
 import { SpoonacularAnalyzeRecipe } from "../../../../lib/schemas/spoonacular-analyze-recipe-schema";
+import axios from "axios";
 import { jsonResponse } from "../../../../lib/server/json-response";
 import { supabase } from "@/config/supabase-server";
 import { v4 as uuidv4 } from "uuid";
@@ -42,9 +43,23 @@ export async function GET(req: Request) {
 		let imageId: string | undefined;
 
 		if (spoonacularRecipe.image) {
-			const blob = await fetch(spoonacularRecipe.image).then((r) => r.blob());
-			imageId = uuidv4();
-			await supabase.storage.from("recipe-photos").upload(imageId, blob);
+			try {
+				const imageResponse = await axios.get<ArrayBuffer>(
+					spoonacularRecipe.image,
+					{ responseType: "arraybuffer" },
+				);
+				const contentType =
+					imageResponse.headers["content-type"] ?? "image/jpeg";
+				imageId = uuidv4();
+				await supabase.storage
+					.from("recipe-photos")
+					.upload(imageId, imageResponse.data, { contentType });
+			} catch (e) {
+				console.error(
+					`failed to retrieve image for recipe: ${spoonacularRecipe.image}`,
+					e,
+				);
+			}
 		}
 
 		// Return the recipe with image_id added

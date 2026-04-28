@@ -42,9 +42,9 @@ export async function GET(req: Request) {
         serving (serving_id:fat_secret_id, *)
       ),
       instruction (*),
-      recipe_cuisines (cuisine_id),
-      recipe_diets (diet_id),
-      recipe_dish_types (dish_type_id),
+      recipe_cuisines (cuisine_id, cuisines (name)),
+      recipe_diets (diet_id, diets (name)),
+      recipe_dish_types (dish_type_id, dish_types (name)),
       recipe_tags (
         tags (name)
       )
@@ -52,10 +52,12 @@ export async function GET(req: Request) {
 		)
 		.eq("id", recipeId);
 
-	// If authenticated, filter by user_id OR visibility = 'public'
+	// If authenticated, filter by user_id OR visibility = 'public' OR source = 'catalog'
 	// If not authenticated, only allow visibility = 'public'
 	if (session.user) {
-		query = query.or(`user_id.eq.${session.user.id},visibility.eq.public`);
+		query = query.or(
+			`user_id.eq.${session.user.id},visibility.eq.public,source.eq.catalog`,
+		);
 	} else {
 		query = query.eq("visibility", "public");
 	}

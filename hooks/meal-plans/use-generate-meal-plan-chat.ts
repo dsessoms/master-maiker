@@ -1,19 +1,14 @@
-import type {
-	MealPlanChatChatResponse,
-	MealPlanChatRequest,
-} from "@/lib/schemas/meal-plans/generate/chat-schema";
+import type { PostChatRequest } from "@/lib/schemas/meal-plans/generate/draft-schema";
+import type { PostChatResponse } from "@/app/api/meal-plans/generate/chat/index+api";
 
 import axiosWithAuth from "@/lib/axiosWithAuth";
 import { useMutation } from "@tanstack/react-query";
+import type { AxiosError } from "axios";
 
 export const useGenerateMealPlanChat = () => {
-	const mutation = useMutation<
-		MealPlanChatChatResponse,
-		unknown,
-		MealPlanChatRequest
-	>({
-		mutationFn: async (request: MealPlanChatRequest) => {
-			const response = await axiosWithAuth.post<MealPlanChatChatResponse>(
+	const mutation = useMutation<PostChatResponse, AxiosError, PostChatRequest>({
+		mutationFn: async (request: PostChatRequest) => {
+			const response = await axiosWithAuth.post<PostChatResponse>(
 				"/api/meal-plans/generate/chat",
 				request,
 			);

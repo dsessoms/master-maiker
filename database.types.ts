@@ -34,6 +34,41 @@ export type Database = {
 	};
 	public: {
 		Tables: {
+			catalog_recipe_meta: {
+				Row: {
+					created_at: string;
+					curator_notes: string | null;
+					needs_manual_review: boolean;
+					recipe_id: string;
+					reviewed_at: string | null;
+					updated_at: string;
+				};
+				Insert: {
+					created_at?: string;
+					curator_notes?: string | null;
+					needs_manual_review?: boolean;
+					recipe_id: string;
+					reviewed_at?: string | null;
+					updated_at?: string;
+				};
+				Update: {
+					created_at?: string;
+					curator_notes?: string | null;
+					needs_manual_review?: boolean;
+					recipe_id?: string;
+					reviewed_at?: string | null;
+					updated_at?: string;
+				};
+				Relationships: [
+					{
+						foreignKeyName: "catalog_recipe_meta_recipe_id_fkey";
+						columns: ["recipe_id"];
+						isOneToOne: true;
+						referencedRelation: "recipe";
+						referencedColumns: ["id"];
+					},
+				];
+			};
 			cuisines: {
 				Row: {
 					id: number;
@@ -528,8 +563,10 @@ export type Database = {
 					number_of_servings: number;
 					prep_time_hours: number | null;
 					prep_time_minutes: number | null;
+					source: string;
+					source_catalog_id: string | null;
 					source_url: string | null;
-					user_id: string;
+					user_id: string | null;
 					visibility: Database["public"]["Enums"]["recipe_visibility"];
 				};
 				Insert: {
@@ -543,8 +580,10 @@ export type Database = {
 					number_of_servings: number;
 					prep_time_hours?: number | null;
 					prep_time_minutes?: number | null;
+					source?: string;
+					source_catalog_id?: string | null;
 					source_url?: string | null;
-					user_id: string;
+					user_id?: string | null;
 					visibility?: Database["public"]["Enums"]["recipe_visibility"];
 				};
 				Update: {
@@ -558,11 +597,21 @@ export type Database = {
 					number_of_servings?: number;
 					prep_time_hours?: number | null;
 					prep_time_minutes?: number | null;
+					source?: string;
+					source_catalog_id?: string | null;
 					source_url?: string | null;
-					user_id?: string;
+					user_id?: string | null;
 					visibility?: Database["public"]["Enums"]["recipe_visibility"];
 				};
-				Relationships: [];
+				Relationships: [
+					{
+						foreignKeyName: "recipe_source_catalog_id_fkey";
+						columns: ["source_catalog_id"];
+						isOneToOne: false;
+						referencedRelation: "recipe";
+						referencedColumns: ["id"];
+					},
+				];
 			};
 			recipe_cuisines: {
 				Row: {
@@ -890,14 +939,17 @@ export type Database = {
 				Row: {
 					id: number;
 					name: string;
+					user_id: string;
 				};
 				Insert: {
 					id?: number;
 					name: string;
+					user_id: string;
 				};
 				Update: {
 					id?: number;
 					name?: string;
+					user_id?: string;
 				};
 				Relationships: [];
 			};
@@ -970,6 +1022,8 @@ export type Database = {
 							prep_time_minutes?: number;
 							recipe_id?: string;
 							recipe_name: string;
+							source?: string;
+							source_url?: string;
 							tag_names?: string[];
 						};
 						Returns: string;
