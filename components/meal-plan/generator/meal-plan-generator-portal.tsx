@@ -68,16 +68,6 @@ function draftToGeneratedMealPlan(draft: ActiveDraft): GeneratedMealPlan {
 	};
 }
 
-function getDraftDateRange(draft: ActiveDraft): {
-	startDate: Date;
-	endDate: Date;
-} {
-	const dates = Object.values(draft.slots)
-		.map((s) => parseISO(s.date))
-		.sort((a, b) => a.getTime() - b.getTime());
-	return { startDate: dates[0], endDate: dates[dates.length - 1] };
-}
-
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -245,8 +235,8 @@ export function MealPlanGeneratorPortal({
 	const handleKeep = async () => {
 		if (!draft) return;
 		try {
-			const { startDate, endDate } = getDraftDateRange(draft);
-			await clearMealPlan({ startDate, endDate });
+			const dates = Object.values(draft.slots).map((s) => parseISO(s.date));
+			await clearMealPlan({ dates });
 			await saveMealPlan({
 				generatedMealPlan: draftToGeneratedMealPlan(draft),
 			});

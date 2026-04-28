@@ -7,6 +7,10 @@ export interface ClearMealPlanRequest {
 	endDate: string; // yyyy-MM-dd format
 }
 
+export interface ClearMealPlanByDatesRequest {
+	dates: string[]; // yyyy-MM-dd format
+}
+
 export type DeleteClearResponse = Awaited<ReturnType<typeof DELETE>>;
 
 export async function DELETE(req: Request) {
@@ -18,24 +22,27 @@ export async function DELETE(req: Request) {
 
 	try {
 		const url = new URL(req.url);
+		const datesParam = url.searchParams.get("dates");
 		const startDate = url.searchParams.get("startDate");
 		const endDate = url.searchParams.get("endDate");
 
-		if (!startDate || !endDate) {
+		if (!datesParam && (!startDate || !endDate)) {
 			return jsonResponse(
-				{ error: "startDate and endDate are required" },
+				{ error: "Either dates or startDate and endDate are required" },
 				{ status: 400 },
 			);
 		}
 
-		// Step 1: Delete food entries for the date range
+		// Step 1: Delete food entries for the specified dates or date range
 		// Cascading delete will automatically remove associated profile_food_entry records
-		const { error: deleteError, count: deletedCount } = await supabase
+		const foodEntryQuery = supabase
 			.from("food_entry")
 			.delete({ count: "exact" })
-			.gte("date", startDate)
-			.lte("date", endDate)
 			.eq("user_id", session.user.id);
+
+		const { error: deleteError, count: deletedCount } = datesParam
+			? await foodEntryQuery.in("date", datesParam.split(","))
+			: await foodEntryQuery.gte("date", startDate!).lte("date", endDate!);
 
 		if (deleteError) {
 			console.error("Error deleting food entries:", deleteError);
@@ -48,14 +55,16 @@ export async function DELETE(req: Request) {
 		const deletedFoodEntriesCount = deletedCount || 0;
 		let deletedNotesCount = 0;
 
-		// Step 2: Delete notes for the date range
-		const { error: notesError, count: notesCount } = await supabase
+		// Step 2: Delete notes for the specified dates or date range
+		const notesQuery = supabase
 			.from("note")
 			.delete({ count: "exact" })
 			.eq("user_id", session.user.id)
-			.eq("note_type", "day_meal")
-			.gte("date", startDate)
-			.lte("date", endDate);
+			.eq("note_type", "day_meal");
+
+		const { error: notesError, count: notesCount } = datesParam
+			? await notesQuery.in("date", datesParam.split(","))
+			: await notesQuery.gte("date", startDate!).lte("date", endDate!);
 
 		if (notesError) {
 			console.error("Error deleting notes:", notesError);

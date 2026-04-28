@@ -9,21 +9,31 @@ interface ClearMealPlanParams {
 	endDate: Date;
 }
 
+interface ClearMealPlanByDatesParams {
+	dates: Date[];
+}
+
+type ClearParams = ClearMealPlanParams | ClearMealPlanByDatesParams;
+
 export const useClearMealPlan = () => {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: async ({ startDate, endDate }: ClearMealPlanParams) => {
-			const startDateStr = format(startDate, "yyyy-MM-dd");
-			const endDateStr = format(endDate, "yyyy-MM-dd");
+		mutationFn: async (params: ClearParams) => {
+			const queryParams =
+				"dates" in params
+					? {
+							dates: params.dates.map((d) => format(d, "yyyy-MM-dd")).join(","),
+						}
+					: {
+							startDate: format(params.startDate, "yyyy-MM-dd"),
+							endDate: format(params.endDate, "yyyy-MM-dd"),
+						};
 
 			const response = await axiosWithAuth.delete<DeleteClearResponse>(
 				"/api/meal-plans/clear",
 				{
-					params: {
-						startDate: startDateStr,
-						endDate: endDateStr,
-					},
+					params: queryParams,
 				},
 			);
 
